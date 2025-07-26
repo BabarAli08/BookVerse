@@ -19,7 +19,7 @@ const Bottom = () => {
         ].map((stat, i) => (
           <div
             key={i}
-            className="flex flex-col items-center p-6 rounded-2xl bg-gradient-to-tr from-purple-100 via-white to-purple-50 drop-shadow-md hover:shadow-2xl  transition-transform duration-500"
+            className="flex flex-col items-center p-6 rounded-2xl  drop-shadow-md  transition-transform duration-500"
           >
             <div className=" bg-gray-300 text-pink-500 p-5 rounded-full text-6xl mb-4">{stat.icon}</div>
             <h3 className="text-4xl font-extrabold text-gray-800 mb-1">

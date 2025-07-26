@@ -1,6 +1,5 @@
 import Navbar from "./Component/Navbar/Navbar"
-import Home from "./Pages/Home/Home"
-
+import Books from "./Pages/Books/Books"
 
 function App() {
 
@@ -9,7 +8,8 @@ function App() {
     
     <>
     <Navbar/>
-    <Home/>
+    {/* <Home/> */}
+    <Books/>
     
     </>
   )
