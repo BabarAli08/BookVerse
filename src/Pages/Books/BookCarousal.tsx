@@ -19,7 +19,7 @@ const BookCarousel = ({ books, title, subtitle, isPremium = false }: {
   isPremium?: boolean 
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const booksPerView = 5;
+  const booksPerView = isPremium? 4:5;
 
   const nextSlide = () => {
     setCurrentIndex((prev) => 
@@ -53,7 +53,7 @@ const BookCarousel = ({ books, title, subtitle, isPremium = false }: {
           </div>
         </div>
 
-        {/* Navigation Arrows */}
+        
         <div className="flex items-center gap-2">
           <button
             onClick={prevSlide}

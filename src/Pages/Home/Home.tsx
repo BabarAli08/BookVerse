@@ -1,7 +1,6 @@
 
 import Bottom from "./Bottom";
 import Featured from "./Featured";
-import Footer from "./Footer";
 import Hero from "./Hero";
 import JoinSection from "./JoinSection";
 
@@ -17,7 +16,7 @@ const Home = () => {
         </button>
       </div>
       <JoinSection/>
-      <Footer/>
+   
     </div>
   );
 };

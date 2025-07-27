@@ -1,15 +1,12 @@
-import React from 'react';
-import TransparentButton from '../../Component/TransparentButton';
-import WhiteButton from '../../Component/WhiteButton';
-import { useNavigate } from 'react-router';
-
+import React from "react";
+import TransparentButton from "../../Component/TransparentButton";
+import WhiteButton from "../../Component/WhiteButton";
+import { Crown } from "lucide-react";
 
 const Hero = () => {
-  const navigate=useNavigate()
-
-    return (
-        <>
-        <style>{`
+  return (
+    <>
+      <style>{`
         @keyframes slideAcross {
           0% {
             transform: translateX(-200px) translateY(0px) rotate(-15deg);
@@ -52,9 +49,9 @@ const Hero = () => {
           animation: slideAcrossReverse 15s linear infinite;
         }
       `}</style>
-      
+
       {/* Top Half */}
-      <div className="w-full h-[50vh] bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 relative flex items-center justify-center overflow-hidden">
+      <div className="w-full h-[35vh] bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-900 relative flex items-center justify-center overflow-hidden">
         {/* Moving Books Animation */}
         <div className="absolute inset-0 pointer-events-none">
           {/* Books moving left to right */}
@@ -64,7 +61,7 @@ const Hero = () => {
               className="absolute animate-slide"
               style={{
                 top: `${20 + i * 25}%`,
-                left: '-200px', // Start completely off-screen
+                left: "-200px", // Start completely off-screen
                 animationDelay: `${i * 4}s`,
               }}
             >
@@ -75,7 +72,7 @@ const Hero = () => {
               </div>
             </div>
           ))}
-          
+
           {/* Books moving right to left */}
           {[...Array(2)].map((_, i) => (
             <div
@@ -83,7 +80,7 @@ const Hero = () => {
               className="absolute animate-slide-reverse"
               style={{
                 top: `${40 + i * 30}%`,
-                right: '-200px', // Start completely off-screen on the right
+                right: "-200px", // Start completely off-screen on the right
                 animationDelay: `${i * 6 + 2}s`,
               }}
             >
@@ -97,18 +94,18 @@ const Hero = () => {
         </div>
 
         {/* Text Section */}
-        <div className="z-10 text-center px-4 max-w-2xl">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">BookVerse</h1>
+        <div className="z-10 text-center px-4 max-w-3xl flex items-center justify-center flex-col flex-wrap">
+            <Crown className="text-yellow-400 mb-[20px]" size={50}/>
+          <h1 className="text-5xl md:text-5xl font-bold  text-white mb-[20px] drop-shadow-lg">
+            Unlock Your Reading Potential
+          </h1>
           <p className="text-gray-300 text-lg md:text-xl mb-6 drop-shadow-md">
-            Your gateway to infinite stories. Read, discover, and immerse yourself in worlds beyond imagination.
+            Choose the perfect plan to enhance your reading journey with premium
+            features, unlimited access, and exclusive content.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <WhiteButton title="Explore Books" onClick={() =>navigate("/books") } />
-            <TransparentButton title="Get Premium" onClick={() => navigate("/premium")} />
-          </div>
         </div>
       </div>
-        </>
-    )
-}
-export default Hero
+    </>
+  );
+};
+export default Hero;

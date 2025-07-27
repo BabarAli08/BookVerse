@@ -2,8 +2,17 @@ import { IoSearch } from "react-icons/io5";
 import { LuShoppingCart } from "react-icons/lu";
 import { IoBookOutline } from "react-icons/io5";
 import { FaUser } from "react-icons/fa";
+import { useNavigate } from "react-router";
 
 const Navbar = () => {
+  const links=[
+    {name:"Home",url:"/"},
+    {name:"Books",url:"/books"},
+    {name:"Premium",url:"/premium"},
+    {name:"About",url:"/about"}
+  ]
+
+  const navigate=useNavigate()
   return (
     <div className=" px-[15vw] flex items-center justify-between w-full h-[6vh] border border-b-2 border-gray-200  bg-white shadow-md">
       {/* Logo */}
@@ -18,18 +27,19 @@ const Navbar = () => {
 
       {/* Navigation Links */}
       <ul className="flex items-center space-x-8">
-        {["Home", "Books", "Premium", "About"].map((item) => (
+        {links.map((item) => (
           <li
-            key={item}
+            onClick={()=>navigate(item.url)}
+            key={item.name}
             className="relative hover:text-purple-600 text-gray-500 font-medium cursor-pointer group"
           >
-            {item}
+            {item.name}
             <span className="absolute left-0 bottom-[-2px] w-0 h-[2px] bg-purple-600 transition-all duration-300 group-hover:w-full"></span>
           </li>
         ))}
       </ul>
 
-      {/* Icons */}
+     
       <div className="flex items-center space-x-4">
         {[<IoSearch />, <LuShoppingCart />, <FaUser />].map((Icon, index) => (
           <div

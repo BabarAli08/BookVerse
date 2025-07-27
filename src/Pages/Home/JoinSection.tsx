@@ -1,8 +1,10 @@
 
 import WhiteButton from '../../Component/WhiteButton';
 import TransparentButton from '../../Component/TransparentButton';
+import { useNavigate } from 'react-router';
 
 const JoinSection = () => {
+  const navigate=useNavigate()
   return (
     <div className="bg-gradient-to-r from-blue-600 to-purple-700 flex flex-col items-center justify-center w-full min-h-[35vh] py-16 px-4">
       {/* Text Content */}
@@ -20,11 +22,11 @@ const JoinSection = () => {
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
         <WhiteButton 
           title="Sign Up Free" 
-          onClick={() => console.log("join now")}
+          onClick={() => navigate('/signup')}
         />
         <TransparentButton 
           title="Go Premium" 
-          onClick={() => console.log("go premium")}
+          onClick={() => navigate('/premium')}
         />
       </div>
     </div>

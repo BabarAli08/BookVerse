@@ -1,6 +1,6 @@
 import { Star, Lock, Crown } from "lucide-react";
 
-interface PremiumBook {
+interface UltimateBook {
   title: string;
   author: string;
   description: string;
@@ -9,17 +9,17 @@ interface PremiumBook {
   pages: number;
 }
 
-const PremiumBook = ({ title, image, author, description, rating, pages }: PremiumBook) => {
+const UltimateBook = ({ title, image, author, description, rating, pages }: UltimateBook) => {
   return (
-    <div className="w-[23rem] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+    <div className="w-[18rem] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
       {/* Book Cover Section with Ultimate Badge and Lock Overlay */}
       <div className="relative h-52 bg-gray-500 overflow-hidden">
         {/* Ultimate Badge */}
-        <div className="absolute top-3 left-3 bg-gradient-to-r from-blue-700 to-purple-700 text-white text-xs font-bold px-3 py-1.5 rounded-md z-10 shadow-md">
-          Premium
+        <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs font-bold px-3 py-1.5 rounded-md z-10 shadow-md">
+          Ultimate
         </div>
         
-        
+        {/* Background Image (blurred/grayed out) */}
         <div className="absolute inset-0">
           {image ? (
             <img 
@@ -80,4 +80,4 @@ const PremiumBook = ({ title, image, author, description, rating, pages }: Premi
   );
 };
 
-export default PremiumBook
+export default UltimateBook
