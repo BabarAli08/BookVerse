@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Filter, ChevronDown } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { setFilteredBooks, setFilters } from "../../Store/FilterSlice";
 
 interface optionState{
     options: string[];
@@ -8,6 +10,7 @@ interface optionState{
     placeholder: string;
 }
 const FilterComponent = () => {
+  const dispatch=useDispatch()
   const [selectedTier, setSelectedTier] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All Tiers");
   const [selectedSort, setSelectedSort] = useState("Sort by Title");
@@ -39,6 +42,16 @@ const FilterComponent = () => {
     "Price: High to Low",
   ];
 
+  
+  useEffect(()=>{
+    dispatch(setFilters({
+        category:selectedCategory,
+        tier:selectedTier,
+        sort:selectedSort,
+        search:searchQuery
+    }))
+    console.log()
+  },[selectedCategory,selectedSort,selectedTier,searchQuery])
   const DropdownSelect = ({ options, selected, onSelect, placeholder }:optionState) => {
     const [isOpen, setIsOpen] = useState(false);
 

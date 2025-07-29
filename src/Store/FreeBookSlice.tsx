@@ -26,7 +26,7 @@ const dataSlice = createSlice({
       const newBooks = action.payload.filter(
         (book) => !state.allBooks.some((b) => b.id === book.id)
       );
-      state.allBooks = [...state.allBooks, ...newBooks];
+      state.allBooks = [...newBooks];
 
       // Only update displayedBooks if it's the initial load
       if (isFirstLoad) {

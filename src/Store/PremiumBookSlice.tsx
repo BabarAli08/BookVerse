@@ -14,7 +14,7 @@ const initialState: premiumBookSlice = {
   displayedBooks: [],
   currentIndex: 0,
   batchSize: 4,
-  page: 25,
+  page:10,
 };
 
 const premiumBookSlice = createSlice({
@@ -22,28 +22,32 @@ const premiumBookSlice = createSlice({
   initialState,
   reducers: {
     setPremiumBooks: (state, action: PayloadAction<book[]>) => {
-        const isFirstLoad = state.allBooks.length === 0;
+      const isFirstLoad = state.allBooks.length === 0;
 
-        const newBooks=action.payload.filter((book)=>!state.allBooks.some((b)=>b.id===book.id))
-        state.allBooks.push(...newBooks)
-      state.displayedBooks = state.allBooks.slice(state.currentIndex, state.currentIndex +state.batchSize);
-       if (isFirstLoad) {
+      const newBooks = action.payload.filter(
+        (book) => !state.allBooks.some((b) => b.id === book.id)
+      );
+      if(state.page==2){
+        state.allBooks=[]
+      }
+      state.allBooks.push(...newBooks);
+      state.displayedBooks = state.allBooks.slice(
+        state.currentIndex,
+        state.currentIndex + state.batchSize
+      );
+      if (isFirstLoad) {
         state.displayedBooks = state.allBooks.slice(0, state.batchSize);
         state.currentIndex = 0;
         state.page = 1;
       }
     },
     nextPremiumBatch: (state) => {
-      const nextBtachStart = state.currentIndex +state.batchSize;
+      const nextBtachStart = state.currentIndex + state.batchSize;
       const nextBatchEnd = nextBtachStart + state.batchSize;
 
-      state.displayedBooks = state.allBooks.slice(
-          nextBtachStart,
-          nextBatchEnd
-        );
-        state.currentIndex = nextBtachStart;
-        state.page++;
-      
+      state.displayedBooks = state.allBooks.slice(nextBtachStart, nextBatchEnd);
+      state.currentIndex = nextBtachStart;
+      state.page++;
     },
     prevPremiumBatch: (state) => {
       const prevBatchStart = Math.max(0, state.currentIndex - state.batchSize);
@@ -54,9 +58,15 @@ const premiumBookSlice = createSlice({
       state.currentIndex = prevBatchStart;
       state.page -= 1;
     },
+    setInitialPage: (state, action: PayloadAction<number>) => {
+      state.page = action.payload;
+    },
+    resetPremiumBooks: () => {
+      return initialState;
+    },
   },
 });
 
-export const { setPremiumBooks, nextPremiumBatch, prevPremiumBatch } =
+export const { setPremiumBooks, nextPremiumBatch, prevPremiumBatch,setInitialPage } =
   premiumBookSlice.actions;
 export default premiumBookSlice.reducer;

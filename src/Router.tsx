@@ -6,6 +6,7 @@ import Premium from "./Pages/Premium/Premium";
 import About from "./Pages/About/About";
 import NotFound from "./Component/NotFound";
 import Signup from "./Pages/Signup/Signup";
+import BookDetails from "./Pages/BookDetails/BookDetails";
 const AppRouter = () => {
   return (
     <Router>
@@ -13,10 +14,11 @@ const AppRouter = () => {
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/books" element={<Books />} />
+          <Route path="/books/:id" element={<BookDetails/>}/>
           <Route path="/premium" element={<Premium />} />
           <Route path="/about" element={<About />} />
           <Route path="/signup" element={<Signup />} />
-        
+          
         </Route>
           <Route path="*" element={<NotFound />} />
       </Routes>

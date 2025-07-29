@@ -16,6 +16,7 @@ import {
   setPremiumBooks,
   nextPremiumBatch,
   prevPremiumBatch,
+  setInitialPage,
 } from "../../Store/PremiumBookSlice";
 import {
   useDispatch,
@@ -35,7 +36,9 @@ const BookCarousel = ({
 }) => {
   const dispatch = useDispatch();
 
-  const freeBooks = useSelector((state: RootState) => state.freeBooks);
+  const {filters}=useSelector((state:RootState)=>state.filteredBooks)
+
+      const freeBooks = useSelector((state: RootState) => state.freeBooks);
   const premiumBooks = useSelector((state: RootState) => state.premiumBooks);
 
   const { displayedBooks, allBooks, currentIndex } = (isPremium
@@ -53,12 +56,19 @@ const BookCarousel = ({
 
   const booksPerView = isPremium ? 4 : 5;
 
+
   const { data, error, loading } = useFetchData({
     url: "https://gutendex.com/books",
     page: page,
+    
   });
 
   useEffect(() => {
+    if(isPremium){
+      
+    const defaultPage=filters.category!=="All Tiers"?2:10
+      dispatch(setInitialPage(defaultPage))
+    }
     if (data && data.length > 0) {
       if (isPremium) {
         dispatch(setPremiumBooks(data));
@@ -66,7 +76,7 @@ const BookCarousel = ({
         dispatch(setFreeBooks(data));
       }
     }
-  }, [data, dispatch, isPremium]);
+  }, [data, dispatch, isPremium,filters.category]);
 
   // console.log("Page:", page);
   // console.log("Current index:", currentIndex);
@@ -76,6 +86,7 @@ const BookCarousel = ({
   //   data.map((b) => b.id)
   // );
 
+  
   const nextSlide = () => {
     if (isPremium) {
       dispatch(nextPremiumBatch());

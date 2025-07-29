@@ -1,10 +1,11 @@
 import { BookOpen, Star } from "lucide-react";
 import type { author, book } from "../../Data/Interfaces";
+import { useNavigate } from "react-router";
 
 
 
 const BookCard = ({ book}: {book:book}) => {
-  // console.log("image formats",book.formats);
+  const navigate=useNavigate()
   const imageUrl =
     book.formats?.["image/jpeg"] || book.formats?.["image/png"] || book.formats?.["image/jpg"] || "";
   
@@ -43,7 +44,9 @@ const BookCard = ({ book}: {book:book}) => {
           </div>
           <span className="text-sm text-gray-600">{pages}p</span>
         </div>
-        <button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 mt-3">
+        <button
+        onClick={()=>navigate(`/books/${book.id}`)}
+        className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 mt-3">
           <BookOpen size={16} />
           <span>Read Free</span>
         </button>
