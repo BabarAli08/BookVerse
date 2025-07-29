@@ -1,39 +1,98 @@
-
-import { useState } from "react";
-interface Book {
-  title: string;
-  author: string;
-  rating: number;
-  image: string;
-  pages: number;
-}
+import { useEffect } from "react";
 
 import { BookOpen, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+
 import PremiumBook from "./PremiumBook";
 import BookCard from "./FreeBooks";
+import useFetchData from "../../Data/useFetchData";
+import { SpinningBookLoader } from "../../Component/Loading";
+import type { book } from "../../Data/Interfaces";
+import {
+  setFreeBooks,
+  nextFreeBatch,
+  prevFreeBatch,
+} from "../../Store/FreeBookSlice";
+import {
+  setPremiumBooks,
+  nextPremiumBatch,
+  prevPremiumBatch,
+} from "../../Store/PremiumBookSlice";
+import {
+  useDispatch,
+  useSelector,
+  type TypedUseSelectorHook,
+} from "react-redux";
+import type { RootState } from "../../Store/store";
 
-const BookCarousel = ({ books, title, subtitle, isPremium = false }: { 
-  books: Book[], 
-  title: string, 
-  subtitle: string,
-  isPremium?: boolean 
+const BookCarousel = ({
+  title,
+  subtitle,
+  isPremium = false,
+}: {
+  title: string;
+  subtitle: string;
+  isPremium?: boolean;
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const booksPerView = isPremium? 4:5;
+  const dispatch = useDispatch();
+
+  const freeBooks = useSelector((state: RootState) => state.freeBooks);
+  const premiumBooks = useSelector((state: RootState) => state.premiumBooks);
+
+  const { displayedBooks, allBooks, currentIndex } = (isPremium
+    ? premiumBooks
+    : freeBooks) || {
+    displayedBooks: [],
+    allBooks: [],
+    currentIndex: 0,
+  };
+  const bookState = useSelector((state: RootState) =>
+    isPremium ? state.premiumBooks : state.freeBooks
+  );
+
+  const page = bookState?.page ?? 1;
+
+  const booksPerView = isPremium ? 4 : 5;
+
+  const { data, error, loading } = useFetchData({
+    url: "https://gutendex.com/books",
+    page: page,
+  });
+
+  useEffect(() => {
+    if (data && data.length > 0) {
+      if (isPremium) {
+        dispatch(setPremiumBooks(data));
+      } else {
+        dispatch(setFreeBooks(data));
+      }
+    }
+  }, [data, dispatch, isPremium]);
+
+  // console.log("Page:", page);
+  // console.log("Current index:", currentIndex);
+  // console.log("Total books loaded:", allBooks.length);
+  // console.log(
+  //   "Latest data:",
+  //   data.map((b) => b.id)
+  // );
 
   const nextSlide = () => {
-    setCurrentIndex((prev) => 
-      prev + booksPerView >= books.length ? 0 : prev + booksPerView
-    );
+    if (isPremium) {
+      dispatch(nextPremiumBatch());
+    } else {
+      dispatch(nextFreeBatch());
+    }
   };
 
   const prevSlide = () => {
-    setCurrentIndex((prev) => 
-      prev === 0 ? Math.max(0, books.length - booksPerView) : Math.max(0, prev - booksPerView)
-    );
+    if (isPremium) {
+      dispatch(prevPremiumBatch());
+    } else {
+      dispatch(prevFreeBatch());
+    }
   };
-
-  const visibleBooks = books.slice(currentIndex, currentIndex + booksPerView);
+const premiumState = useSelector((state: RootState) => state.premiumBooks);
+console.log("PREMIUM STATE:", premiumState);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-8">
@@ -47,24 +106,31 @@ const BookCarousel = ({ books, title, subtitle, isPremium = false }: {
           )}
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-            <p className={`text-sm ${isPremium ? 'text-purple-600' : 'text-green-600'} font-medium`}>
+            <p
+              className={`text-sm ${
+                isPremium ? "text-purple-600" : "text-green-600"
+              } font-medium`}
+            >
               {subtitle}
             </p>
           </div>
         </div>
 
-        
         <div className="flex items-center gap-2">
           <button
             onClick={prevSlide}
-            disabled={currentIndex === 0}
+            disabled={loading || currentIndex === 0}
             className="p-2 rounded-full border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft size={20} className="text-gray-600" />
           </button>
           <button
             onClick={nextSlide}
-            disabled={currentIndex + booksPerView >= books.length}
+            disabled={
+              loading ||
+              (currentIndex + booksPerView >= allBooks.length &&
+                data.length === 0)
+            }
             className="p-2 rounded-full border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronRight size={20} className="text-gray-600" />
@@ -72,18 +138,27 @@ const BookCarousel = ({ books, title, subtitle, isPremium = false }: {
         </div>
       </div>
 
-      
       <div className="flex gap-6 overflow-hidden">
-        {visibleBooks.map((book, index) => (
-          isPremium ? (
-            <PremiumBook key={currentIndex + index} {...book} />
-          ) : (
-            <BookCard key={currentIndex + index} {...book} />
+        {loading ? (
+          <SpinningBookLoader />
+        ) : error ? (
+          <h1 className="bg-red-400 text-xl text-white p-4 rounded-md">
+            There was an issue loading the books. Please try again later.
+          </h1>
+        ) : allBooks && allBooks.length > 0 ? (
+          displayedBooks.map((book: book) =>
+            isPremium ? (
+              <PremiumBook key={book.id} book={book} />
+            ) : (
+              <BookCard key={book.id} book={book} />
+            )
           )
-        ))}
+        ) : (
+          <p className="text-gray-600">No books found.</p>
+        )}
       </div>
     </div>
   );
 };
 
-export default BookCarousel
+export default BookCarousel;

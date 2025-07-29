@@ -1,19 +1,21 @@
 import type {button} from '../Types'
 
 
-const TransparentButton = ({ title="button", onClick }:button) => {
+const TransparentButton = ({ title="button", onClick,isBlack=false }:button) => {
   return (
     <button
       onClick={onClick}
-      className="
+      className=
+       {` 
+        ${isBlack?'text-black':'text-white'}
         bg-transparent 
-        text-gray-800 
         font-medium 
         py-2 
         px-6 
-        text-white
-        border 
-        border-gray-500 
+       
+        
+        border-gray-200
+        border-1 
         rounded-lg 
         hover:bg-gray-100 
         hover:text-black
@@ -25,7 +27,7 @@ const TransparentButton = ({ title="button", onClick }:button) => {
         focus:ring-2 
         focus:ring-gray-300 
         focus:ring-opacity-50
-      "
+      `}
     >
       {title}
     </button>

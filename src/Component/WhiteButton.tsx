@@ -1,15 +1,18 @@
 import React from 'react'
 interface buttonType{
     title:string
-    onClick:()=>void
+    onClick:()=>void,
+    isBlack?:boolean
 }
-const WhiteButton = ({ title="button",onClick}:buttonType) => {
+const WhiteButton = ({ title="button",onClick, isBlack=false}:buttonType) => {
   return (
     <button
       onClick={onClick}
-      className="
-        bg-white 
-        text-gray-800 
+      className=
+       {`
+        ${isBlack ? 'bg-black text-white' : 'bg-white text-black'} 
+
+       
         font-semibold 
         py-2 
         px-8 
@@ -18,6 +21,8 @@ const WhiteButton = ({ title="button",onClick}:buttonType) => {
         rounded-lg 
         shadow-md 
         hover:bg-gray-100 
+        hover:text-black 
+        hover:border-gray-800 
         hover:shadow-lg 
         transition 
         duration-300 
@@ -26,8 +31,7 @@ const WhiteButton = ({ title="button",onClick}:buttonType) => {
         focus:ring-2 
         focus:ring-gray-300 
         focus:ring-opacity-50
-      "
-    >
+      `}>
       {title}
     </button>
   )

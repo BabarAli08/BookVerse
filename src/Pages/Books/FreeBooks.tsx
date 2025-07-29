@@ -1,16 +1,17 @@
-
 import { BookOpen, Star } from "lucide-react";
+import type { author, book } from "../../Data/Interfaces";
 
 
-interface Book {
-  title: string;
-  author: string;
-  rating: number;
-  image: string;
-  pages: number;
-}
 
-const BookCard = ({ title, image, author, rating, pages }: Book) => {
+const BookCard = ({ book}: {book:book}) => {
+  // console.log("image formats",book.formats);
+  const imageUrl =
+    book.formats?.["image/jpeg"] || book.formats?.["image/png"] || book.formats?.["image/jpg"] || "";
+  
+  const authorNames = book.authors?.map((author:author) => author.name).join(", ") || "Unknown Author";
+  const pages = Math.floor(Math.random() * 800 + 100); 
+  const rating = (Math.random() * 2 + 3).toFixed(1); 
+
   return (
     <div className="w-[15rem] bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex-shrink-0">
       <div className="relative h-48 bg-gray-200">
@@ -18,10 +19,10 @@ const BookCard = ({ title, image, author, rating, pages }: Book) => {
           Free
         </div>
         <div className="w-full h-full flex items-center justify-center">
-          {image ? (
-            <img 
-              src={image} 
-              alt={title}
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={book.title}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -32,11 +33,9 @@ const BookCard = ({ title, image, author, rating, pages }: Book) => {
 
       <div className="p-4 space-y-2">
         <h3 className="text-base font-semibold text-gray-900 leading-tight line-clamp-2">
-          {title}
+          {book.title}
         </h3>
-        <p className="text-sm text-gray-600">
-          by {author}
-        </p>
+        <p className="text-sm text-gray-600">by {authorNames || "Unknown"}</p>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <Star size={14} className="fill-yellow-400 text-yellow-400" />
@@ -52,11 +51,5 @@ const BookCard = ({ title, image, author, rating, pages }: Book) => {
     </div>
   );
 };
-
-
-
-
-
-
 
 export default BookCard;

@@ -1,4 +1,6 @@
 export interface button{
     title:string
-    onClick:()=>void
+    onClick:()=>void,
+    isBlack?:boolean
+
 }
