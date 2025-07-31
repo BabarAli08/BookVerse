@@ -7,8 +7,12 @@ import About from "./Pages/About/About";
 import NotFound from "./Component/NotFound";
 import Signup from "./Pages/Signup/Signup";
 import BookDetails from "./Pages/BookDetails/BookDetails";
+import { Toaster } from "sonner";
+
 const AppRouter = () => {
   return (
+    <>
+    <Toaster richColors position="top-left" theme="dark" />
     <Router>
       <Routes>
         <Route element={<Layout />}>
@@ -23,6 +27,7 @@ const AppRouter = () => {
           <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
+    </>
   );
 };
 

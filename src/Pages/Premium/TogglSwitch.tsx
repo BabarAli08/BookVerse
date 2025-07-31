@@ -1,16 +1,20 @@
 import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toggleYearly } from "../../Store/PricesSlices";
 
 const ToggleSwitch = () => {
-  const [isYearly, setIsYearly] = useState(false);
+   const isYearly = useSelector((state: RootState) => state.prices.Yearly);
 
+  const dispatch=useDispatch()
   const handleToggle = () => {
-    setIsYearly(!isYearly);
+    
+    dispatch(toggleYearly(!isYearly));
   };
 
   return (
     <div className="flex items-center justify-center p-8">
       <div className="flex items-center gap-4">
-        {/* Monthly Label */}
+        
         <span 
           className={`text-sm font-medium transition-colors duration-200 cursor-pointer select-none ${
             !isYearly ? 'text-gray-900' : 'text-gray-500'
@@ -20,14 +24,14 @@ const ToggleSwitch = () => {
           Monthly
         </span>
 
-        {/* Toggle Switch */}
+        
         <button
           onClick={handleToggle}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
             isYearly ? 'bg-gray-800' : 'bg-gray-300'
           }`}
         >
-          {/* Toggle Circle */}
+          
           <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
               isYearly ? 'translate-x-6' : 'translate-x-1'
@@ -35,7 +39,7 @@ const ToggleSwitch = () => {
           />
         </button>
 
-        {/* Yearly Label */}
+        
         <span 
           className={`text-sm font-medium transition-colors duration-200 cursor-pointer select-none ${
             isYearly ? 'text-gray-900' : 'text-gray-500'

@@ -11,6 +11,8 @@ import {
   setFreeBooks,
   nextFreeBatch,
   prevFreeBatch,
+  setFilteredData,
+  
 } from "../../Store/FreeBookSlice";
 import {
   setPremiumBooks,
@@ -24,6 +26,7 @@ import {
   type TypedUseSelectorHook,
 } from "react-redux";
 import type { RootState } from "../../Store/store";
+import { setFilteredBooks } from "../../Store/FilterSlice";
 
 const BookCarousel = ({
   title,
@@ -64,19 +67,40 @@ const BookCarousel = ({
   });
 
   useEffect(() => {
-    if(isPremium){
-      
-    const defaultPage=filters.category!=="All Tiers"?2:10
-      dispatch(setInitialPage(defaultPage))
-    }
+  if (isPremium) {
+    const defaultPage = filters.category !== "All Tiers" ? 2 : 10;
+    dispatch(setInitialPage(defaultPage));
+  }
+}, [filters.category, dispatch, isPremium]);
+  useEffect(() => {
+    
     if (data && data.length > 0) {
       if (isPremium) {
-        dispatch(setPremiumBooks(data));
+        if(filters.search.length>0 || filters.category!== "All Tiers"){
+          dispatch(setFilteredData(true))
+          dispatch(setPremiumBooks([...data]));
+          
+        }
+        else{
+
+          dispatch(setPremiumBooks(data))
+        }
+        
       } else {
-        dispatch(setFreeBooks(data));
+        if(filters.search.length>0){
+          
+          dispatch(setFilteredData(true))
+          console.log("Data in free",data)
+          dispatch(setFreeBooks([...data]))
+          console.log("Updated displayedBooks", freeBooks.displayedBooks);
+        }
+        else{
+          dispatch(setFreeBooks(data))
+        }
       }
+
     }
-  }, [data, dispatch, isPremium,filters.category]);
+  }, [data, dispatch, isPremium,filters.category,filters.search]);
 
   // console.log("Page:", page);
   // console.log("Current index:", currentIndex);

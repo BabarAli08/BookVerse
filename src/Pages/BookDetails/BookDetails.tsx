@@ -1,8 +1,9 @@
 import { useParams } from "react-router-dom";
 import BookDetailsButton from "../../Component/BookDetailsButton";
 import { BookOpen, Download, Heart, Share2, Star, Clock, FileText, User, Calendar } from "lucide-react";
-import { useSelector } from "react-redux";
 import useFetchSingleBook from "../../Data/useFetchSingleBook";
+import { DotsLoader } from "../../Component/Loading";
+import { toast } from "sonner";
 
 const BookDetails = () => {
   const { id } = useParams();
@@ -11,30 +12,45 @@ const BookDetails = () => {
 
     const imageUrl=book?.formats?.["image/jpeg"]||book?.formats?.["image/png"]||book?.formats?.["image/jpg"]||""
     
+    const pdf=book?.formats?.["application/pdf"]||""
+    const epub=book?.formats?.["application/epub+zip"||""]
+
+    const handleBookCopy=()=>{
+      navigator.clipboard.writeText(window.location.href)
+      toast.success("Link Copied")
+    }
+
+    const handleAddWishlist=()=>{
+       toast.success("Link Copied")
+    }
+    console.log("pdf link",pdf)
+    console.log("epub link",epub)
     const rating=(Math.random()*2+3).toFixed(1)
-  
+
+  if(loading) return <DotsLoader/>
+  if(error) return <h1>{error}</h1>
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex gap-8">
-          {/* Left Panel - Book Cover & Actions */}
+          
           <div className="w-[400px] space-y-6">
-            {/* Book Cover Card */}
+            
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              {/* Cover Image */}
+              
               <div className="relative p-6 bg-gray-100">
                 <div className="relative aspect-[3/4] max-w-[280px] mx-auto bg-gray-200 rounded-lg flex items-center justify-center">
                   <div className="w-full h-full text-gray-400">
                    <img className="w-[100%] h-[100%] object-cover" src={imageUrl} alt={book?.title} />
                   </div>
-                  {/* Free badge */}
+                  
                   <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-md text-sm font-medium">
                     Free
                   </div>
                 </div>
               </div>
 
-              {/* Rating */}
+             
               <div className="px-6 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <Star size={16} className="text-yellow-400 fill-yellow-400" />
@@ -43,27 +59,27 @@ const BookDetails = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              
               <div className="p-6 space-y-3">
                 <BookDetailsButton logo={BookOpen} isBlack={true} title="Read Free" />
                 
                 <button className="w-full flex items-center justify-center gap-3 h-12 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200">
                   <Download size={18} />
-                  <span className="font-medium">Download</span>
+                  <a href={pdf ===""?epub:pdf} className="font-medium">Download</a>
                 </button>
 
                 <button className="w-full flex items-center justify-center gap-3 h-12 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200">
                   <Heart size={18} />
-                  <span className="font-medium">Add to Wishlist</span>
+                  <span onClick={handleAddWishlist} className="font-medium">Add to Wishlist</span>
                 </button>
 
                 <button className="w-full flex items-center justify-center gap-3 h-12 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200">
                   <Share2 size={18} />
-                  <span className="font-medium">Share Book</span>
+                  <span onClick={handleBookCopy} className="font-medium">Share Book</span>
                 </button>
               </div>
 
-              {/* Reading Progress */}
+             
               <div className="px-6 pb-6">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -121,7 +137,7 @@ const BookDetails = () => {
                     <Calendar size={16} className="text-gray-400" />
                     <div>
                       <span className="text-gray-500 text-sm">Published:</span>
-                      <span className="ml-2 font-medium text-gray-900">{book?.authors[0].death_year}</span>
+                      <span className="ml-2 font-medium text-gray-900">{book?.authors?.[0].death_year}</span>
                     </div>
                   </div>
                   
@@ -129,7 +145,7 @@ const BookDetails = () => {
                     <User size={16} className="text-gray-400" />
                     <div>
                       <span className="text-gray-500 text-sm">Publisher:</span>
-                      <span className="ml-2 font-medium text-gray-900">{book?.authors[0]?.name}</span>
+                      <span className="ml-2 font-medium text-gray-900">{book?.authors?.[0]?.name}</span>
                     </div>
                   </div>
                 </div>
@@ -139,8 +155,8 @@ const BookDetails = () => {
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <span className="text-gray-500 text-sm">Available Formats:</span>
                 <div className="flex gap-2 mt-2">
-                  <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-medium">PDF</span>
-                  <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-medium">EPUB</span>
+                  <a href={pdf} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-medium ">PDF {pdf===""?"unabailible":""}</a>
+                  <a href={epub} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-medium">EPUB {epub===""?"unabailible":""}</a>
                 </div>
               </div>
             </div>
@@ -167,7 +183,7 @@ const BookDetails = () => {
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Book Summary</h3>
                 <p className="text-gray-600 leading-relaxed">
-                 {book?.summaries[0]}
+                 {book?.summaries?.[0]}
                 </p>
               </div>
             </div>

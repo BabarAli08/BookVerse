@@ -1,10 +1,21 @@
+import { useState } from "react";
 import type { book as bookState } from "../../Data/Interfaces";
-
+import UpgradeToSee from "../../Component/UpgradeToSee";
+import { useDispatch } from "react-redux";
+import { setBook,setClicked } from "../../Data/PremiumBookClickedSlice";
 interface PremiumBookProps {
   book: bookState
 }
 
 const PremiumBook = ({ book }: PremiumBookProps) => {
+  
+  const dispatch=useDispatch()
+  
+
+  const handleClick=()=>{
+    dispatch(setClicked())
+    dispatch(setBook([book]))
+  }
   const imageUrl =
     book.formats?.["image/jpeg"] ||
     book.formats?.["image/png"] ||
@@ -17,6 +28,7 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
   const randomPages = Math.floor(Math.random() * (500 - 150) + 150);
 
   return (
+    <>
     <div className="w-full max-w-xs bg-white rounded-xl border border-gray-300 shadow-md overflow-hidden relative flex flex-col">
       {/* Premium Badge */}
       <span className="absolute top-2 left-2 z-10 bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded">
@@ -24,7 +36,7 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
       </span>
 
       
-      {/* <div className="h-48 bg-black opacity-60"> */}
+     
 
       <div className="relative h-48  bg-gray-200">
         <img
@@ -36,7 +48,7 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
             e.currentTarget.src = defaultImage;
           }}
           />
-          {/* </div> */}
+      
         <div className="absolute inset-0 bg-black  opacity-60"></div>
         <div className="absolute inset-0 flex items-center justify-center">
           <svg
@@ -85,10 +97,14 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
           </svg>
-          <span>Upgrade to Read</span>
+          <span onClick={handleClick}>Upgrade to Read</span>
         </button>
       </div>
+      
     </div>
+
+    </>
+
   );
 };
 

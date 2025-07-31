@@ -9,7 +9,7 @@ interface ButtonState {
 const BookDetailsButton = ({ title, logo: Logo, isBlack = false }: ButtonState) => {
   return (
     <button className={`
-      group relative w-[90%] h-[5vh] min-h-[48px] 
+      group relative w-[100%] h-[5vh] min-h-[48px] 
       ${isBlack 
         ? 'bg-gradient-to-r from-gray-900 to-black text-white shadow-lg shadow-gray-900/25 hover:shadow-gray-900/40' 
         : 'bg-gradient-to-r from-white to-gray-50 text-gray-800 shadow-lg shadow-gray-200/50 hover:shadow-gray-300/60'
@@ -24,7 +24,7 @@ const BookDetailsButton = ({ title, logo: Logo, isBlack = false }: ButtonState) 
       active:scale-[0.98] active:translate-y-0
       overflow-hidden
     `}>
-      {/* Subtle gradient overlay on hover */}
+      
       <div className={`
         absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300
         ${isBlack 
@@ -33,7 +33,7 @@ const BookDetailsButton = ({ title, logo: Logo, isBlack = false }: ButtonState) 
         }
       `} />
       
-      {/* Icon with subtle animation */}
+      
       <Logo 
         size={24} 
         className={`

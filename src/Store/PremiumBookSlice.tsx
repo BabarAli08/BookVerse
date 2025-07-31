@@ -7,6 +7,7 @@ interface premiumBookSlice {
   currentIndex: number;
   batchSize: number;
   page: number;
+  filteredData: boolean;
 }
 
 const initialState: premiumBookSlice = {
@@ -14,7 +15,8 @@ const initialState: premiumBookSlice = {
   displayedBooks: [],
   currentIndex: 0,
   batchSize: 4,
-  page:10,
+  page: 10,
+  filteredData: false,
 };
 
 const premiumBookSlice = createSlice({
@@ -27,19 +29,32 @@ const premiumBookSlice = createSlice({
       const newBooks = action.payload.filter(
         (book) => !state.allBooks.some((b) => b.id === book.id)
       );
-      if(state.page==2){
-        state.allBooks=[]
-      }
-      state.allBooks.push(...newBooks);
-      state.displayedBooks = state.allBooks.slice(
-        state.currentIndex,
-        state.currentIndex + state.batchSize
-      );
-      if (isFirstLoad) {
-        state.displayedBooks = state.allBooks.slice(0, state.batchSize);
+      if (state.filteredData) {
+        state.allBooks = action.payload;
+        state.displayedBooks = action.payload.slice(0, state.batchSize);
         state.currentIndex = 0;
-        state.page = 1;
+        state.page = 1; // Reset to first page for filtered result
+        state.filteredData = false;
+      } else {
+        const newBooks = action.payload.filter(
+          (book) => !state.allBooks.some((b) => b.id === book.id)
+        );
+
+        state.allBooks.push(...newBooks);
+
+        
+        if (state.allBooks.length === newBooks.length) {
+          state.currentIndex = 0;
+        }
+
+        state.displayedBooks = state.allBooks.slice(
+          state.currentIndex,
+          state.currentIndex + state.batchSize
+        );
       }
+    },
+    setFilteredData: (state, action: PayloadAction<boolean>) => {
+      state.filteredData = action.payload;
     },
     nextPremiumBatch: (state) => {
       const nextBtachStart = state.currentIndex + state.batchSize;
@@ -67,6 +82,10 @@ const premiumBookSlice = createSlice({
   },
 });
 
-export const { setPremiumBooks, nextPremiumBatch, prevPremiumBatch,setInitialPage } =
-  premiumBookSlice.actions;
+export const {
+  setPremiumBooks,
+  nextPremiumBatch,
+  prevPremiumBatch,
+  setInitialPage,
+} = premiumBookSlice.actions;
 export default premiumBookSlice.reducer;

@@ -7,6 +7,7 @@ interface freeBookState {
   currentIndex: number;
   batchSize: number;
   page: number;
+  filteredData: boolean;
 }
 
 const initialState: freeBookState = {
@@ -15,6 +16,7 @@ const initialState: freeBookState = {
   currentIndex: 0,
   batchSize: 5,
   page: 1,
+  filteredData: false,
 };
 const dataSlice = createSlice({
   name: "freeBooks",
@@ -23,18 +25,32 @@ const dataSlice = createSlice({
     setFreeBooks: (state, action: PayloadAction<book[]>) => {
       const isFirstLoad = state.allBooks.length === 0;
 
-      const newBooks = action.payload.filter(
-        (book) => !state.allBooks.some((b) => b.id === book.id)
-      );
-      state.allBooks = [...newBooks];
+      if (state.filteredData) {
+       
+        state.allBooks = action.payload;
 
-      // Only update displayedBooks if it's the initial load
-      if (isFirstLoad) {
-        state.displayedBooks = state.allBooks.slice(0, state.batchSize);
+        
         state.currentIndex = 0;
         state.page = 1;
+        state.displayedBooks = state.allBooks.slice(0, state.batchSize);
+
+      
+        state.filteredData = false;
+      } else {
+        
+        const newBooks = action.payload.filter(
+          (book) => !state.allBooks.some((b) => b.id === book.id)
+        );
+        state.allBooks = [...state.allBooks, ...newBooks];
+
+        if (isFirstLoad || action.payload.length !== state.allBooks.length) {
+          state.currentIndex = 0;
+          state.page = 1;
+          state.displayedBooks = state.allBooks.slice(0, state.batchSize);
+        }
       }
     },
+
     nextFreeBatch: (state) => {
       const nextIndex = state.currentIndex + state.batchSize;
       if (nextIndex < state.allBooks.length) {
@@ -45,6 +61,9 @@ const dataSlice = createSlice({
         state.currentIndex = nextIndex;
         state.page++;
       }
+    },
+    setFilteredData: (state, action: PayloadAction<boolean>) => {
+      state.filteredData = action.payload;
     },
     prevFreeBatch: (state) => {
       state.currentIndex = Math.max(0, state.currentIndex - state.batchSize);
@@ -58,5 +77,6 @@ const dataSlice = createSlice({
   },
 });
 
-export const { setFreeBooks, nextFreeBatch, prevFreeBatch } = dataSlice.actions;
+export const { setFreeBooks, nextFreeBatch, prevFreeBatch, setFilteredData } =
+  dataSlice.actions;
 export default dataSlice.reducer;
