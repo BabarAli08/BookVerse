@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-
 import { BookOpen, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 
 import PremiumBook from "./PremiumBook";
@@ -11,7 +10,7 @@ import {
   setFreeBooks,
   nextFreeBatch,
   prevFreeBatch,
-  setFilteredData,
+  resetFreeBooks,
   
 } from "../../Store/FreeBookSlice";
 import {
@@ -19,14 +18,13 @@ import {
   nextPremiumBatch,
   prevPremiumBatch,
   setInitialPage,
+  resetPremiumBooks,
 } from "../../Store/PremiumBookSlice";
 import {
   useDispatch,
   useSelector,
-  type TypedUseSelectorHook,
 } from "react-redux";
 import type { RootState } from "../../Store/store";
-import { setFilteredBooks } from "../../Store/FilterSlice";
 
 const BookCarousel = ({
   title,
@@ -68,7 +66,15 @@ const BookCarousel = ({
 
   useEffect(() => {
   if (isPremium) {
-    const defaultPage = filters.category !== "All Tiers" ? 2 : 10;
+    let defaultPage:number;
+
+    if(filters.search.length>0 || filters.category !=="All Tiers"){
+      defaultPage=2
+    }
+    else{
+      defaultPage=10
+    }
+
     dispatch(setInitialPage(defaultPage));
   }
 }, [filters.category, dispatch, isPremium]);
@@ -77,7 +83,7 @@ const BookCarousel = ({
     if (data && data.length > 0) {
       if (isPremium) {
         if(filters.search.length>0 || filters.category!== "All Tiers"){
-          dispatch(setFilteredData(true))
+          dispatch(resetPremiumBooks())
           dispatch(setPremiumBooks([...data]));
           
         }
@@ -89,8 +95,8 @@ const BookCarousel = ({
       } else {
         if(filters.search.length>0){
           
-          dispatch(setFilteredData(true))
-          console.log("Data in free",data)
+          dispatch(resetFreeBooks())
+         
           dispatch(setFreeBooks([...data]))
           console.log("Updated displayedBooks", freeBooks.displayedBooks);
         }

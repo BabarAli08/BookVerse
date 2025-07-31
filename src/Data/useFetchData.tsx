@@ -7,10 +7,9 @@ import type { RootState } from "../Store/store";
 interface fetchState {
   url: string;
   page: number;
-  searchTerm:string
 }
 
-const useFetchData = ({ url, page,searchTerm }: fetchState) => {
+const useFetchData = ({ url, page }: fetchState) => {
   const { filters } = useSelector((state: RootState) => state.filteredBooks);
   const [data, setData] = useState<book[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -18,7 +17,8 @@ const useFetchData = ({ url, page,searchTerm }: fetchState) => {
 
   const category =
     filters.category === "All Tiers" ? "" : filters.category.toLowerCase();
-  
+  const searchTerm = filters.search;
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -41,7 +41,7 @@ const useFetchData = ({ url, page,searchTerm }: fetchState) => {
     const delayDebounce = setTimeout(() => {
       fetchData(); 
     }, 500);
-    return () => clearTimeout(delayDebounce);
+    
   }, [page, category, url, searchTerm]);
 
   

@@ -7,7 +7,6 @@ interface premiumBookSlice {
   currentIndex: number;
   batchSize: number;
   page: number;
-  filteredData: boolean;
 }
 
 const initialState: premiumBookSlice = {
@@ -16,7 +15,7 @@ const initialState: premiumBookSlice = {
   currentIndex: 0,
   batchSize: 4,
   page: 10,
-  filteredData: false,
+
 };
 
 const premiumBookSlice = createSlice({
@@ -24,18 +23,7 @@ const premiumBookSlice = createSlice({
   initialState,
   reducers: {
     setPremiumBooks: (state, action: PayloadAction<book[]>) => {
-      const isFirstLoad = state.allBooks.length === 0;
-
-      const newBooks = action.payload.filter(
-        (book) => !state.allBooks.some((b) => b.id === book.id)
-      );
-      if (state.filteredData) {
-        state.allBooks = action.payload;
-        state.displayedBooks = action.payload.slice(0, state.batchSize);
-        state.currentIndex = 0;
-        state.page = 1; // Reset to first page for filtered result
-        state.filteredData = false;
-      } else {
+     
         const newBooks = action.payload.filter(
           (book) => !state.allBooks.some((b) => b.id === book.id)
         );
@@ -51,10 +39,7 @@ const premiumBookSlice = createSlice({
           state.currentIndex,
           state.currentIndex + state.batchSize
         );
-      }
-    },
-    setFilteredData: (state, action: PayloadAction<boolean>) => {
-      state.filteredData = action.payload;
+      
     },
     nextPremiumBatch: (state) => {
       const nextBtachStart = state.currentIndex + state.batchSize;
@@ -87,5 +72,6 @@ export const {
   nextPremiumBatch,
   prevPremiumBatch,
   setInitialPage,
+  resetPremiumBooks,
 } = premiumBookSlice.actions;
 export default premiumBookSlice.reducer;
