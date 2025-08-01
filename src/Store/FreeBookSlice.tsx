@@ -62,10 +62,16 @@ const dataSlice = createSlice({
     },
     resetFreeBooks:()=>{
       return initialState
+    },
+    fetchMore:(state,action:PayloadAction<book[]>)=>{
+      state.allBooks=[...state.allBooks,...action.payload]
+    },
+    setFreePage:(state,action )=>{
+      state.page=action.payload
     }
-  },
+  }
 });
 
-export const { setFreeBooks, nextFreeBatch, prevFreeBatch, resetFreeBooks } =
+export const { setFreeBooks, nextFreeBatch, prevFreeBatch, resetFreeBooks,setFreePage,fetchMore } =
   dataSlice.actions;
 export default dataSlice.reducer;

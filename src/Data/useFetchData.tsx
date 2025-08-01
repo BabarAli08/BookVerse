@@ -20,32 +20,32 @@ const useFetchData = ({ url, page }: fetchState) => {
   const searchTerm = filters.search;
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await axios.get(
-          `${url}/?page=${page}&category=${category}&search=${searchTerm}`
-        );
-        setData(response.data.results);
-        console.log("data After search", data);
-      } catch (err: any) {
-        console.error("Failed to fetch books", err);
-        setError("Something went wrong while fetching data.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const delayDebounce = setTimeout(() => {
-      fetchData(); 
-    }, 500);
-    
-  }, [page, category, url, searchTerm]);
+      const fetchData = async () => {
+        setLoading(true);
+        setError(null);
 
-  
-  return { data, loading, error, };
+        try {
+          const response = await axios.get(
+            `${url}/?page=${page}&category=${category}&search=${searchTerm}`
+          );
+          setData(response.data.results);
+          console.log("data After search", response.data.results);
+        } catch (err: any) {
+          console.error("Failed to fetch books", err);
+          setError("Something went wrong while fetching data.");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchData();
+    }, 3000); 
+   
+    return () => clearTimeout(delayDebounce);
+  }, [category, url, searchTerm]);
+
+  return { data, loading, error };
 };
 
 export default useFetchData;

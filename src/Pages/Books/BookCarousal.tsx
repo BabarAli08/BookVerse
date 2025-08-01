@@ -4,6 +4,7 @@ import { BookOpen, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import PremiumBook from "./PremiumBook";
 import BookCard from "./FreeBooks";
 import useFetchData from "../../Data/useFetchData";
+import { LoaderCard3 } from "../../Component/Loading CardComponent";
 import { SpinningBookLoader } from "../../Component/Loading";
 import type { book } from "../../Data/Interfaces";
 import {
@@ -11,7 +12,8 @@ import {
   nextFreeBatch,
   prevFreeBatch,
   resetFreeBooks,
-  
+  setFreePage,
+  fetchMore,
 } from "../../Store/FreeBookSlice";
 import {
   setPremiumBooks,
@@ -20,10 +22,7 @@ import {
   setInitialPage,
   resetPremiumBooks,
 } from "../../Store/PremiumBookSlice";
-import {
-  useDispatch,
-  useSelector,
-} from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
 
 const BookCarousel = ({
@@ -37,9 +36,9 @@ const BookCarousel = ({
 }) => {
   const dispatch = useDispatch();
 
-  const {filters}=useSelector((state:RootState)=>state.filteredBooks)
+  const { filters } = useSelector((state: RootState) => state.filteredBooks);
 
-      const freeBooks = useSelector((state: RootState) => state.freeBooks);
+  const freeBooks = useSelector((state: RootState) => state.freeBooks);
   const premiumBooks = useSelector((state: RootState) => state.premiumBooks);
 
   const { displayedBooks, allBooks, currentIndex } = (isPremium
@@ -49,65 +48,59 @@ const BookCarousel = ({
     allBooks: [],
     currentIndex: 0,
   };
+  const premiumState = useSelector((state: RootState) => state.premiumBooks);
   const bookState = useSelector((state: RootState) =>
     isPremium ? state.premiumBooks : state.freeBooks
   );
 
-  const page = bookState?.page ?? 1;
+  const shouldUsePage2 =
+    isPremium &&
+    (filters.search.length > 0 || filters.category !== "All Tiers");
+  const newPage = shouldUsePage2 ? 2 : 10;
 
   const booksPerView = isPremium ? 4 : 5;
+  
+  useEffect(() => {
+    console.log("premium page",newPage)
+    dispatch(setInitialPage(newPage));
+  }, [filters.search, filters.category, isPremium]);
 
 
   const { data, error, loading } = useFetchData({
     url: "https://gutendex.com/books",
-    page: page,
-    
+    page: isPremium?premiumState.page :freeBooks.page,
   });
 
-  useEffect(() => {
-  if (isPremium) {
-    let defaultPage:number;
 
-    if(filters.search.length>0 || filters.category !=="All Tiers"){
-      defaultPage=2
-    }
-    else{
-      defaultPage=10
-    }
-
-    dispatch(setInitialPage(defaultPage));
-  }
-}, [filters.category, dispatch, isPremium]);
   useEffect(() => {
-    
     if (data && data.length > 0) {
       if (isPremium) {
-        if(filters.search.length>0 || filters.category!== "All Tiers"){
-          dispatch(resetPremiumBooks())
+        if (filters.search.length > 0 || filters.category !== "All Tiers") {
+          dispatch(resetPremiumBooks());
           dispatch(setPremiumBooks([...data]));
-          
+        } else {
+          dispatch(setPremiumBooks(data));
         }
-        else{
-
-          dispatch(setPremiumBooks(data))
-        }
-        
       } else {
-        if(filters.search.length>0){
-          
-          dispatch(resetFreeBooks())
-         
-          dispatch(setFreeBooks([...data]))
+        if (filters.search.length > 0) {
+          dispatch(resetFreeBooks());
+
+          dispatch(setFreeBooks([...data]));
           console.log("Updated displayedBooks", freeBooks.displayedBooks);
-        }
-        else{
-          dispatch(setFreeBooks(data))
+        } else {
+          dispatch(setFreeBooks(data));
         }
       }
-
     }
-  }, [data, dispatch, isPremium,filters.category,filters.search]);
-
+  }, [
+    data,
+    dispatch,
+    isPremium,
+    filters.category,
+    filters.search,
+    filters.tier,
+  ]);
+  
   // console.log("Page:", page);
   // console.log("Current index:", currentIndex);
   // console.log("Total books loaded:", allBooks.length);
@@ -115,8 +108,11 @@ const BookCarousel = ({
   //   "Latest data:",
   //   data.map((b) => b.id)
   // );
-
   
+  if(freeBooks.allBooks.length<(freeBooks.currentIndex +freeBooks.batchSize)){
+    dispatch(setFreePage((prev: number)=>prev+1))
+    dispatch(fetchMore(data))    
+  }
   const nextSlide = () => {
     if (isPremium) {
       dispatch(nextPremiumBatch());
@@ -132,8 +128,7 @@ const BookCarousel = ({
       dispatch(prevFreeBatch());
     }
   };
-const premiumState = useSelector((state: RootState) => state.premiumBooks);
-console.log("PREMIUM STATE:", premiumState);
+  console.log("PREMIUM STATE:", premiumState);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-8">
@@ -181,10 +176,12 @@ console.log("PREMIUM STATE:", premiumState);
 
       <div className="flex gap-6 overflow-hidden">
         {loading ? (
-          <SpinningBookLoader />
+          Array(booksPerView)
+            .fill(0)
+            .map((_, i) => <LoaderCard3 key={i} />)
         ) : error ? (
           <h1 className="bg-red-400 text-xl text-white p-4 rounded-md">
-            There was an issue loading the books. Please try again later.
+            No {isPremium ? "Premium" : "Free"} Books Availibe for this tier
           </h1>
         ) : allBooks && allBooks.length > 0 ? (
           displayedBooks.map((book: book) =>

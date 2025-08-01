@@ -42,11 +42,11 @@ const premiumBookSlice = createSlice({
       
     },
     nextPremiumBatch: (state) => {
-      const nextBtachStart = state.currentIndex + state.batchSize;
-      const nextBatchEnd = nextBtachStart + state.batchSize;
+      const nextBatchStart = state.currentIndex + state.batchSize;
+      const nextBatchEnd = nextBatchStart + state.batchSize;
 
-      state.displayedBooks = state.allBooks.slice(nextBtachStart, nextBatchEnd);
-      state.currentIndex = nextBtachStart;
+      state.displayedBooks = state.allBooks.slice(nextBatchStart, nextBatchEnd);
+      state.currentIndex = nextBatchStart;
       state.page++;
     },
     prevPremiumBatch: (state) => {

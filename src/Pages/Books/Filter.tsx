@@ -44,13 +44,13 @@ const FilterComponent = () => {
 
   
   useEffect(()=>{
-    dispatch(setFilters({
-        category:selectedCategory,
-        tier:selectedTier,
-        sort:selectedSort,
-        search:searchQuery
-    }))
-    console.log()
+      dispatch(setFilters({
+          category:selectedCategory,
+          tier:selectedTier,
+          sort:selectedSort,
+          search:searchQuery
+      }))
+
   },[selectedCategory,selectedSort,selectedTier,searchQuery])
   const DropdownSelect = ({ options, selected, onSelect, placeholder }:optionState) => {
     const [isOpen, setIsOpen] = useState(false);
