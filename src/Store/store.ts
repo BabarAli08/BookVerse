@@ -4,13 +4,17 @@ import PremiumBooks from "./PremiumBookSlice";
 import  filteredBooks  from "./FilterSlice";
 import PremiumBookClickedSlice from "../Data/PremiumBookClickedSlice";
 import PricesSlices from "./PricesSlices";
+import UserDetailsSlice from "./UserDetailsSlice";
+import BookReadingSlice from "./BookReadingSlice";
 const store=configureStore({
     reducer:{
         freeBooks:freeBooks,
         premiumBooks:PremiumBooks,
         filteredBooks:filteredBooks,
         PremiumBookCLick:PremiumBookClickedSlice,
-        prices:PricesSlices
+        prices:PricesSlices,
+        userDetails:UserDetailsSlice,
+        bookReading:BookReadingSlice
     }
 })
 

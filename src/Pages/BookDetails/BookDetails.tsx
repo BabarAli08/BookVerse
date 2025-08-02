@@ -1,14 +1,18 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import BookDetailsButton from "../../Component/BookDetailsButton";
 import { BookOpen, Download, Heart, Share2, Star, Clock, FileText, User, Calendar } from "lucide-react";
 import useFetchSingleBook from "../../Data/useFetchSingleBook";
 import { DotsLoader } from "../../Component/Loading";
 import { toast } from "sonner";
+import BookDetailsLoader from "../../Component/BookDetailsLoader";
 
 const BookDetails = () => {
   const { id } = useParams();
+  const navigate= useNavigate()
   
   const {book,loading,error}=useFetchSingleBook({id:Number(id)})
+
+  if(loading) return <BookDetailsLoader/>
 
     const imageUrl=book?.formats?.["image/jpeg"]||book?.formats?.["image/png"]||book?.formats?.["image/jpg"]||""
     
@@ -61,7 +65,7 @@ const BookDetails = () => {
 
               
               <div className="p-6 space-y-3">
-                <BookDetailsButton logo={BookOpen} isBlack={true} title="Read Free" />
+                <BookDetailsButton logo={BookOpen} isBlack={true} title="Read Free" onClick={()=>navigate(`/books/${id}/read`)}/>
                 
                 <button className="w-full flex items-center justify-center gap-3 h-12 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200">
                   <Download size={18} />

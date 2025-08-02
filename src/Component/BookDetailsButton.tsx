@@ -4,11 +4,12 @@ interface ButtonState {
   title: string;
   logo: LucideIcon;
   isBlack?: boolean;
+  onClick:()=>void
 }
 
-const BookDetailsButton = ({ title, logo: Logo, isBlack = false }: ButtonState) => {
+const BookDetailsButton = ({ title, logo: Logo, isBlack = false,onClick }: ButtonState) => {
   return (
-    <button className={`
+    <button onClick={()=>onClick()} className={`
       group relative w-[100%] h-[5vh] min-h-[48px] 
       ${isBlack 
         ? 'bg-gradient-to-r from-gray-900 to-black text-white shadow-lg shadow-gray-900/25 hover:shadow-gray-900/40' 

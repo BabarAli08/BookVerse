@@ -20,30 +20,37 @@ const useFetchData = ({ url, page }: fetchState) => {
   const searchTerm = filters.search;
 
   useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      const fetchData = async () => {
-        setLoading(true);
-        setError(null);
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
 
-        try {
-          const response = await axios.get(
-            `${url}/?page=${page}&category=${category}&search=${searchTerm}`
-          );
-          setData(response.data.results);
-          console.log("data After search", response.data.results);
-        } catch (err: any) {
-          console.error("Failed to fetch books", err);
-          setError("Something went wrong while fetching data.");
-        } finally {
-          setLoading(false);
-        }
-      };
+      try {
+        
+        const response = await axios.get(
+          `${url}/?page=${page}&topic=${category}&search=${searchTerm}`
+        );
+        console.log(`${url}/?page=${page}&topic=${category}&search=${searchTerm}`, response.data.results);
 
-      fetchData();
-    }, 3000); 
+        setData(response.data.results || []);
+        console.log("data After search", response.data.results);
+      } catch (err: any) {
+        console.error("Failed to fetch books", err);
+        setError("Something went wrong while fetching data.");
+        setData([]); 
+      } finally {
+        setLoading(false);
+      }
+    };
+
    
-    return () => clearTimeout(delayDebounce);
-  }, [category, url, searchTerm]);
+    if (searchTerm || category) {
+      const delayDebounce = setTimeout(fetchData, 2000);
+      return () => clearTimeout(delayDebounce);
+    } else {
+     
+      fetchData();
+    }
+  }, [category, url, searchTerm, page]);
 
   return { data, loading, error };
 };
