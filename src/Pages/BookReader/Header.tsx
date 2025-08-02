@@ -2,16 +2,18 @@ import { Menu, Bookmark, Search, MessageSquare, Moon, Sun } from 'lucide-react';
 
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../../Store/store';
-import { toggleDark } from '../../Store/BookReadingSlice';
+import { setSidebar, toggleDark } from '../../Store/BookReadingSlice';
 
 const Header = () => {
   
     const dispatch=useDispatch()
-    const {togglDark: isDarkMode,completePercentage}=useSelector((state:RootState)=>state.bookReading)
+    const {togglDark: isDarkMode}=useSelector((state:RootState)=>state.bookReading)
 
   const toggleTheme = () => {
     dispatch(toggleDark());
   };
+
+ 
 
   return (
     <div className={`${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} transition-colors duration-300`}>
@@ -20,7 +22,7 @@ const Header = () => {
         <div className="flex items-center justify-between max-w-6xl mx-auto">
           
           
-          <button className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600'} transition-colors`}>
+          <button onClick={()=>dispatch(setSidebar())} className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600'} transition-colors`}>
             <Menu className="w-5 h-5" />
           </button>
 
