@@ -2,7 +2,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import useFetchSingleBook from "../../Data/useFetchSingleBook";
 import BookFetchError from "../../Component/BookFetchError";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setReadingBook } from "../../Store/BookReadingSlice";
 import Header from "./Header";
@@ -11,29 +11,95 @@ import ReadingSidebar from "./SideBar";
 import Highlighting from "./Highlighting";
 import Navbar from "../../Component/Navbar/Navbar";
 
+// Helper functions
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
+function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  limit: number
+): (...args: Parameters<T>) => void {
+  let inThrottle: boolean;
+  return (...args: Parameters<T>) => {
+    if (!inThrottle) {
+      func(...args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
+
 const BookReader = () => {
   const [selectedText, setSelectedText] = useState<string>("");
   const [scrollProgress, setScrollProgress] = useState<number>(0);
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
   const [showOptions, setShowOptions] = useState<boolean>(false);
-  const bookContentRef = useRef<HTMLDivElement>(null);
+  const [isProgressHovered, setIsProgressHovered] = useState(false);
+  const [progressTooltip, setProgressTooltip] = useState({ 
+    show: false, 
+    percentage: 0, 
+    x: 0 
+  });
+  const [bookContent, setBookContent] = useState<string>("");
+  const [contentLoading, setContentLoading] = useState(false);
+  const [contentError, setContentError] = useState<string | null>(null);
+  const [isContentReady, setIsContentReady] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
+  const bookContentRef = useRef<HTMLDivElement>(null);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
+
+  const {
+    togglDark,
+    toggleSidebar,
+    completePercentage,
+    bookMarks,
+    lineHeight,
+    fontFamily,
+    fontSize,
+    highlited,
+  } = useSelector((state: RootState) => state.bookReading);
+
+  // Improved scroll handler with throttling and proper validation
+  const handleScroll = useCallback(
+    throttle(() => {
       const el = bookContentRef.current;
-      if (!el) return;
+      if (!el || !isContentReady) return;
 
       const scrollTop = el.scrollTop;
       const scrollHeight = el.scrollHeight;
       const clientHeight = el.clientHeight;
+      const maxScrollTop = scrollHeight - clientHeight;
 
-      const progress = (scrollTop / (scrollHeight - clientHeight)) * 100;
+      // Prevent division by zero and handle edge cases
+      if (maxScrollTop <= 0) {
+        setScrollProgress(0);
+        return;
+      }
+
+      const progress = Math.max(0, Math.min(100, (scrollTop / maxScrollTop) * 100));
       setScrollProgress(progress);
-    };
+    }, 16), // ~60fps throttling
+    [isContentReady]
+  );
 
+  // Set up scroll listener
+  useEffect(() => {
     const container = bookContentRef.current;
-    if (container) {
+    if (container && isContentReady) {
       container.addEventListener("scroll", handleScroll);
+      // Call once to set initial state
+      handleScroll();
     }
 
     return () => {
@@ -41,10 +107,77 @@ const BookReader = () => {
         container.removeEventListener("scroll", handleScroll);
       }
     };
-  }, []);
+  }, [handleScroll, isContentReady]);
 
-  console.log(scrollProgress);
+  // Improved seek function with validation
+  const handleSeek = useCallback((percentage: number) => {
+    const container = bookContentRef.current;
+    if (!container || !isContentReady) return;
 
+    const clampedPercentage = Math.max(0, Math.min(100, percentage));
+    const scrollHeight = container.scrollHeight;
+    const clientHeight = container.clientHeight;
+    const maxScrollTop = scrollHeight - clientHeight;
+
+    // Validate that there's scrollable content
+    if (maxScrollTop <= 0) return;
+
+    const targetScrollTop = (clampedPercentage / 100) * maxScrollTop;
+
+    try {
+      container.scrollTo({
+        top: targetScrollTop,
+        behavior: "smooth",
+      });
+    } catch (error) {
+      // Fallback for older browsers
+      container.scrollTop = targetScrollTop;
+    }
+  }, [isContentReady]);
+
+  // Enhanced keyboard navigation
+  const handleKeyPress = useCallback((e: KeyboardEvent) => {
+    // Only handle if focus is on body or within the book reader
+    if (e.target !== document.body && !(e.target as HTMLElement)?.closest('.book-reader-container')) return;
+    
+    const step = e.shiftKey ? 10 : 5; // Hold shift for bigger jumps
+    
+    switch(e.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        e.preventDefault();
+        handleSeek(Math.min(100, scrollProgress + step));
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        e.preventDefault();
+        handleSeek(Math.max(0, scrollProgress - step));
+        break;
+      case 'Home':
+        e.preventDefault();
+        handleSeek(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        handleSeek(100);
+        break;
+      case ' ': // Spacebar for page navigation
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleSeek(Math.max(0, scrollProgress - 20));
+        } else {
+          handleSeek(Math.min(100, scrollProgress + 20));
+        }
+        break;
+    }
+  }, [scrollProgress, handleSeek]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [handleKeyPress]);
+
+  // Text selection handlers
   const handleTextSelection = () => {
     setTimeout(() => {
       const selection = window.getSelection();
@@ -56,14 +189,10 @@ const BookReader = () => {
           bookContentRef.current.contains(range.commonAncestorContainer)
         ) {
           const rect = range.getBoundingClientRect();
-
-          console.log("Selected text:", selection.toString().trim());
-          console.log("Selection position:", { x: rect.x, y: rect.y });
           setSelectedText(selection.toString().trim());
           setSelectedPosition({ x: rect.x, y: rect.y - 60 });
           setShowOptions(true);
         } else {
-          // Clear selection if it's outside the book content
           clearSelection();
         }
       }
@@ -83,36 +212,14 @@ const BookReader = () => {
     clearSelection();
   };
 
-  console.log("selectedText", selectedText);
-
   useEffect(() => {
     document.addEventListener("mouseup", handleTextSelection);
-
     return () => {
       document.removeEventListener("mouseup", handleTextSelection);
     };
   }, []);
 
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
-
-  const [bookContent, setBookContent] = useState<string>("");
-  const [contentLoading, setContentLoading] = useState(false);
-  const [contentError, setContentError] = useState<string | null>(null);
-
-  const {
-    togglDark,
-    toggleSidebar,
-    completePercentage,
-    bookMarks,
-    lineHeight,
-    fontFamily,
-    fontSize,
-    highlited,
-  } = useSelector((state: RootState) => state.bookReading);
-
+  // Book URL getter
   const getBookUrl = () => {
     if (!book?.formats) return "";
 
@@ -133,15 +240,11 @@ const BookReader = () => {
 
   // CORS proxy to bypass restrictions
   const fetchWithProxy = async (url: string): Promise<string> => {
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(
-      url
-    )}`;
-
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl);
     if (!response.ok) {
       throw new Error(`Failed to fetch: ${response.status}`);
     }
-
     const data = await response.json();
     return data.contents;
   };
@@ -150,12 +253,9 @@ const BookReader = () => {
   const processBookHtml = (html: string): string => {
     return (
       html
-        // Remove script tags for security
         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-        // Remove conflicting styles
         .replace(/<link\b[^>]*>/gi, "")
         .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-        // Remove html/body tags but keep content
         .replace(/<\/?html[^>]*>/gi, "")
         .replace(/<\/?body[^>]*>/gi, "")
     );
@@ -168,11 +268,17 @@ const BookReader = () => {
     const fetchContent = async () => {
       setContentLoading(true);
       setContentError(null);
+      setIsContentReady(false);
 
       try {
         const html = await fetchWithProxy(htmlUrl);
         const processedHtml = processBookHtml(html);
         setBookContent(processedHtml);
+        
+        // Wait a bit longer for content to be rendered
+        setTimeout(() => {
+          setIsContentReady(true);
+        }, 500);
       } catch (error) {
         setContentError("Failed to load book content");
         console.error("Error fetching book:", error);
@@ -183,6 +289,65 @@ const BookReader = () => {
 
     fetchContent();
   }, [htmlUrl]);
+
+  // Debounced progress saving
+  const debouncedSaveProgress = useCallback(
+    debounce((bookId: number, progress: number) => {
+      if (progress > 0) {
+        localStorage.setItem(`reading-progress-${bookId}`, progress.toFixed(2));
+      }
+    }, 1000),
+    []
+  );
+
+  useEffect(() => {
+    if (book?.id && scrollProgress > 0) {
+      debouncedSaveProgress(book.id, scrollProgress);
+    }
+  }, [book?.id, scrollProgress, debouncedSaveProgress]);
+
+  
+  useEffect(() => {
+    if (book?.id && bookContentRef.current && isContentReady) {
+      const savedProgress = localStorage.getItem(`reading-progress-${book.id}`);
+      if (savedProgress) {
+        const progress = parseFloat(savedProgress);
+        
+        const restoreProgress = () => {
+          const container = bookContentRef.current;
+          if (container && container.scrollHeight > container.clientHeight) {
+            handleSeek(progress);
+          } else {
+            
+            setTimeout(restoreProgress, 200);
+          }
+        };
+        
+        setTimeout(restoreProgress, 1000);
+      }
+    }
+  }, [book?.id, isContentReady, handleSeek]);
+
+ 
+  const handleProgressBarClick = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+    handleSeek(percentage);
+  };
+
+
+  const handleProgressBarMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(100, (mouseX / rect.width) * 100));
+    
+    setProgressTooltip({
+      show: true,
+      percentage: Math.round(percentage),
+      x: Math.max(20, Math.min(rect.width - 20, mouseX))
+    });
+  };
 
   // Loading states
   if (loading)
@@ -266,14 +431,13 @@ const BookReader = () => {
         <Header />
 
         <div className="flex h-[calc(100vh-64px)]">
-          {" "}
-          {/* Assuming header is 64px high */}
           {/* Sidebar */}
           {toggleSidebar && (
             <div className="flex-shrink-0">
               <ReadingSidebar />
             </div>
           )}
+          
           {/* Main content area */}
           <div className="flex-1 flex justify-center items-start p-6">
             <div
@@ -304,15 +468,217 @@ const BookReader = () => {
               />
             </div>
           </div>
-          <div className="w-full h-2 fixed top-0 left-0 z-40">
+
+          {/* Enhanced Progress Bar */}
+          <div className="fixed top-0 left-0 w-full z-40">
             <div
-              className="h-full bg-blue-500 transition-all duration-200"
-              style={{ width: `${scrollProgress}%` }}
-            ></div>
+              className={`
+                w-full cursor-pointer transition-all duration-300 relative group
+                ${isProgressHovered ? 'h-3' : 'h-1.5'}
+                backdrop-blur-sm
+              `}
+              onClick={handleProgressBarClick}
+              onMouseEnter={() => setIsProgressHovered(true)}
+              onMouseLeave={() => {
+                setIsProgressHovered(false);
+                setProgressTooltip({ show: false, percentage: 0, x: 0 });
+              }}
+              onMouseMove={handleProgressBarMouseMove}
+              title={`Reading progress: ${Math.round(scrollProgress)}%`}
+            >
+              {/* Background track with subtle shadow */}
+              <div
+                className={`
+                  w-full h-full rounded-full transition-all duration-300
+                  ${togglDark 
+                    ? "bg-gradient-to-r from-gray-800/60 via-gray-700/60 to-gray-800/60 shadow-lg shadow-black/20" 
+                    : "bg-gradient-to-r from-gray-200/80 via-gray-300/80 to-gray-200/80 shadow-md shadow-gray-400/20"
+                  }
+                  ${isProgressHovered ? 'shadow-xl scale-y-110' : ''}
+                `}
+              >
+                {/* Progress fill with animated gradient */}
+                <div
+                  className={`
+                    h-full transition-all duration-500 ease-out relative overflow-hidden rounded-full
+                    ${isProgressHovered ? 'shadow-lg' : ''}
+                  `}
+                  style={{
+                    width: `${Math.max(0, Math.min(100, scrollProgress))}%`,
+                    background: togglDark 
+                      ? `linear-gradient(90deg, 
+                          #6366f1 0%,
+                          #8b5cf6 25%,
+                          #a855f7 50%,
+                          #ec4899 75%,
+                          #f43f5e 100%)`
+                      : `linear-gradient(90deg,
+                          #3b82f6 0%,
+                          #6366f1 25%,
+                          #8b5cf6 50%,
+                          #a855f7 75%,
+                          #d946ef 100%)`,
+                    boxShadow: isProgressHovered 
+                      ? (togglDark 
+                          ? '0 4px 20px rgba(99, 102, 241, 0.4), 0 0 40px rgba(139, 92, 246, 0.2)'
+                          : '0 4px 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(99, 102, 241, 0.15)')
+                      : undefined
+                  }}
+                >
+                  {/* Animated shimmer effect */}
+                  <div
+                    className={`
+                      absolute inset-0 opacity-40
+                      bg-gradient-to-r from-transparent via-white to-transparent
+                      transform -skew-x-12 w-20
+                      ${scrollProgress > 0 ? 'animate-shimmer' : ''}
+                    `}
+                  />
+                  
+                  {/* Glowing edge effect */}
+                  <div
+                    className={`
+                      absolute top-0 right-0 w-4 h-full
+                      bg-gradient-to-l from-white/60 to-transparent
+                      rounded-full blur-sm
+                      ${scrollProgress > 2 ? 'opacity-100' : 'opacity-0'}
+                      transition-opacity duration-300
+                    `}
+                  />
+                </div>
+
+                {/* Progress indicator dot with pulse effect */}
+                {scrollProgress > 1 && (
+                  <div
+                    className={`
+                      absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2
+                      rounded-full transition-all duration-300 z-10
+                      ${isProgressHovered ? 'w-4 h-4 scale-125' : 'w-2.5 h-2.5 scale-100'}
+                      ${togglDark 
+                        ? 'bg-white shadow-lg ring-2 ring-indigo-400/40' 
+                        : 'bg-white shadow-xl ring-2 ring-blue-400/50'
+                      }
+                      ${isProgressHovered ? 'animate-pulse' : ''}
+                    `}
+                    style={{ 
+                      left: `${Math.max(2, Math.min(98, scrollProgress))}%`,
+                      boxShadow: isProgressHovered 
+                        ? (togglDark 
+                            ? '0 0 20px rgba(99, 102, 241, 0.6), 0 0 40px rgba(139, 92, 246, 0.3)'
+                            : '0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(99, 102, 241, 0.2)')
+                        : undefined
+                    }}
+                  >
+                    {/* Inner dot for extra visual appeal */}
+                    <div
+                      className={`
+                        absolute inset-1 rounded-full
+                        ${togglDark ? 'bg-indigo-400' : 'bg-blue-500'}
+                        ${isProgressHovered ? 'animate-ping' : ''}
+                      `}
+                    />
+                  </div>
+                )}
+
+                {/* Progress tooltip with improved design */}
+                {progressTooltip.show && isProgressHovered && (
+                  <div
+                    className={`
+                      absolute top-4 px-4 py-3 rounded-xl text-xs font-medium pointer-events-none
+                      transition-all duration-200 z-20 backdrop-blur-md transform -translate-x-1/2
+                      ${togglDark
+                        ? 'bg-gray-900/95 text-gray-100 border border-gray-700/50 shadow-2xl shadow-black/40'
+                        : 'bg-white/95 text-gray-800 border border-gray-200/50 shadow-2xl shadow-gray-500/20'
+                      }
+                      animate-in fade-in slide-in-from-top-2 duration-200
+                    `}
+                    style={{
+                      left: `${progressTooltip.x}px`,
+                    }}
+                  >
+                    <div className="text-center">
+                      <div className="font-bold text-sm flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${togglDark ? 'bg-indigo-400' : 'bg-blue-500'} animate-pulse`}></div>
+                        {progressTooltip.percentage}%
+                      </div>
+                      <div className="text-xs opacity-75 mt-1">
+                        {progressTooltip.percentage === 0 ? 'Beginning' : 
+                         progressTooltip.percentage === 100 ? 'The End' : 
+                         'Click to jump here'}
+                      </div>
+                    </div>
+                   
+                    {/* Tooltip arrow */}
+                    <div
+                      className={`
+                        absolute top-full left-1/2 transform -translate-x-1/2
+                        w-0 h-0 border-l-4 border-r-4 border-t-4
+                        ${togglDark 
+                          ? 'border-l-transparent border-r-transparent border-t-gray-900/95'
+                          : 'border-l-transparent border-r-transparent border-t-white/95'
+                        }
+                      `}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Progress percentage in corner */}
+              <div
+                className={`
+                  absolute top-2 right-4 px-3 py-1.5 rounded-full text-xs font-medium
+                  transition-all duration-300 backdrop-blur-sm
+                  ${scrollProgress > 1 
+                    ? 'opacity-80 translate-y-0 scale-100' 
+                    : 'opacity-0 -translate-y-4 scale-90'
+                  }
+                  ${togglDark
+                    ? 'bg-gray-800/90 text-gray-300 border border-gray-700/50 shadow-lg'
+                    : 'bg-white/90 text-gray-600 border border-gray-300/50 shadow-md'
+                  }
+                `}
+              >
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${togglDark ? 'bg-indigo-400' : 'bg-blue-500'} animate-pulse`}></div>
+                  <span>{Math.round(scrollProgress)}% complete</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <style>{`
+          @keyframes shimmer {
+            0% { transform: translateX(-100%) skewX(-12deg); }
+            100% { transform: translateX(400%) skewX(-12deg); }
+          }
+
+          .animate-shimmer {
+            animation: shimmer 3s infinite linear;
+          }
+
+          @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          @keyframes slide-in-from-top-2 {
+            from { transform: translateY(-8px) translateX(-50%); }
+            to { transform: translateY(0) translateX(-50%); }
+          }
+
+          .animate-in {
+            animation-fill-mode: both;
+          }
+
+          .fade-in {
+            animation: fade-in 0.2s ease-out;
+          }
+
+          .slide-in-from-top-2 {
+            animation: slide-in-from-top-2 0.2s ease-out;
+          }
+
           .custom-scrollbar {
             scrollbar-width: thin;
             scrollbar-color: ${
@@ -321,13 +687,13 @@ const BookReader = () => {
           }
 
           .custom-scrollbar::-webkit-scrollbar {
-            width: 8px;
+            width: 20px;
           }
 
           .custom-scrollbar::-webkit-scrollbar-track {
             background: ${togglDark ? "#1F2937" : "#F1F5F9"};
             border-radius: 10px;
-            margin: 8px 0;
+            margin: 20px 0;
           }
 
           .custom-scrollbar::-webkit-scrollbar-thumb {
@@ -424,79 +790,25 @@ const BookReader = () => {
             box-shadow: 0 4px 12px ${
               togglDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
             };
-            margin: 2em auto;
-            display: block;
+            margin: 2em 0;
           }
 
           .book-reader-container ul,
           .book-reader-container ol {
-            margin: 1.5em 0;
-            padding-left: 2em;
+            margin-left: 1.5em;
           }
 
-          .book-reader-container li {
+          .book-reader-container ul li,
+          .book-reader-container ol li {
             margin-bottom: 0.5em;
           }
 
           .book-reader-container code {
-            background: ${togglDark ? "#374151" : "#F3F4F6"};
-            padding: 0.2em 0.4em;
-            border-radius: 0.25em;
-            font-family: 'Fira Code', 'Consolas', monospace;
-            font-size: 0.9em;
-          }
-
-          .book-reader-container pre {
-            background: ${togglDark ? "#1F2937" : "#F9FAFB"};
-            padding: 1.5em;
-            border-radius: 0.5em;
-            overflow-x: auto;
-            margin: 2em 0;
-            border: 1px solid ${togglDark ? "#374151" : "#E5E7EB"};
-          }
-
-          .book-reader-container table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 2em 0;
-            border-radius: 0.5em;
-            overflow: hidden;
-            box-shadow: 0 2px 8px ${
-              togglDark ? "rgba(0, 0, 0, 0.2)" : "rgba(0, 0, 0, 0.1)"
-            };
-          }
-
-          .book-reader-container th,
-          .book-reader-container td {
-            padding: 1em;
-            text-align: left;
-            border-bottom: 1px solid ${togglDark ? "#374151" : "#E5E7EB"};
-          }
-
-          .book-reader-container th {
-            background: ${togglDark ? "#374151" : "#F9FAFB"};
-            font-weight: 600;
-          }
-
-          .book-reader-container tr:hover {
+            color: ${togglDark ? "#60A5FA" : "#2563EB"};
             background: ${
-              togglDark ? "rgba(55, 65, 81, 0.5)" : "rgba(249, 250, 251, 0.8)"
+              togglDark ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.05)"
             };
-          }
-
-          /* Selection styling */
-          .book-reader-container ::selection {
-            background: ${
-              togglDark ? "rgba(99, 102, 241, 0.3)" : "rgba(59, 130, 246, 0.2)"
-            };
-            color: inherit;
-          }
-
-          /* Focus indicators for accessibility */
-          .custom-scrollbar:focus {
-            outline: 2px solid ${togglDark ? "#6366F1" : "#3B82F6"};
-            outline-offset: 2px;
-          }
+            padding: 0. 
         `}</style>
       </div>
     </div>

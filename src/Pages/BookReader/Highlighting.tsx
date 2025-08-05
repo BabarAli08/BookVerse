@@ -2,6 +2,7 @@ import { X, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type {  RootState } from "../../Store/store";
+import { PiHighlighterFill } from "react-icons/pi";
 import { deleteHighlight, deleteNote, setHighlighted, setNotes } from "../../Store/BookReadingSlice";
 
 interface HighlightingProps {
@@ -61,7 +62,7 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
     <div className="z-50 p-4 w-[27rem] max-w-[40rem] bg-white rounded-xl shadow-xl border border-gray-300">
       {/* Header */}
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-md font-semibold">🖍️ Highlight Text</h2>
+        <h2 className="text-md font-semibold flex items-center justify-center gap-3"><PiHighlighterFill size={25}/> Highlight Text</h2>
         <button onClick={onClose}>
           <X className="w-4 h-4 text-gray-600 hover:text-black" />
         </button>
@@ -193,7 +194,7 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
             {colors.map((color) => (
               <div
                 key={color}
-                className={`w-6 h-6 rounded-full border-2 cursor-pointer transition-all duration-200 hover:scale-110 ${
+                className={`w-8 h-8 rounded-full border-2 cursor-pointer transition-all duration-200 hover:scale-110 ${
                   selectedColor === color ? "border-black scale-110" : "border-gray-300"
                 }`}
                 style={{ backgroundColor: color }}

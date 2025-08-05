@@ -40,7 +40,7 @@ const ReadingSidebar = () => {
   };
 
   const getHighlightColor = (color: string) => {
-    // Since colors are now hex values, we'll create a simple background with opacity
+    
     return togglDark 
       ? `border border-gray-600/30` 
       : `border border-gray-200`;
