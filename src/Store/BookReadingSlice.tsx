@@ -1,69 +1,108 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { book } from "../Data/Interfaces";
 
-interface BookState{
-    book:book,
-    togglDark:boolean,
-    completePercentage:number,
-    bookMarks:number[],
-    fontSize:string,
-    highlited:string[]
-    lineHeight:string
-    fontFamily:"Georgia, serif" | "sans-serif" | 'cursive' | 'monospace'
-    letterSpacing:string
-    toggleSidebar:boolean
+interface highlightState {
+  id: number;
+  color: string;
+  text: string;
 }
-const initialState:BookState={
-    book:{},
-    togglDark:false,
-    completePercentage:0,
-    bookMarks:[],
-    highlited:[],
-    fontSize:"18",
-    lineHeight:'1.6',
-    fontFamily:"Georgia, serif",
-    letterSpacing:"0",
-    toggleSidebar:false
-    
+interface notesState {
+  id: number;
+  selectedText: string;
+  note: string;
 }
-const BookReadingSlice=createSlice({
-    name:"bookReading",
-    initialState,
-    reducers:{
-    setReadingBook:(state,action:{payload:book})=>{
-        state.book = action.payload
+interface BookState {
+  book: book;
+  togglDark: boolean;
+  completePercentage: number;
+  bookMarks: number[];
+  fontSize: string;
+  highlited: highlightState[];
+  notes: notesState[];
+  lineHeight: string;
+  fontFamily: "Georgia, serif" | "sans-serif" | "cursive" | "monospace";
+  letterSpacing: string;
+  toggleSidebar: boolean;
+  highlights:string[]
+}
+const initialState: BookState = {
+  book: {},
+  togglDark: false,
+  completePercentage: 0,
+  bookMarks: [],
+  highlited: [],
+  notes: [],
+  fontSize: "18",
+  lineHeight: "1.6",
+  fontFamily: "Georgia, serif",
+  letterSpacing: "0",
+  toggleSidebar: false,
+  highlights:[]
+};
+const BookReadingSlice = createSlice({
+  name: "bookReading",
+  initialState,
+  reducers: {
+    setReadingBook: (state, action: { payload: book }) => {
+      state.book = action.payload;
     },
-    toggleDark:(state)=>{
-        state.togglDark=!state.togglDark
+    toggleDark: (state) => {
+      state.togglDark = !state.togglDark;
     },
-    setCompletePercentage:(state,action:{payload:number})=>{
-        state.completePercentage=action.payload
-    
+    setCompletePercentage: (state, action: { payload: number }) => {
+      state.completePercentage = action.payload;
     },
-    setBookMark:(state,action:{payload:number})=>{
-        state.bookMarks=[...state.bookMarks,action.payload]
+    setBookMark: (state, action: { payload: number }) => {
+      state.bookMarks = [...state.bookMarks, action.payload];
     },
-    setFontSize:(state,action:{payload:string})=>{
-        state.fontSize=action.payload
+    setFontSize: (state, action: { payload: string }) => {
+      state.fontSize = action.payload;
     },
-    setHighlighted:(state,action:{payload:string[]})=>{
-        state.highlited=action.payload
+    setHighlighted: (state, action: { payload: highlightState[] }) => {
+      state.highlited = action.payload;
     },
-    setLineHeight:(state,action:{payload:string})=>{
-        state.lineHeight=action.payload
+    setNotes: (state, action: { payload: notesState[] }) => {
+      state.notes = action.payload;
     },
-    setFontFamily:(state,action:{payload:"Georgia, serif" | "sans-serif" | 'cursive' | 'monospace'})=>{
-        state.fontFamily=action.payload
+    setLineHeight: (state, action: { payload: string }) => {
+      state.lineHeight = action.payload;
     },
-    setLetterSpacing:(state,action:{payload:string})=>{
-        state.letterSpacing=action.payload
+    setFontFamily: (
+      state,
+      action: {
+        payload: "Georgia, serif" | "sans-serif" | "cursive" | "monospace";
+      }
+    ) => {
+      state.fontFamily = action.payload;
     },
-    setSidebar:(state)=>{
-        state.toggleSidebar=!state.toggleSidebar
-    }
-    }  
-})
+    setLetterSpacing: (state, action: { payload: string }) => {
+      state.letterSpacing = action.payload;
+    },
+    setSidebar: (state) => {
+      state.toggleSidebar = !state.toggleSidebar;
+    },
+    deleteHighlight: (state, action: { payload: number }) => {
+      state.highlited = state.highlited.filter((h) => h.id !== action.payload);
+    },
+    deleteNote: (state, action: { payload: number }) => {
+      state.notes = state.notes.filter((n) => n.id !== action.payload);
+    },
+  },
+});
 
-
-export const {setReadingBook,toggleDark,setCompletePercentage,setBookMark,setFontSize,setHighlighted,setLineHeight,setFontFamily,setLetterSpacing,setSidebar}=BookReadingSlice.actions
+export const {
+  setReadingBook,
+  toggleDark,
+  setCompletePercentage,
+  setBookMark,
+  setFontSize,
+  setHighlighted,
+  setNotes,
+  deleteNote,
+  deleteHighlight,
+  setLineHeight,
+  setFontFamily,
+  setLetterSpacing,
+  setSidebar,
+} = BookReadingSlice.actions;
 export default BookReadingSlice.reducer;

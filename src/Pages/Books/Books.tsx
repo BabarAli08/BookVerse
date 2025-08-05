@@ -10,7 +10,7 @@ const Books = () => {
 
   return (
     <>
-      {/* Main content */}
+      
       <div className="w-full min-h-screen bg-gray-50 flex flex-col relative z-0">
         <Header />
         <FilterComponent />
@@ -28,7 +28,7 @@ const Books = () => {
         )}
       </div>
 
-      {/* Dark overlay + Upgrade modal */}
+      
       {clicked && (
         <>
           <div className="fixed inset-0 bg-gradient-to-b from-black/80 to-black/60 backdrop-blur-none z-10" />
