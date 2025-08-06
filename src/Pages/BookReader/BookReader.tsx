@@ -303,7 +303,7 @@ const BookReader = () => {
   useEffect(() => {
     if (book?.id && scrollProgress > 0) {
       debouncedSaveProgress(book.id, scrollProgress);
-    }
+    } 
   }, [book?.id, scrollProgress, debouncedSaveProgress]);
 
   
