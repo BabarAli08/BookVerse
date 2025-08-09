@@ -1,11 +1,11 @@
 
-import type { RootState } from '@reduxjs/toolkit/query';
 import { X, Crown } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { setClicked, setClickedFalse } from '../Data/PremiumBookClickedSlice';
+import type { RootState } from '../Store/store';
 
-<s></s>
+
 
 const UpgradeToSee = () => {
     const dispatch=useDispatch()

@@ -1,24 +1,106 @@
-import { BookOpen, Star } from "lucide-react";
+import { BookOpen, Star, Heart } from "lucide-react";
 import type { author, book } from "../../Data/Interfaces";
 import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import supabase from "../../supabase-client";
 
-
-
-const BookCard = ({ book}: {book:book}) => {
-  const navigate=useNavigate()
+const BookCard = ({ book }: { book: book }) => {
+  const [fav, setFav] = useState(false);
+  const navigate = useNavigate();
   const imageUrl =
-    book.formats?.["image/jpeg"] || book.formats?.["image/png"] || book.formats?.["image/jpg"] || "";
-  
-  const authorNames = book.authors?.map((author:author) => author.name).join(", ") || "Unknown Author";
-  const pages = Math.floor(Math.random() * 800 + 100); 
-  const rating = (Math.random() * 2 + 3).toFixed(1); 
+    book.formats?.["image/jpeg"] ||
+    book.formats?.["image/png"] ||
+    book.formats?.["image/jpg"] ||
+    "";
+
+  const authorNames =
+    book.authors?.map((author: author) => author.name).join(", ") ||
+    "Unknown Author";
+  const pages = Math.floor(Math.random() * 800 + 100);
+  const rating = (Math.random() * 2 + 3).toFixed(1);
+  useEffect(() => {
+    async function fetchFav() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data: favBooks, error } = await supabase
+        .from("books")
+        .select("book_id")
+        .eq("user_id", user.id)
+        .eq("book_id", book.id)
+        .single();
+
+      if (!error && favBooks) setFav(true);
+    }
+
+    fetchFav();
+  }, [book.id]);
+  const handleFav = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if(!fav)   setFav(true);
+    else setFav(false)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      alert("Please log in to add to wishlist.");
+      return;
+    }
+    if (!fav) {
+      const mappedBook = {
+        user_id: user.id,
+        book_id: book.id,
+        tier: "free",
+        title: book.title,
+        authors: authorNames,
+        cover: book.formats?.["image/jpeg"],
+        published_at: book?.authors?.[0]?.death_year,
+        description: book?.summaries?.[0],
+      };
+      console.log("mapped Book", mappedBook);
+
+      const { data, error } = await supabase
+        .from("books")
+        .upsert([mappedBook], { onConflict: ["user_id", "book_id"] });
+
+      if (error) console.log(error);
+     
+    } else {
+      const { data, error } = await supabase
+        .from("books")
+        .delete()
+        .eq("book_id", book.id)
+        .eq("user_id", user.id);
+      if (error) console.log(error);
+      else {
+        setFav(false);
+      }
+    }
+  };
 
   return (
-    <div className="w-[15rem] bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex-shrink-0">
+    <div className="w-[15rem] bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex-shrink-0 group">
       <div className="relative h-48 bg-gray-200">
+        {/* Free Badge */}
         <div className="absolute top-3 left-3 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">
           Free
         </div>
+
+        {/* Wishlist Heart (shows on hover) */}
+        <button
+          className="absolute top-3 right-3 bg-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-110"
+          onClick={handleFav}
+        >
+          <Heart
+            size={18}
+            className={`text-red-500 ${fav ? "fill-red-500" : ""}`}
+          />
+        </button>
+
+        {/* Book Image */}
         <div className="w-full h-full flex items-center justify-center">
           {imageUrl ? (
             <img
@@ -36,7 +118,7 @@ const BookCard = ({ book}: {book:book}) => {
         <h3 className="text-base font-semibold text-gray-900 leading-tight line-clamp-2">
           {book.title}
         </h3>
-        <p className="text-sm text-gray-600">by {authorNames || "Unknown"}</p>
+        <p className="text-sm text-gray-600">by {authorNames}</p>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <Star size={14} className="fill-yellow-400 text-yellow-400" />
@@ -45,8 +127,9 @@ const BookCard = ({ book}: {book:book}) => {
           <span className="text-sm text-gray-600">{pages}p</span>
         </div>
         <button
-        onClick={()=>navigate(`/books/${book.id}`)}
-        className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 mt-3">
+          onClick={() => navigate(`/books/${book.id}`)}
+          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 mt-3"
+        >
           <BookOpen size={16} />
           <span>Read Free</span>
         </button>
