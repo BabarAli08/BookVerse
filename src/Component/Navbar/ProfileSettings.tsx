@@ -1,5 +1,8 @@
-import { User, BookOpen, Heart, Settings, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { User, BookOpen, Heart, Settings, LogOut } from "lucide-react";
+import { useNavigate } from "react-router";
+import supabase from "../../supabase-client";
+import { useDispatch } from "react-redux";
+import { login, logout } from "../../Store/AuthSlice";
 
 interface profileState {
   isOpen: boolean;
@@ -14,18 +17,49 @@ interface menuItem {
 }
 
 export default function ProfileDropdown({ isOpen, setIsOpen }: profileState) {
-  const navigate=useNavigate()
-  const menuItems:menuItem[] = [
-    { icon: User, label: 'Profile', color: 'text-gray-700', onClick:()=>navigate('/profile') },
-    { icon: BookOpen, label: 'My Library', color: 'text-gray-700', onClick:()=>navigate('/library') },
-    { icon: Heart, label: 'Wishlist', color: 'text-gray-700', onClick:()=>navigate('/wishlist') },
-    { icon: Settings, label: 'Settings', color: 'text-gray-700',onClick:()=>navigate('/settings') },
-    { icon: LogOut, label: 'Sign Out', color: 'text-red-500', onClick:()=>navigate('/') },
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const handleSignOut = async () => {
+    const { data, error } = await supabase.auth.signOut();
+    if (error) return alert(error.message);
+
+    dispatch(logout());
+  };
+  const menuItems: menuItem[] = [
+    {
+      icon: User,
+      label: "Profile",
+      color: "text-gray-700",
+      onClick: () => navigate("/profile"),
+    },
+    {
+      icon: BookOpen,
+      label: "My Library",
+      color: "text-gray-700",
+      onClick: () => navigate("/library"),
+    },
+    {
+      icon: Heart,
+      label: "Wishlist",
+      color: "text-gray-700",
+      onClick: () => navigate("/wishlist"),
+    },
+    {
+      icon: Settings,
+      label: "Settings",
+      color: "text-gray-700",
+      onClick: () => navigate("/settings"),
+    },
+    {
+      icon: LogOut,
+      label: "Sign Out",
+      color: "text-red-500",
+      onClick: () => handleSignOut(),
+    },
   ];
 
   return (
     <>
-      
       {isOpen && (
         <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
           <div className="py-1">
@@ -34,7 +68,7 @@ export default function ProfileDropdown({ isOpen, setIsOpen }: profileState) {
               return (
                 <div
                   key={index}
-                  onClick={()=>item.onClick()}
+                  onClick={() => item.onClick()}
                   className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <Icon size={16} className={`mr-3 ${item.color}`} />
@@ -48,12 +82,8 @@ export default function ProfileDropdown({ isOpen, setIsOpen }: profileState) {
         </div>
       )}
 
-
       {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
-        />
+        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
       )}
     </>
   );

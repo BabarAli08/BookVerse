@@ -6,6 +6,7 @@ import PremiumBookClickedSlice from "../Data/PremiumBookClickedSlice";
 import PricesSlices from "./PricesSlices";
 import UserDetailsSlice from "./UserDetailsSlice";
 import BookReadingSlice from "./BookReadingSlice";
+import AuthSlice from "./AuthSlice";
 const store=configureStore({
     reducer:{
         freeBooks:freeBooks,
@@ -14,9 +15,11 @@ const store=configureStore({
         PremiumBookCLick:PremiumBookClickedSlice,
         prices:PricesSlices,
         userDetails:UserDetailsSlice,
-        bookReading:BookReadingSlice
+        bookReading:BookReadingSlice,
+        auth:AuthSlice
     }
 })
 
 export default store
 export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

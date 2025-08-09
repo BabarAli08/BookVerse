@@ -2,7 +2,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Theme } from "@radix-ui/themes";
 import './index.css'
-import App from './App.tsx'
 import AppRouter from './Router.tsx'
 import { Provider } from 'react-redux'
 import store from './Store/store.ts'
