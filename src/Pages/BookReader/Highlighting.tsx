@@ -1,9 +1,16 @@
 import { X, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import type {  RootState } from "../../Store/store";
+import type { RootState } from "../../Store/store";
 import { PiHighlighterFill } from "react-icons/pi";
-import { deleteHighlight, deleteNote, setHighlighted, setNotes } from "../../Store/BookReadingSlice";
+import {
+  deleteHighlight,
+  deleteNote,
+  setHighlighted,
+  setNotes,
+} from "../../Store/BookReadingSlice";
+import supabase from "../../supabase-client";
+import type { User } from "@supabase/supabase-js";
 
 interface HighlightingProps {
   text: string;
@@ -13,31 +20,85 @@ interface HighlightingProps {
 const colors = ["#fbbf24", "#f472b6", "#34d399", "#60a5fa", "#a78bfa"];
 
 const Highlighting = ({ text, onClose }: HighlightingProps) => {
-  const { highlited, notes } = useSelector((state: RootState) => state.bookReading);
+  const { highlited, notes } = useSelector(
+    (state: RootState) => state.bookReading
+  );
   const dispatch = useDispatch();
-
+  const { book } = useSelector((state: RootState) => state.bookReading);
   const [note, setNote] = useState("");
   const [showNotes, setShowNotes] = useState(false);
   const [selectedColor, setSelectedColor] = useState(colors[0]);
   const [showHighlights, setShowHighlights] = useState(false);
   const [showNotesList, setShowNotesList] = useState(false);
 
-  const onHighlight = () => {
-    const newHighlight = {
-      id: Date.now(),
-      color: selectedColor,
-      text: text,
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+      if (!error) setCurrentUser(user);
     };
-    dispatch(setHighlighted([...highlited, newHighlight]));
+    fetchUser();
+  }, []);
+
+  const onHighlight = async () => {
+    if (!currentUser) {
+      alert("Please log in before adding a highlight.");
+      return;
+    }
+
+    const supabaseHighlight = {
+      type:"highlight",
+      highlight_color: selectedColor,
+      highlight_text: text,
+      user_id: currentUser.id,
+      book_id: book.id,
+      text:text
+    };
+
+    const { error } = await supabase
+      .from("annotations")
+      .insert([supabaseHighlight]);
+
+    if (error) {
+      alert("Error adding the highlight: " + error.message);
+      return;
+    }
+
+    dispatch(
+      setHighlighted([
+        ...highlited,
+        {
+          id: Date.now(),
+          color: selectedColor,
+          text: text,
+        },
+      ])
+    );
     onClose();
   };
 
-  const onNoteSubmit = () => {
+  const onNoteSubmit = async() => {
     const newNote = {
       id: Date.now(),
       selectedText: text,
       note: note,
     };
+
+    const supabaseNote = {
+      type:"note",
+      note_text: note,
+      user_id: currentUser?.id,
+      book_id: book.id,
+      text:text
+    };
+    const {data,error}=await supabase.from("annotations").insert([supabaseNote])
+
+    if(error) alert("error adding new note to database "+ error.message)
+      
     dispatch(setNotes([...notes, newNote]));
     setNote("");
     setShowNotes(false);
@@ -47,7 +108,7 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
   const onNote = () => setShowNotes(true);
 
   const deleteHighlights = (id: number) => {
-    dispatch(deleteHighlight(id))
+    dispatch(deleteHighlight(id));
   };
 
   const deleteNotes = (id: number) => {
@@ -55,14 +116,18 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
   };
 
   const truncateText = (text: string, maxLength: number = 50) => {
-    return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+    return text.length > maxLength
+      ? text.substring(0, maxLength) + "..."
+      : text;
   };
 
   return (
     <div className="z-50 p-4 w-[27rem] max-w-[40rem] bg-white rounded-xl shadow-xl border border-gray-300">
       {/* Header */}
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-md font-semibold flex items-center justify-center gap-3"><PiHighlighterFill size={25}/> Highlight Text</h2>
+        <h2 className="text-md font-semibold flex items-center justify-center gap-3">
+          <PiHighlighterFill size={25} /> Highlight Text
+        </h2>
         <button onClick={onClose}>
           <X className="w-4 h-4 text-gray-600 hover:text-black" />
         </button>
@@ -123,7 +188,9 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
       {showHighlights && (
         <div className="max-h-64 overflow-y-auto space-y-2">
           {highlited.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No highlights yet</p>
+            <p className="text-sm text-gray-500 text-center py-4">
+              No highlights yet
+            </p>
           ) : (
             highlited.map((highlight) => (
               <div
@@ -156,7 +223,9 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
       {showNotesList && (
         <div className="max-h-64 overflow-y-auto space-y-2">
           {notes.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No notes yet</p>
+            <p className="text-sm text-gray-500 text-center py-4">
+              No notes yet
+            </p>
           ) : (
             notes.map((noteItem) => (
               <div
@@ -178,7 +247,9 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
                 <p className="text-sm text-gray-600 italic mb-2">
                   "{truncateText(noteItem.selectedText)}"
                 </p>
-                <div className="text-xs font-medium text-gray-700 mb-1">Note:</div>
+                <div className="text-xs font-medium text-gray-700 mb-1">
+                  Note:
+                </div>
                 <p className="text-sm text-gray-800">{noteItem.note}</p>
               </div>
             ))
@@ -189,13 +260,17 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
       {/* Color Picker */}
       {!showNotes && !showHighlights && !showNotesList && (
         <>
-          <p className="text-sm font-medium text-gray-700 mb-2">Choose highlight color:</p>
+          <p className="text-sm font-medium text-gray-700 mb-2">
+            Choose highlight color:
+          </p>
           <div className="flex space-x-2 mb-4">
             {colors.map((color) => (
               <div
                 key={color}
                 className={`w-8 h-8 rounded-full border-2 cursor-pointer transition-all duration-200 hover:scale-110 ${
-                  selectedColor === color ? "border-black scale-110" : "border-gray-300"
+                  selectedColor === color
+                    ? "border-black scale-110"
+                    : "border-gray-300"
                 }`}
                 style={{ backgroundColor: color }}
                 onClick={() => setSelectedColor(color)}

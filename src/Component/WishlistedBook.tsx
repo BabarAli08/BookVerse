@@ -21,7 +21,7 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Format added_at date nicely
+  
   const addedDate = book.created_at
     ? new Date(book.created_at).toLocaleDateString("en-US", {
         year: "numeric",
@@ -31,7 +31,7 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
     : "";
 
   const handleDelete = async () => {
-    if (isDeleting) return; // Prevent multiple clicks
+    if (isDeleting) return; 
 
     setIsDeleting(true);
     
@@ -52,7 +52,7 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
         .from("books")
         .delete()
         .eq("book_id", book.book_id)
-        .eq("user_id", user.id); // Fixed: use user.id instead of user
+        .eq("user_id", user.id); 
 
       if (error) {
         alert("Error occurred while deleting: " + error.message);
@@ -61,7 +61,7 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
 
       console.log("Book deleted successfully:", data);
 
-      // Call the callback to refresh the wishlist
+      
       if (onDelete) {
         onDelete();
       }
@@ -88,7 +88,7 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
           : "border border-gray-200 hover:border-gray-300 shadow-gray-900/10 hover:shadow-gray-900/20"
       }`}
     >
-      {/* Premium background accent */}
+     
       {isPremium && (
         <>
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-yellow-500/5 via-amber-500/3 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -96,9 +96,8 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
         </>
       )}
 
-      {/* Header */}
       <div className="relative p-6 pb-3">
-        {/* Premium tier badge */}
+       
         <div onClick={()=>navigate('/premium')}
           className={`inline-flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl shadow-lg transition-all duration-300 ${
             isPremium
@@ -110,7 +109,7 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
           {book.tier || "Free"}
         </div>
 
-        {/* Enhanced delete button */}
+       
         <button
           onClick={handleDelete}
           disabled={isDeleting}
@@ -129,7 +128,7 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
         </button>
       </div>
 
-      {/* Premium book cover */}
+      
       <div className="px-6 pb-4">
         <div 
           className={`relative w-full h-52 rounded-xl overflow-hidden shadow-xl transition-all duration-500 group-hover:shadow-2xl ${
@@ -155,14 +154,14 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
             </div>
           )}
           
-          {/* Premium overlay effect */}
+          
           {isPremium && (
             <div className="absolute inset-0 bg-gradient-to-t from-yellow-900/20 via-transparent to-amber-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           )}
         </div>
       </div>
 
-      {/* Enhanced content area */}
+     
       <div className="px-6 pb-6">
         <h3 className={`text-xl font-bold mb-2 line-clamp-2 leading-tight transition-all duration-300 ${
           isPremium 
@@ -192,7 +191,7 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
           </p>
         )}
 
-        {/* Premium CTA button */}
+       
         <button
           onClick={() => isPremium ? setShowPremium?.(true) : navigate(`/books/${book.book_id}/read`)}
           className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-[1.02] hover:-translate-y-1 relative overflow-hidden ${
@@ -201,7 +200,7 @@ const WishlistBook = ({ book, onDelete, setShowPremium }: WishlistBookProps) => 
               : "bg-gradient-to-r from-gray-900 to-black text-white hover:from-gray-800 hover:to-gray-900 shadow-gray-900/40"
           }`}
         >
-          {/* Button shine effect for premium */}
+          
           {isPremium && (
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-out" />
           )}
