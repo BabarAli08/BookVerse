@@ -85,12 +85,19 @@ const BookDetails = () => {
         return;
       }
 
-      // If book is completed, just navigate without adding to currently_reading
+      // If book is completed, remove from currently_reading and navigate
       const isCompleted = completedBooks?.some(
         (book) => Number(book.book_id) === Number(id)
       );
 
       if (isCompleted) {
+        // Remove from currently_reading if it exists there
+        await supabase
+          .from("currently_reading")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("book_id", id);
+
         navigate(`/books/${id}/read`);
         return;
       }
@@ -136,7 +143,7 @@ const BookDetails = () => {
 
       navigate(`/books/${id}/read`);
     } catch (err) {
-      alert("Error adding the book to currently reading: " + err.message);
+      alert("Error adding the book to currently reading: " + err?.message);
     }
   };
 
