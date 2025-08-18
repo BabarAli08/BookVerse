@@ -7,6 +7,8 @@ import {
   Settings,
   Moon,
   Sun,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
@@ -18,6 +20,8 @@ import {
   toggleDark,
 } from "../../Store/BookReadingSlice";
 import { useEffect, useState } from "react";
+import supabase from "../../supabase-client";
+import { toast } from "sonner";
 
 interface sectionState {
   settings: boolean;
@@ -50,23 +54,68 @@ const ReadingSidebar = () => {
     parseFloat(localStorage.getItem(`reading-progress-${book.id}`) || "0")
   );
 
+  const [bookCompleted, setBookCompleted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
   useEffect(() => {
-    const interval=setInterval(()=>{
-      const storedProgress = localStorage.getItem(`reading-progress-${book.id}`);
+    const interval = setInterval(() => {
+      const storedProgress = localStorage.getItem(
+        `reading-progress-${book.id}`
+      );
       if (storedProgress) {
         setReadingProgress(JSON.parse(storedProgress));
       }
-
-    },1000)
-    return () => clearInterval(interval)
-
-    
+    }, 1000);
+    return () => clearInterval(interval);
   }, [book.id]);
-  const [bookmarks] = useState([
-    { id: 1, title: "Introduction to Mindfulness", completed: false },
-    { id: 2, title: "The Science Behind Meditation", completed: true },
-    { id: 3, title: "Breathing Techniques", completed: false },
-  ]);
+ 
+  // Check if book is completed on component mount
+  useEffect(() => {
+    const checkBookCompletionStatus = async () => {
+      try {
+        setIsCheckingStatus(true);
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error("Failed to get user:", userError);
+          return;
+        }
+
+        if (!user) {
+          console.log("No user found");
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("completed_books")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("book_id", book.id)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+          console.error("Failed to get book completion status:", error);
+          toast.error("Failed to check book status");
+          return;
+        }
+        
+        // If data exists, book is completed
+        setBookCompleted(!!data);
+        
+      } catch (error) {
+        console.error("Error checking book completion status:", error);
+        toast.error("Failed to check book status");
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    };
+
+    checkBookCompletionStatus();
+  }, [book.id]);
 
   const fontFamilies = ["Georgia, serif", "sans-serif", "cursive", "monospace"];
 
@@ -81,8 +130,77 @@ const ReadingSidebar = () => {
     return togglDark ? `border border-gray-600/30` : `border border-gray-200`;
   };
 
-  const toggleComplete = (type: string, id: number) => {
-    console.log(`Toggling ${type} completion for id: ${id}`);
+  const bookAuthors = book.authors?.map((a) => a.name).join(", ");
+
+  const toggleBookCompleted = async () => {
+    if (isLoading) return; // Prevent multiple clicks
+    
+    try {
+      setIsLoading(true);
+      
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        toast.error("Please login to mark book as completed");
+        return;
+      }
+
+      if (!user) {
+        toast.error("Please login to mark book as completed");
+        return;
+      }
+
+      const completedBook = {
+        user_id: user.id,
+        book_id: book.id,
+        cover: book?.formats?.["image/jpeg"],
+        description: book?.summaries?.[0],
+        title: book?.title,
+        authors: bookAuthors,
+      };
+
+      if (!bookCompleted) {
+        // Mark as completed (INSERT/UPSERT)
+        const { data, error } = await supabase
+          .from("completed_books")
+          .upsert([completedBook], {
+            onConflict: "user_id,book_id",
+          });
+
+        if (error) {
+          console.error("Failed to mark book as completed:", error);
+          toast.error("Failed to mark book as completed");
+          return;
+        }
+
+        setBookCompleted(true);
+        toast.success("Book marked as completed");
+      } else {
+        // Mark as uncompleted (DELETE)
+        const { error } = await supabase
+          .from("completed_books")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("book_id", book.id);
+
+        if (error) {
+          console.error("Failed to mark book as uncompleted:", error);
+          toast.error("Failed to mark book as uncompleted");
+          return;
+        }
+
+        setBookCompleted(false);
+        toast.success("Book marked as uncompleted");
+      }
+    } catch (error) {
+      console.error("Error toggling book completion:", error);
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -485,81 +603,40 @@ const ReadingSidebar = () => {
           )}
         </div>
 
-        {/* Bookmarks */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => toggleSection("bookmarks")}
-            className={`flex items-center justify-between w-full p-3 rounded-lg ${
-              togglDark ? "hover:bg-gray-800" : "hover:bg-gray-50"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Bookmark
-                className={`w-4 h-4 ${
-                  togglDark ? "text-gray-400" : "text-gray-600"
-                }`}
-              />
-              <h2
-                className={`font-medium ${
-                  togglDark ? "text-gray-100" : "text-gray-900"
-                }`}
-              >
-                Bookmarks
-              </h2>
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${
-                expandedSections.bookmarks ? "rotate-180" : ""
-              } ${togglDark ? "text-gray-400" : "text-gray-600"}`}
-            />
-          </button>
-
-          {expandedSections.bookmarks && (
-            <div className="mt-3 space-y-1 px-3">
-              {bookmarks.map((bookmark) => (
-                <div
-                  key={bookmark.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg ${
-                    togglDark ? "hover:bg-gray-800" : "hover:bg-gray-50"
-                  }`}
-                >
-                  <div className="w-2 h-2 bg-yellow-400 rounded-full flex-shrink-0"></div>
-                  <span
-                    className={`text-sm flex-1 ${
-                      bookmark.completed
-                        ? togglDark
-                          ? "line-through text-gray-500"
-                          : "line-through text-gray-400"
-                        : togglDark
-                        ? "text-gray-200"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    {bookmark.title}
-                  </span>
-                  <button
-                    onClick={() => toggleComplete("bookmark", bookmark.id)}
-                    className={`p-1 rounded ${
-                      bookmark.completed
-                        ? "bg-green-500 text-white"
-                        : togglDark
-                        ? "bg-gray-700 text-gray-400 hover:bg-gray-600"
-                        : "bg-gray-100 text-gray-400 hover:bg-gray-200"
-                    }`}
-                  >
-                    <Check className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Complete Chapter Button */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2">
-            <Check className="w-4 h-4" />
-            Mark Chapter Complete
+          <button
+            onClick={toggleBookCompleted}
+            disabled={isLoading || isCheckingStatus}
+            className={`w-full font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-[1.02] ${
+              isLoading || isCheckingStatus
+                ? "opacity-50 cursor-not-allowed"
+                : bookCompleted
+                ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg shadow-green-500/25"
+                : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg shadow-blue-500/25"
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Loading...</span>
+              </>
+            ) : isCheckingStatus ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Checking status...</span>
+              </>
+            ) : bookCompleted ? (
+              <>
+                <CheckCircle2 className="w-5 h-5 animate-pulse" />
+                <span>Mark as Unread</span>
+              </>
+            ) : (
+              <>
+                <BookOpen className="w-5 h-5" />
+                <span>Mark as Completed</span>
+              </>
+            )}
           </button>
         </div>
       </div>

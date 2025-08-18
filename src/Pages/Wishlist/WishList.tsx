@@ -89,7 +89,7 @@ const WishList = () => {
             <p className="text-gray-600 mb-8">
               Start adding books you want to read later.
             </p>
-            <button className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+            <button onClick={()=>navigate('/books')} className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
               <Plus size={16} />
               Browse Books
             </button>
@@ -201,7 +201,7 @@ const WishList = () => {
 
         {/* Add More Button */}
         <div className="text-center">
-          <button className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+          <button onClick={()=>navigate('/books')} className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors">
             <Plus size={16} />
             Add More Books
           </button>
