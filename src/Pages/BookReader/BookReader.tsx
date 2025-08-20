@@ -4,7 +4,12 @@ import useFetchSingleBook from "../../Data/useFetchSingleBook";
 import BookFetchError from "../../Component/BookFetchError";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setHighlighted, setNotes, setReadingBook } from "../../Store/BookReadingSlice";
+import {
+  setAnnotationsLoading,
+  setHighlighted,
+  setNotes,
+  setReadingBook,
+} from "../../Store/BookReadingSlice";
 import Header from "./Header";
 import type { RootState } from "../../Store/store";
 import ReadingSidebar from "./SideBar";
@@ -12,7 +17,7 @@ import Highlighting from "./Highlighting";
 import Navbar from "../../Component/Navbar/Navbar";
 import supabase from "../../supabase-client";
 
-function debounce<T extends (...args: any[]) => any>(
+function debounce<T extends (...args: any[]) => void>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -23,7 +28,7 @@ function debounce<T extends (...args: any[]) => any>(
   };
 }
 
-function throttle<T extends (...args: any[]) => any>(
+function throttle<T extends (...args: any[]) => void>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -70,51 +75,8 @@ const BookReader = () => {
     highlited,
   } = useSelector((state: RootState) => state.bookReading);
 
-  const getAnnotations = async () => {
-    const {
-      data: { user },
-      error: UserError,
-    } = await supabase.auth.getUser();
+ 
 
-    if (!user?.id || !book?.id || bookContent.length===0) {
-      console.warn("User or book not loaded yet");
-      return;
-    }
-    if (UserError) alert("please sign in to get your saved highlights");
-    const { data, error } = await supabase
-      .from("annotations")
-      .select("*")
-      .eq("user_id", user?.id)
-      .eq("book_id", book?.id);
-    if (error) {
-      alert("error fetching the book highlights and notes" + error?.message);
-    }
-    console.log("fetched Highlights", data);
-    if (data) {
-      const highlights = data
-        .filter((item) => item.type === "highlight")
-        .map((item) => ({
-          id: item.id,
-          color: item.highlight_color,
-          text: item.highlight_text,
-        }));
-
-      const notes = data
-        .filter((item) => item.type === "note")
-        .map((item) => ({
-          id: item.id,
-          selectedText: item.text,
-          note: item.note_text,
-        }));
-
-      dispatch(setHighlighted(highlights));
-      dispatch(setNotes(notes));
-    }
-  };
-
-  useEffect(() => {
-    getAnnotations();
-  }, [book]);
 
   const handleScroll = useCallback(
     throttle(() => {
@@ -346,7 +308,7 @@ const BookReader = () => {
 
   useEffect(() => {
     if (book?.id && scrollProgress > 0) {
-      debouncedSaveProgress(book.id, Number(scrollProgress));
+      debouncedSaveProgress(book?.id, Number(scrollProgress));
     }
   }, [book?.id, scrollProgress, debouncedSaveProgress]);
 
@@ -854,7 +816,10 @@ const BookReader = () => {
             background: ${
               togglDark ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.05)"
             };
-            padding: 0. 
+            padding: 0.2em 0.4em;
+            border-radius: 0.25em;
+            font-size: 0.9em;
+          }
         `}</style>
       </div>
     </div>

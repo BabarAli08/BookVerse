@@ -5,7 +5,6 @@ import Books from "./Pages/Books/Books";
 import Premium from "./Pages/Premium/Premium";
 import About from "./Pages/About/About";
 import NotFound from "./Component/NotFound";
-import Signup from "./Pages/Signup/Signup";
 import BookDetails from "./Pages/BookDetails/BookDetails";
 import { Toaster } from "sonner";
 import Profile from "./Pages/Profile/Profile";
@@ -17,6 +16,7 @@ import SignIn from "./Pages/SignIn";
 import supabase from "./supabase-client";
 import { useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import SignUp from "./Pages/SignIn";
 
 const AppRouter = () => {
   const [loading, setLoading] = useState(true);
@@ -87,12 +87,12 @@ const AppRouter = () => {
             <Route path="/books/:id" element={<BookDetails />} />
             <Route path="/premium" element={<Premium />} />
             <Route path="/about" element={<About />} />
-            <Route path="/signup" element={<Signup />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/library" element={<MyLibrary />} />
             <Route path="/wishlist" element={<WishList />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
+          <Route path="/signup" element={<SignUp />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/books/:id/read" element={<BookReader />} />
         </Routes>

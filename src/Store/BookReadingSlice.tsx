@@ -24,6 +24,7 @@ interface BookState {
   letterSpacing: string;
   toggleSidebar: boolean;
   highlights:string[]
+  annotationsLoading:boolean
 }
 const initialState: BookState = {
   book: {},
@@ -37,7 +38,8 @@ const initialState: BookState = {
   fontFamily: "Georgia, serif",
   letterSpacing: "0",
   toggleSidebar: false,
-  highlights:[]
+  highlights:[],
+  annotationsLoading:true
 };
 const BookReadingSlice = createSlice({
   name: "bookReading",
@@ -67,6 +69,10 @@ const BookReadingSlice = createSlice({
     setLineHeight: (state, action: { payload: string }) => {
       state.lineHeight = action.payload;
     },
+    setAnnotationsLoading:(state,action:{payload:boolean})=>{
+      state.annotationsLoading=action.payload
+    }
+    ,
     setFontFamily: (
       state,
       action: {
@@ -104,5 +110,6 @@ export const {
   setFontFamily,
   setLetterSpacing,
   setSidebar,
+  setAnnotationsLoading
 } = BookReadingSlice.actions;
 export default BookReadingSlice.reducer;

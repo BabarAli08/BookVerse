@@ -13,15 +13,25 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
 import {
+  setAnnotationsLoading,
   setFontFamily,
   setFontSize,
+  setHighlighted,
   setLetterSpacing,
   setLineHeight,
+  setNotes,
   toggleDark,
 } from "../../Store/BookReadingSlice";
 import { useEffect, useState } from "react";
 import supabase from "../../supabase-client";
 import { toast } from "sonner";
+
+// Import loading components
+import {
+  HighlightLoadingCard,
+  NoteLoadingCard,
+  PulseLoader,
+} from "./BookReaderLoading";
 
 interface sectionState {
   settings: boolean;
@@ -47,6 +57,7 @@ const ReadingSidebar = () => {
     fontSize,
     lineHeight,
     togglDark,
+    annotationsLoading,
     letterSpacing,
   } = useSelector((state: RootState) => state.bookReading);
 
@@ -69,8 +80,7 @@ const ReadingSidebar = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [book.id]);
- 
-  
+
   useEffect(() => {
     const checkBookCompletionStatus = async () => {
       try {
@@ -79,7 +89,7 @@ const ReadingSidebar = () => {
           data: { user },
           error: userError,
         } = await supabase.auth.getUser();
-        
+
         if (userError) {
           console.error("Failed to get user:", userError);
           return;
@@ -96,16 +106,15 @@ const ReadingSidebar = () => {
           .eq("user_id", user.id)
           .eq("book_id", book.id)
           .single();
-        
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+
+        if (error && error.code !== "PGRST116") {
+          // PGRST116 is "not found" error
           console.error("Failed to get book completion status:", error);
           toast.error("Failed to check book status");
           return;
         }
-        
-       
+
         setBookCompleted(!!data);
-        
       } catch (error) {
         console.error("Error checking book completion status:", error);
         toast.error("Failed to check book status");
@@ -119,12 +128,96 @@ const ReadingSidebar = () => {
 
   const fontFamilies = ["Georgia, serif", "sans-serif", "cursive", "monospace"];
 
+  console.log("annotationsLoading: ", annotationsLoading);
   const toggleSection = (section: keyof sectionState) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
   };
+
+  useEffect(() => {
+    dispatch(setAnnotationsLoading(true));
+  }, [dispatch]);
+
+  const getAnnotations = async () => {
+    console.log("Starting getAnnotations...");
+
+    const {
+      data: { user },
+      error: UserError,
+    } = await supabase.auth.getUser();
+
+    if (!user?.id) {
+      console.warn("No user found - user needs to sign in");
+      dispatch(setAnnotationsLoading(false));
+      dispatch(setHighlighted([]));
+      dispatch(setNotes([]));
+      return;
+    }
+
+    if (!book?.id) {
+      console.warn("No book found yet, will retry when book loads");
+      return; // Keep loading state, don't set to false
+    }
+
+    if (UserError) {
+      alert("please sign in to get your saved highlights");
+      dispatch(setAnnotationsLoading(false));
+      dispatch(setHighlighted([]));
+      dispatch(setNotes([]));
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("annotations")
+        .select("*")
+        .eq("user_id", user?.id)
+        .eq("book_id", book?.id);
+
+      if (error) {
+        alert("error fetching the book highlights and notes" + error?.message);
+        dispatch(setAnnotationsLoading(false));
+        return;
+      }
+
+      console.log("fetched Highlights", data);
+
+      const highlights =
+        data
+          ?.filter((item) => item.type === "highlight")
+          ?.map((item) => ({
+            id: item.id,
+            color: item.highlight_color,
+            text: item.highlight_text,
+          })) || [];
+
+      const notes =
+        data
+          ?.filter((item) => item.type === "note")
+          ?.map((item) => ({
+            id: item.id,
+            selectedText: item.text,
+            note: item.note_text,
+          })) || [];
+
+      dispatch(setHighlighted(highlights));
+      dispatch(setNotes(notes));
+      dispatch(setAnnotationsLoading(false));
+    } catch (error: any) {
+      console.error("Error fetching annotations:", error);
+      toast.error("Error fetching annotations: " + error.message);
+      dispatch(setAnnotationsLoading(false));
+      dispatch(setHighlighted([]));
+      dispatch(setNotes([]));
+    }
+  };
+
+
+  useEffect(()=>{
+    getAnnotations()
+  },[])
 
   const getHighlightColor = (color: string) => {
     return togglDark ? `border border-gray-600/30` : `border border-gray-200`;
@@ -133,11 +226,11 @@ const ReadingSidebar = () => {
   const bookAuthors = book.authors?.map((a) => a.name).join(", ");
 
   const toggleBookCompleted = async () => {
-    if (isLoading) return; 
-    
+    if (isLoading) return;
+
     try {
       setIsLoading(true);
-      
+
       const {
         data: { user },
         error: userError,
@@ -156,13 +249,16 @@ const ReadingSidebar = () => {
         title: book?.title,
         authors: bookAuthors,
       };
-      const { data, error}=await supabase.from('currently_reading').delete().eq('user_id',user.id).eq('book_id',book.id)
-      
-      if(error){
-        alert("error deleting the book from curently reading")
+      const { data, error } = await supabase
+        .from("currently_reading")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("book_id", book.id);
+
+      if (error) {
+        alert("error deleting the book from curently reading");
       }
       if (!bookCompleted) {
-       
         const { data, error } = await supabase
           .from("completed_books")
           .upsert([completedBook], {
@@ -209,7 +305,6 @@ const ReadingSidebar = () => {
       }`}
     >
       <div className="h-full overflow-y-auto custom-scrollbar">
-        {/* Header */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -475,46 +570,73 @@ const ReadingSidebar = () => {
 
           {expandedSections.highlights && (
             <div className="mt-3 space-y-2 px-3">
-              {highlights.map((highlight, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg ${getHighlightColor(
-                    highlight.color
-                  )}`}
-                  style={{
-                    backgroundColor: highlight.color
-                      ? `${highlight.color}30`
-                      : "#fbbf2430",
-                  }}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          togglDark
-                            ? "bg-gray-700 text-gray-300"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        Highlight
-                      </span>
-                      <div
-                        className="w-2 h-2 rounded-full"
-                        style={{
-                          backgroundColor: highlight.color || "#fbbf24",
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                  <p
-                    className={`text-sm ${
-                      togglDark ? "text-gray-200" : "text-gray-700"
+              {annotationsLoading ? (
+                // Show loading components
+                <>
+                  <div
+                    className={`text-sm font-medium mb-3 flex items-center gap-2 ${
+                      togglDark ? "text-gray-300" : "text-gray-700"
                     }`}
                   >
-                    {highlight.text}
-                  </p>
-                </div>
-              ))}
+                    <PulseLoader isDark={togglDark} size="sm" />
+                    Loading your highlights...
+                  </div>
+                  {/* Show multiple loading cards */}
+                  {[1, 2, 3].map((i) => (
+                    <HighlightLoadingCard key={i} isDark={togglDark} />
+                  ))}
+                </>
+              ) : highlights.length === 0 ? (
+                <p
+                  className={`text-sm text-center py-4 ${
+                    togglDark ? "text-gray-400" : "text-gray-500"
+                  }`}
+                >
+                  No highlights yet
+                </p>
+              ) : (
+                // Show actual highlights
+                highlights.map((highlight, index) => (
+                  <div
+                    key={highlight.id || index}
+                    className={`p-3 rounded-lg ${getHighlightColor(
+                      highlight.color
+                    )}`}
+                    style={{
+                      backgroundColor: highlight.color
+                        ? `${highlight.color}30`
+                        : "#fbbf2430",
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            togglDark
+                              ? "bg-gray-700 text-gray-300"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          Highlight
+                        </span>
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{
+                            backgroundColor: highlight.color || "#fbbf24",
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                    <p
+                      className={`text-sm ${
+                        togglDark ? "text-gray-200" : "text-gray-700"
+                      }`}
+                    >
+                      {highlight.text}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -550,7 +672,22 @@ const ReadingSidebar = () => {
 
           {expandedSections.notes && (
             <div className="mt-3 space-y-2 px-3">
-              {notes.length === 0 ? (
+              {annotationsLoading ? (
+                // Show loading components for notes
+                <>
+                  <div
+                    className={`text-sm font-medium mb-3 flex items-center gap-2 ${
+                      togglDark ? "text-gray-300" : "text-gray-700"
+                    }`}
+                  >
+                    <PulseLoader isDark={togglDark} size="sm" />
+                    Loading your notes...
+                  </div>
+                  {[1, 2].map((i) => (
+                    <NoteLoadingCard key={i} isDark={togglDark} />
+                  ))}
+                </>
+              ) : notes.length === 0 ? (
                 <p
                   className={`text-sm text-center py-4 ${
                     togglDark ? "text-gray-400" : "text-gray-500"
@@ -559,9 +696,10 @@ const ReadingSidebar = () => {
                   No notes yet
                 </p>
               ) : (
+                // Show actual notes
                 notes.map((note, index) => (
                   <div
-                    key={index}
+                    key={note.id || index}
                     className={`p-3 rounded-lg border ${
                       togglDark
                         ? "bg-gray-800/50 border-gray-600"
