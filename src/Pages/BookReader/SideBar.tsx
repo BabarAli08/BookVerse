@@ -70,7 +70,7 @@ const ReadingSidebar = () => {
     return () => clearInterval(interval);
   }, [book.id]);
  
-  // Check if book is completed on component mount
+  
   useEffect(() => {
     const checkBookCompletionStatus = async () => {
       try {
@@ -103,7 +103,7 @@ const ReadingSidebar = () => {
           return;
         }
         
-        // If data exists, book is completed
+       
         setBookCompleted(!!data);
         
       } catch (error) {
@@ -133,7 +133,7 @@ const ReadingSidebar = () => {
   const bookAuthors = book.authors?.map((a) => a.name).join(", ");
 
   const toggleBookCompleted = async () => {
-    if (isLoading) return; // Prevent multiple clicks
+    if (isLoading) return; 
     
     try {
       setIsLoading(true);
@@ -143,12 +143,7 @@ const ReadingSidebar = () => {
         error: userError,
       } = await supabase.auth.getUser();
 
-      if (userError) {
-        toast.error("Please login to mark book as completed");
-        return;
-      }
-
-      if (!user) {
+      if (userError || !user) {
         toast.error("Please login to mark book as completed");
         return;
       }
@@ -161,9 +156,13 @@ const ReadingSidebar = () => {
         title: book?.title,
         authors: bookAuthors,
       };
-
+      const { data, error}=await supabase.from('currently_reading').delete().eq('user_id',user.id).eq('book_id',book.id)
+      
+      if(error){
+        alert("error deleting the book from curently reading")
+      }
       if (!bookCompleted) {
-        // Mark as completed (INSERT/UPSERT)
+       
         const { data, error } = await supabase
           .from("completed_books")
           .upsert([completedBook], {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
-import  supabase  from "../supabase-client";
+import supabase from "../supabase-client";
 import { login } from "../Store/AuthSlice";
 
 const SignUp = () => {
@@ -9,9 +9,38 @@ const SignUp = () => {
     name: "",
     email: "",
     password: "",
+    bio: "",
+    location: "",
   });
   const [isLogin, setIsLogin] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const createUserProfile = async (
+    userId: string,
+    name: string,
+    email: string,
+    bio: string,
+    location: string
+  ) => {
+    try {
+      const { error } = await supabase.from("profiles").insert([
+        {
+          id: userId,
+          name,
+          email,
+          bio,
+          location,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.error("Error creating profile:", error);
+      }
+    } catch (err) {
+      console.error("Unexpected error creating profile:", err);
+    }
+  };
 
   const handleAuth = async () => {
     setLoading(true);
@@ -22,14 +51,18 @@ const SignUp = () => {
         email: details.email,
         password: details.password,
         options: {
-          data: { name: details.name },
+          data: {
+            name: details.name,
+            bio: details.bio,
+            location: details.location,
+          },
         },
       });
 
       if (error) {
         if (error.message.includes("User already registered")) {
           alert("Account already exists. Please sign in instead.");
-          setIsLogin(true); // Switch to login mode
+          setIsLogin(true);
         } else {
           alert(error.message);
         }
@@ -39,7 +72,14 @@ const SignUp = () => {
 
       if (data?.user && !data.session) {
         alert("Sign-up successful! Please check your email to verify your account.");
-      } else if (data?.session) {
+      } else if (data?.session && data?.user) {
+        await createUserProfile(
+          data.user.id,
+          details.name,
+          details.email,
+          details.bio,
+          details.location
+        );
         dispatch(login(data.user));
       }
     } else {
@@ -71,13 +111,32 @@ const SignUp = () => {
         </h2>
 
         {!isLogin && (
-          <input
-            type="text"
-            placeholder="Name"
-            value={details.name}
-            onChange={(e) => setDetails({ ...details, name: e.target.value })}
-            className="w-full p-3 mb-4 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+          <>
+            <input
+              type="text"
+              placeholder="Name"
+              value={details.name}
+              onChange={(e) => setDetails({ ...details, name: e.target.value })}
+              className="w-full p-3 mb-4 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+              required
+            />
+            <textarea
+              placeholder="Bio"
+              value={details.bio}
+              onChange={(e) => setDetails({ ...details, bio: e.target.value })}
+              className="w-full p-3 mb-4 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+              rows={3}
+            />
+            <input
+              type="text"
+              placeholder="Location"
+              value={details.location}
+              onChange={(e) =>
+                setDetails({ ...details, location: e.target.value })
+              }
+              className="w-full p-3 mb-4 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </>
         )}
 
         <input
@@ -86,6 +145,7 @@ const SignUp = () => {
           value={details.email}
           onChange={(e) => setDetails({ ...details, email: e.target.value })}
           className="w-full p-3 mb-4 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+          required
         />
 
         <input
@@ -94,12 +154,19 @@ const SignUp = () => {
           value={details.password}
           onChange={(e) => setDetails({ ...details, password: e.target.value })}
           className="w-full p-3 mb-6 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+          required
+          minLength={6}
         />
 
         <button
           onClick={handleAuth}
-          disabled={loading}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white p-3 rounded transition"
+          disabled={
+            loading ||
+            (!isLogin && !details.name) ||
+            !details.email ||
+            !details.password
+          }
+          className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white p-3 rounded transition"
         >
           {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
         </button>

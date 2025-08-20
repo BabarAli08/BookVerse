@@ -21,9 +21,12 @@ import supabase from "../../supabase-client";
 
 const BookDetails = () => {
   const [wishlisted, setWishlisted] = useState(false);
+  const [readingProgress, setReadingProgress] = useState<number>(0);
 
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
 
   useEffect(() => {
     const fetchWishlist = async () => {
@@ -58,20 +61,33 @@ const BookDetails = () => {
     fetchWishlist();
   }, [id, navigate]);
 
-  const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
+  useEffect(() => {
+    if (book?.id) {
+      const storedProgress = localStorage.getItem(
+        `reading-progress-${book.id}`
+      );
+      if (storedProgress) {
+        setReadingProgress(JSON.parse(storedProgress));
+      }
+    }
+  }, [book?.id]);
 
   const handleReadFree = async () => {
     try {
+      // Get user first
       const {
         data: { user },
-        error,
+        error: userError,
       } = await supabase.auth.getUser();
 
-      if (error || !user) {
-        alert("Please log in to read this book");
+      if (userError || !user) {
+        alert("User not found. Kindly login");
         navigate("/login");
         return;
       }
+
+      // Track user activity
+      await trackUserActivity(user.id);
 
       // Check if book is completed
       const { data: completedBooks, error: fetchError } = await supabase
@@ -85,7 +101,6 @@ const BookDetails = () => {
         return;
       }
 
-      // If book is completed, remove from currently_reading and navigate
       const isCompleted = completedBooks?.some(
         (book) => Number(book.book_id) === Number(id)
       );
@@ -121,10 +136,7 @@ const BookDetails = () => {
         user_id: user?.id,
         title: book?.title,
         description: book?.summaries?.[0] || null,
-        cover:
-          book?.formats?.["image/jpeg"] ||
-          book?.formats?.["image/png"] ||
-          book?.formats?.["image/jpg"],
+        cover: imageUrl,
         published_at: book?.authors?.[0].death_year,
         authors: book?.authors?.map((author) => author.name).join(", "),
         tier: "free",
@@ -141,22 +153,122 @@ const BookDetails = () => {
         return;
       }
 
+      // Navigate to reading page
       navigate(`/books/${id}/read`);
     } catch (err) {
-      alert("Error adding the book to currently reading: " + err?.message);
+      console.error("Error in handleReadFree:", err);
+      alert("Error adding the book to currently reading: " + (err as Error)?.message);
     }
   };
 
-  if (loading) return <BookDetailsLoader />;
+  // Extract the activity tracking into a separate function
+  const trackUserActivity = async (userId:string) => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
 
-  const imageUrl =
-    book?.formats?.["image/jpeg"] ||
-    book?.formats?.["image/png"] ||
-    book?.formats?.["image/jpg"] ||
-    "";
+      const { data: existingActivity } = await supabase
+        .from("user_daily_activities")
+        .select("book_clicks")
+        .eq("user_id", userId)
+        .eq("activity_date", today)
+        .single();
 
-  const pdf = book?.formats?.["application/pdf"] || "";
-  const epub = book?.formats?.["application/epub+zip" || ""];
+      const isFirstClickToday = !existingActivity;
+
+      if (isFirstClickToday) {
+        console.log("🎉 First click of the day!");
+
+        const { error: insertError } = await supabase
+          .from("user_daily_activities")
+          .insert({
+            user_id: userId,
+            activity_date: today,
+            book_clicks: 1,
+            first_click_time: now,
+            last_click_time: now,
+          });
+
+        if (insertError) {
+          console.error("Error inserting activity:", insertError);
+        }
+      } else {
+        console.log(
+          `Already clicked ${existingActivity.book_clicks} times today`
+        );
+
+        const { error: updateError } = await supabase
+          .from("user_daily_activities")
+          .update({
+            book_clicks: existingActivity.book_clicks + 1,
+            last_click_time: now,
+          })
+          .eq("user_id", userId)
+          .eq("activity_date", today);
+
+        if (updateError) {
+          console.error("Error updating activity:", updateError);
+        }
+      }
+
+      await updateUserStreak(userId, today);
+    } catch (error) {
+      console.error("Error tracking user activity:", error);
+    }
+  };
+
+  const updateUserStreak = async (userId :string, today:string) => {
+    try {
+      const { data: currentStreak } = await supabase
+        .from("user_streaks")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+      const yesterday = new Date(Date.now() - 86400000)
+        .toISOString()
+        .split("T")[0];
+
+      let newStreak = 1;
+      if (currentStreak) {
+        if (currentStreak.last_activity_date === yesterday) {
+          newStreak = currentStreak.current_streak + 1;
+          console.log(`🔥 Streak continues! Day ${newStreak}`);
+        } else {
+          newStreak = 1;
+          console.log("🔄 Starting new streak");
+        }
+      } else {
+        console.log("🆕 Welcome! Starting your first streak");
+      }
+
+      const longestStreak = Math.max(
+        newStreak,
+        currentStreak?.longest_streak || 0
+      );
+
+      const { error } = await supabase.from("user_streaks").upsert(
+        {
+          user_id: userId,
+          current_streak: newStreak,
+          longest_streak: longestStreak,
+          last_activity_date: today,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id",
+        }
+      );
+
+      if (error) {
+        console.error("Error updating streak:", error);
+      } else {
+        console.log(`✅ Streak updated: ${newStreak} days`);
+      }
+    } catch (err) {
+      console.error("Error updating streak:", err);
+    }
+  };
 
   const handleBookCopy = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -191,7 +303,7 @@ const BookDetails = () => {
           cover: imageUrl,
           description: book?.summaries?.[0],
           published_at: book?.authors?.[0].death_year,
-          tier: "free", // Assuming all books on this page are free
+          tier: "free",
           authors: book?.authors?.map((author) => author.name).join(", "),
         };
 
@@ -208,10 +320,21 @@ const BookDetails = () => {
     }
   };
 
+  // Early returns after all hooks
+  if (loading) return <BookDetailsLoader />;
+  if (error) return <h1>{error}</h1>;
+
+  const imageUrl =
+    book?.formats?.["image/jpeg"] ||
+    book?.formats?.["image/png"] ||
+    book?.formats?.["image/jpg"] ||
+    "";
+
+  const pdf = book?.formats?.["application/pdf"] || "";
+  const epub = book?.formats?.["application/epub+zip"] || "";
+
   const rating = (Math.random() * 2 + 3).toFixed(1);
 
-  if (loading) return <DotsLoader />;
-  if (error) return <h1>{error}</h1>;
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
@@ -272,11 +395,12 @@ const BookDetails = () => {
                   </span>
                 </button>
 
-                <button className="w-full flex items-center justify-center gap-3 h-12 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200">
+                <button
+                  onClick={handleBookCopy}
+                  className="w-full flex items-center justify-center gap-3 h-12 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200"
+                >
                   <Share2 size={18} />
-                  <span onClick={handleBookCopy} className="font-medium">
-                    Share Book
-                  </span>
+                  <span className="font-medium">Share Book</span>
                 </button>
               </div>
 
@@ -284,12 +408,14 @@ const BookDetails = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Reading Progress</span>
-                    <span className="text-gray-900 font-medium">5%</span>
+                    <span className="text-gray-900 font-medium">
+                      {readingProgress}%
+                    </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: "5%" }}
+                      style={{ width: `${readingProgress}%` }}
                     ></div>
                   </div>
                 </div>
@@ -375,13 +501,13 @@ const BookDetails = () => {
                     href={pdf}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-medium "
                   >
-                    PDF {pdf === "" ? "unabailible" : ""}
+                    PDF {pdf === "" ? "unavailable" : ""}
                   </a>
                   <a
                     href={epub}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-medium"
                   >
-                    EPUB {epub === "" ? "unabailible" : ""}
+                    EPUB {epub === "" ? "unavailable" : ""}
                   </a>
                 </div>
               </div>
