@@ -23,7 +23,7 @@ const SignUp = () => {
         if (event === 'SIGNED_IN' && session?.user) {
           console.log("✅ User signed in, checking for profile...");
           
-          
+          // Check if profile exists
           const { data: existingProfile, error: checkError } = await supabase
             .from("profiles")
             .select("id")
@@ -31,24 +31,20 @@ const SignUp = () => {
             .single();
 
           if (checkError) {
-            console.log(" Profile check error:", checkError.message);
+            console.log("🔍 Profile check error:", checkError.message);
             
+            // Create profile whether from metadata or default values
+            console.log("🚀 Creating profile for user...");
             
-            if (session.user.user_metadata && Object.keys(session.user.user_metadata).length > 0) {
-              console.log(" Creating profile from metadata:", session.user.user_metadata);
-              
-              await createUserProfile(
-                session.user.id,
-                session.user.user_metadata.name || "",
-                session.user.email || "",
-                session.user.user_metadata.bio || "",
-                session.user.user_metadata.location || ""
-              );
-            } else {
-              console.log(" No user_metadata available for profile creation");
-            }
+            await createUserProfile(
+              session.user.id,
+              session.user.user_metadata?.name || "",
+              session.user.email || "",
+              session.user.user_metadata?.bio || "",
+              session.user.user_metadata?.location || ""
+            );
           } else {
-            console.log("Profile already exists:", existingProfile);
+            console.log("✅ Profile already exists:", existingProfile);
           }
           
           dispatch(login(session.user));
@@ -67,55 +63,76 @@ const SignUp = () => {
     location: string
   ) => {
     try {
-      console.log(" Creating profile with data:", {
-        userId,
-        name,
-        email,
-        bio,
-        location
-      });
 
-      const { data, error } = await supabase.from("profiles").insert([
-        {
-          id: userId,
-          name,
-          email,
-          bio,
-          location,
-          website: "",
-          avatar: "",
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const { data: testData, error: testError } = await supabase
+        .from("profiles")
+        .select("id")
+        .limit(1);
+      
+      console.log("Test query result:", { testData, testError });
+
+     
+      const { data: existingProfile, error: existError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .single();
+
+      console.log("Existing profile check:", { existingProfile, existError });
+
+      if (existingProfile) {
+       
+        return existingProfile;
+      }
+
+     
+      const { data, error } = await supabase
+        .from("profiles")
+        .insert([
+          {
+            id: userId,
+            name: name || "",
+            email: email || "",
+            bio: bio || "",
+            location: location || "",
+            website: "",
+            subscription_status: 'free',
+            created_at: new Date().toISOString(),
+          },
+        ])
+        .select();
+
+      console.log("Insert result:", { data, error });
 
       if (error) {
         console.error("Error creating profile:", {
           message: error.message,
           details: error.details,
           hint: error.hint,
-          code: error.code
+          code: error.code,
+          fullError: error
         });
         
+  
       
-        if (error.code === '42501' || error.message.includes('permission')) {
-          console.error("🔒 This looks like a Row Level Security issue!");
-          console.error("💡 Make sure your profiles table has the correct RLS policies");
-        }
+        alert(`Profile creation failed: ${error.message}`);
+        return null;
       } else {
-        console.log(" Profile created successfully:", data);
+        console.log("✅ Profile created successfully:", data);
+        alert("Profile created successfully!");
+        return data[0];
       }
     } catch (err) {
-      console.error("Unexpected error creating profile:", err);
+      alert(`Unexpected error: ${(err as Error)?.message}`);
+  
+      return null;
     }
   };
 
-  
   const handleAuth = async () => {
     setLoading(true);
 
     if (!isLogin) {
-     
-      console.log("Starting sign up process...");
       
       const { data, error } = await supabase.auth.signUp({
         email: details.email,
@@ -130,7 +147,7 @@ const SignUp = () => {
       });
 
       if (error) {
-        console.error(" Sign up error:", error);
+        alert("Sign up error:"+ error.message);
         if (error.message.includes("User already registered")) {
           alert("Account already exists. Please sign in instead.");
           setIsLogin(true);
@@ -141,7 +158,7 @@ const SignUp = () => {
         return;
       }
 
-      console.log("Sign up success:", {
+      console.log("✅ Sign up success:", {
         user: data.user?.email,
         session: !!data.session,
         user_metadata: data.user?.user_metadata
@@ -149,8 +166,6 @@ const SignUp = () => {
 
       if (data?.user) {
         if (data.session) {
-         
-          console.log(" User signed in immediately, creating profile...");
           await createUserProfile(
             data.user.id,
             details.name,
@@ -161,27 +176,26 @@ const SignUp = () => {
           dispatch(login(data.user));
           alert("Account created successfully!");
         } else {
+             
           alert("Sign-up successful! Please check your email to verify your account. Your profile will be created when you confirm your email.");
         }
       }
     } else {
-    
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: details.email,
         password: details.password,
       });
 
       if (error) {
-        console.error(" Sign in error:", error);
         alert(error.message);
         setLoading(false);
         return;
       }
 
-      console.log("Sign in success:", data.user?.email);
+      console.log("✅ Sign in success:", data.user?.email);
 
       if (data?.user) {
-    
         const { data: existingProfile, error: profileError } = await supabase
           .from("profiles")
           .select("id")
@@ -189,8 +203,7 @@ const SignUp = () => {
           .single();
 
         if (profileError && profileError.code === 'PGRST116') {
-          console.log("No profile found, creating one...");
-          
+         
           await createUserProfile(
             data.user.id,
             data.user.user_metadata?.name || "",
@@ -199,7 +212,7 @@ const SignUp = () => {
             data.user.user_metadata?.location || ""
           );
         } else if (existingProfile) {
-          console.log("Profile already exists");
+         alert("profile already Exists Try Signing in")
         }
 
         dispatch(login(data.user));
@@ -215,9 +228,6 @@ const SignUp = () => {
         <h2 className="text-3xl font-bold text-center text-purple-700 mb-6">
           {isLogin ? "Sign In" : "Sign Up"}
         </h2>
-
-   
-        
 
         {!isLogin && (
           <>

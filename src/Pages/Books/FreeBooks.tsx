@@ -1,11 +1,12 @@
-import { BookOpen, Star, Heart } from "lucide-react";
+import { BookOpen, Star, Heart, LoaderPinwheel, Loader2 } from "lucide-react";
 import type { author, book } from "../../Data/Interfaces";
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import supabase from "../../supabase-client";
 
 const BookCard = ({ book }: { book: book }) => {
-  const [fav, setFav] = useState(false);
+  const [fav, setFav] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
   const imageUrl =
     book.formats?.["image/jpeg"] ||
@@ -20,11 +21,12 @@ const BookCard = ({ book }: { book: book }) => {
   const rating = (Math.random() * 2 + 3).toFixed(1);
   useEffect(() => {
     async function fetchFav() {
+      setLoading(true);
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (!user) return setLoading(false);
 
       const { data: favBooks, error } = await supabase
         .from("books")
@@ -33,15 +35,21 @@ const BookCard = ({ book }: { book: book }) => {
         .eq("book_id", book.id)
         .single();
 
-      if (!error && favBooks) setFav(true);
+      if (!error && favBooks) {
+        setLoading(false);
+        setFav(true);
+      } else {
+        setLoading(false);
+        setFav(false);
+      }
     }
 
     fetchFav();
   }, [book.id]);
   const handleFav = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if(!fav)   setFav(true);
-    else setFav(false)
+    if (!fav) setFav(true);
+    else setFav(false);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -67,7 +75,6 @@ const BookCard = ({ book }: { book: book }) => {
         .upsert([mappedBook], { onConflict: ["user_id", "book_id"] });
 
       if (error) console.log(error);
-     
     } else {
       const { data, error } = await supabase
         .from("books")
@@ -94,10 +101,16 @@ const BookCard = ({ book }: { book: book }) => {
           className="absolute top-3 right-3 bg-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-110"
           onClick={handleFav}
         >
-          <Heart
-            size={18}
-            className={`text-red-500 ${fav ? "fill-red-500" : ""}`}
-          />
+          {loading ? (
+            <Loader2 size={18} className="text-red-500 animate-spin" />
+          ) : (
+            <Heart
+              size={18}
+              className={`text-red-500 transition-all duration-300 ${
+                fav ? "fill-red-500 scale-110" : ""
+              }`}
+            />
+          )}
         </button>
 
         {/* Book Image */}

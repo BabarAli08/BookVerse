@@ -51,12 +51,14 @@ const Profile = () => {
     const getUser = async () => {
       setLoading(true);
       const { data, error } = await supabase.auth.getUser();
-      if (error || !data.user) {
+      const {data:realUser,error:userError}=await supabase.from("profiles").select().eq("id",data?.user?.id)
+      console.log("got the user ",realUser)
+      if (error || !data.user || userError ||!realUser?.[0]) {
         alert("Please login to view your profile");
-        navigate("/login");
+        navigate("/signup");
         return;
       } else {
-        setUser(data.user);
+        setUser(realUser[0]);
         await Promise.all([
           getCurrentlyReading(data.user.id),
           getCompletedBooks(data.user.id),
@@ -73,6 +75,7 @@ const Profile = () => {
           .eq("user_id", userId);
 
         if (error) {
+          
           console.error("Error fetching currently reading books:", error);
           return;
         }
@@ -148,7 +151,7 @@ const Profile = () => {
 
                 <div className=" md:mt-20 sm:mb-4">
                   <h1 className="text-2xl  font-bold text-slate-900 mb-1">
-                    {user?.user_metadata?.name || "Anonymous User"}
+                    {user?.name || "Anonymous User"}
                   </h1>
                   <p className="text-slate-600 mb-2">{user?.email}</p>
                   <div className="flex items-center gap-2 text-sm text-slate-500">

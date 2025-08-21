@@ -13,15 +13,17 @@ import {
   Loader2,
 } from "lucide-react";
 import useFetchSingleBook from "../../Data/useFetchSingleBook";
-import { DotsLoader } from "../../Component/Loading";
 import { toast } from "sonner";
 import BookDetailsLoader from "../../Component/BookDetailsLoader";
 import { useEffect, useState } from "react";
 import supabase from "../../supabase-client";
+import BookDetailsLoadingButton from "../../Component/BookDetailsLoadingButton";
 
 const BookDetails = () => {
-  const [wishlisted, setWishlisted] = useState(false);
+  const [wishlisted, setWishlisted] = useState<boolean>(false);
   const [readingProgress, setReadingProgress] = useState<number>(0);
+  const [wishlistLoading, setWishlistLoading] = useState<boolean>(false);
+  const [bookLoading,setBookLoading]=useState<boolean>(false)
 
   const { id } = useParams();
   const navigate = useNavigate();
@@ -30,6 +32,7 @@ const BookDetails = () => {
 
   useEffect(() => {
     const fetchWishlist = async () => {
+      setWishlistLoading(true);
       try {
         const {
           data: { user },
@@ -38,6 +41,7 @@ const BookDetails = () => {
 
         if (userError || !user) {
           navigate("/login");
+          setWishlistLoading(false);
           return;
         }
 
@@ -49,12 +53,15 @@ const BookDetails = () => {
 
         if (error) {
           console.error("Error fetching wishlist:", error);
+          setWishlistLoading(false);
           return;
         }
 
         setWishlisted(books && books.length > 0);
+        setWishlistLoading(false);
       } catch (err) {
         console.error("Unexpected error fetching wishlist:", err);
+        setWishlistLoading(false);
       }
     };
 
@@ -73,96 +80,88 @@ const BookDetails = () => {
   }, [book?.id]);
 
   const handleReadFree = async () => {
-    try {
-      // Get user first
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+  try {
+    setBookLoading(true);
 
-      if (userError || !user) {
-        alert("User not found. Kindly login");
-        navigate("/login");
-        return;
-      }
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-      // Track user activity
-      await trackUserActivity(user.id);
-
-      // Check if book is completed
-      const { data: completedBooks, error: fetchError } = await supabase
-        .from("completed_books")
-        .select("book_id")
-        .eq("user_id", user.id)
-        .eq("book_id", id);
-
-      if (fetchError) {
-        alert(fetchError.message);
-        return;
-      }
-
-      const isCompleted = completedBooks?.some(
-        (book) => Number(book.book_id) === Number(id)
-      );
-
-      if (isCompleted) {
-        // Remove from currently_reading if it exists there
-        await supabase
-          .from("currently_reading")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("book_id", id);
-
-        navigate(`/books/${id}/read`);
-        return;
-      }
-
-      // Check if book is already in currently_reading
-      const { data: currentlyReading } = await supabase
-        .from("currently_reading")
-        .select("book_id")
-        .eq("user_id", user.id)
-        .eq("book_id", id);
-
-      // If already in currently_reading, just navigate
-      if (currentlyReading && currentlyReading.length > 0) {
-        navigate(`/books/${id}/read`);
-        return;
-      }
-
-      // Book is not completed and not in currently_reading, so add it
-      const supabaseBook = {
-        book_id: book?.id,
-        user_id: user?.id,
-        title: book?.title,
-        description: book?.summaries?.[0] || null,
-        cover: imageUrl,
-        published_at: book?.authors?.[0].death_year,
-        authors: book?.authors?.map((author) => author.name).join(", "),
-        tier: "free",
-      };
-
-      const { error: insertError } = await supabase
-        .from("currently_reading")
-        .insert([supabaseBook]);
-
-      if (insertError) {
-        alert(
-          "Could not add book to currently reading: " + insertError.message
-        );
-        return;
-      }
-
-      // Navigate to reading page
-      navigate(`/books/${id}/read`);
-    } catch (err) {
-      console.error("Error in handleReadFree:", err);
-      alert("Error adding the book to currently reading: " + (err as Error)?.message);
+    if (userError || !user) {
+      alert("User not found. Kindly login");
+      navigate("/login");
+      return;
     }
-  };
 
-  // Extract the activity tracking into a separate function
-  const trackUserActivity = async (userId:string) => {
+    await trackUserActivity(user.id);
+
+    const { data: completedBooks, error: fetchError } = await supabase
+      .from("completed_books")
+      .select("book_id")
+      .eq("user_id", user.id)
+      .eq("book_id", id);
+
+    if (fetchError) {
+      alert(fetchError.message);
+      return;
+    }
+
+    const isCompleted = completedBooks?.some(
+      (book) => Number(book.book_id) === Number(id)
+    );
+
+    if (isCompleted) {
+      await supabase
+        .from("currently_reading")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("book_id", id);
+
+      navigate(`/books/${id}/read`);
+      return;
+    }
+
+    const { data: currentlyReading } = await supabase
+      .from("currently_reading")
+      .select("book_id")
+      .eq("user_id", user.id)
+      .eq("book_id", id);
+
+    if (currentlyReading && currentlyReading.length > 0) {
+      navigate(`/books/${id}/read`);
+      return;
+    }
+
+    const supabaseBook = {
+      book_id: book?.id,
+      user_id: user?.id,
+      title: book?.title,
+      description: book?.summaries?.[0] || null,
+      cover: imageUrl,
+      published_at: book?.authors?.[0].death_year,
+      authors: book?.authors?.map((author) => author.name).join(", "),
+      tier: "free",
+    };
+
+    const { error: insertError } = await supabase
+      .from("currently_reading")
+      .insert([supabaseBook]);
+
+    if (insertError) {
+      alert("Could not add book: " + insertError.message);
+      return;
+    }
+
+    navigate(`/books/${id}/read`);
+  } catch (err) {
+    console.error("Error in handleReadFree:", err);
+    alert("Error adding the book: " + (err as Error)?.message);
+  } finally {
+   
+    setBookLoading(false);
+  }
+};
+
+  const pages=Math.floor(Math.random()*500+100)
+  const trackUserActivity = async (userId: string) => {
     try {
       const today = new Date().toISOString().split("T")[0];
       const now = new Date().toISOString();
@@ -217,7 +216,7 @@ const BookDetails = () => {
     }
   };
 
-  const updateUserStreak = async (userId :string, today:string) => {
+  const updateUserStreak = async (userId: string, today: string) => {
     try {
       const { data: currentStreak } = await supabase
         .from("user_streaks")
@@ -233,13 +232,13 @@ const BookDetails = () => {
       if (currentStreak) {
         if (currentStreak.last_activity_date === yesterday) {
           newStreak = currentStreak.current_streak + 1;
-          console.log(`🔥 Streak continues! Day ${newStreak}`);
+          console.log(`Streak continues! Day ${newStreak}`);
         } else {
           newStreak = 1;
-          console.log("🔄 Starting new streak");
+          console.log("Starting new streak");
         }
       } else {
-        console.log("🆕 Welcome! Starting your first streak");
+        console.log("Welcome! Starting your first streak");
       }
 
       const longestStreak = Math.max(
@@ -263,7 +262,7 @@ const BookDetails = () => {
       if (error) {
         console.error("Error updating streak:", error);
       } else {
-        console.log(`✅ Streak updated: ${newStreak} days`);
+        console.log(`Streak updated: ${newStreak} days`);
       }
     } catch (err) {
       console.error("Error updating streak:", err);
@@ -366,12 +365,21 @@ const BookDetails = () => {
               </div>
 
               <div className="p-6 space-y-3">
+                {bookLoading?
+                
+                <BookDetailsLoadingButton
+                  title="Getting your book Ready"
+                  isBlack={true}
+                  
+                />
+                :
                 <BookDetailsButton
                   logo={BookOpen}
                   isBlack={true}
                   title="Read Free"
                   onClick={handleReadFree}
                 />
+                }
 
                 <button className="w-full flex items-center justify-center gap-3 h-12 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200">
                   <Download size={18} />
@@ -383,16 +391,31 @@ const BookDetails = () => {
                 <button
                   onClick={handleAddWishlist}
                   className="w-full flex items-center justify-center gap-3 h-12 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200"
+                  disabled={wishlistLoading} 
                 >
-                  <Heart
-                    size={18}
-                    className={`text-gray-400 hover:text-black ${
-                      wishlisted ? "fill-red-500 text-red-500" : ""
-                    }`}
-                  />
-                  <span className="font-medium">
-                    {wishlisted ? "Wishlisted" : "Add to wishlist"}
-                  </span>
+                  {wishlistLoading ? (
+                    <>
+                      <Loader2
+                        className="animate-spin text-gray-500"
+                        size={18}
+                      />
+                      <span className="font-medium">
+                        Checking wishlist status...
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Heart
+                        size={18}
+                        className={`text-gray-400 hover:text-black ${
+                          wishlisted ? "fill-red-500 text-red-500" : ""
+                        }`}
+                      />
+                      <span className="font-medium">
+                        {wishlisted ? "Wishlisted" : "Add to wishlist"}
+                      </span>
+                    </>
+                  )}
                 </button>
 
                 <button
@@ -451,7 +474,7 @@ const BookDetails = () => {
                     <div>
                       <span className="text-gray-500 text-sm">Pages:</span>
                       <span className="ml-2 font-medium text-gray-900">
-                        380
+                        {pages}
                       </span>
                     </div>
                   </div>
@@ -513,9 +536,9 @@ const BookDetails = () => {
               </div>
             </div>
 
-            {/* Tabs */}
+       
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
-              {/* Tab Headers */}
+            
               <div className="flex border-b border-gray-200">
                 <button className="px-6 py-4 text-blue-600 border-b-2 border-blue-600 font-medium">
                   Summary
@@ -531,7 +554,6 @@ const BookDetails = () => {
                 </button>
               </div>
 
-              {/* Tab Content */}
               <div className="p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
                   Book Summary
