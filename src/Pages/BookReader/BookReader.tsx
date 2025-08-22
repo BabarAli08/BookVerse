@@ -450,7 +450,7 @@ const BookReader = () => {
               <div
                 ref={bookContentRef}
                 className={`
-                h-full overflow-auto rounded-xl custom-scrollbar
+                h-[90vh] overflow-auto rounded-xl custom-scrollbar
                 ${theme?.bg || (togglDark ? 'bg-gray-800' : 'bg-white')}
                 ${theme?.text || (togglDark ? "text-gray-100" : "text-gray-800")}
                 ${isFocused ? "px-16 py-12" : "px-12 py-10"}

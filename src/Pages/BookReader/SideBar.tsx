@@ -300,7 +300,7 @@ const ReadingSidebar = () => {
 
   return (
     <div
-      className={`w-80 h-screen border-r ${
+      className={`w-80 h-[90vh] border-r ${
         togglDark ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
       }`}
     >

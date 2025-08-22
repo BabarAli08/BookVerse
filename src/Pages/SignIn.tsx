@@ -21,9 +21,7 @@ const SignUp = () => {
         console.log("Auth state change:", event, session?.user?.email);
         
         if (event === 'SIGNED_IN' && session?.user) {
-          console.log("✅ User signed in, checking for profile...");
           
-          // Check if profile exists
           const { data: existingProfile, error: checkError } = await supabase
             .from("profiles")
             .select("id")
@@ -31,10 +29,7 @@ const SignUp = () => {
             .single();
 
           if (checkError) {
-            console.log("🔍 Profile check error:", checkError.message);
-            
-            // Create profile whether from metadata or default values
-            console.log("🚀 Creating profile for user...");
+          
             
             await createUserProfile(
               session.user.id,
@@ -44,7 +39,7 @@ const SignUp = () => {
               session.user.user_metadata?.location || ""
             );
           } else {
-            console.log("✅ Profile already exists:", existingProfile);
+            console.log("Profile already exists:", existingProfile);
           }
           
           dispatch(login(session.user));
@@ -96,13 +91,14 @@ const SignUp = () => {
             bio: bio || "",
             location: location || "",
             website: "",
-            subscription_status: 'free',
             created_at: new Date().toISOString(),
           },
         ])
         .select();
+        
+        
 
-      console.log("Insert result:", { data, error });
+
 
       if (error) {
         console.error("Error creating profile:", {
@@ -118,7 +114,7 @@ const SignUp = () => {
         alert(`Profile creation failed: ${error.message}`);
         return null;
       } else {
-        console.log("✅ Profile created successfully:", data);
+        console.log("Profile created successfully:", data);
         alert("Profile created successfully!");
         return data[0];
       }

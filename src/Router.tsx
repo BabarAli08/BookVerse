@@ -17,6 +17,8 @@ import supabase from "./supabase-client";
 import { useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import SignUp from "./Pages/SignIn";
+import Checkout from "./Pages/CheckOut/Checkout";
+import PaymentSuccess from "./Pages/CheckOut/PaymentSuccess";
 
 const AppRouter = () => {
   const [loading, setLoading] = useState(true);
@@ -91,6 +93,8 @@ const AppRouter = () => {
             <Route path="/library" element={<MyLibrary />} />
             <Route path="/wishlist" element={<WishList />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/success" element={<PaymentSuccess/>}/>
           </Route>
           <Route path="/signup" element={<SignUp />} />
           <Route path="*" element={<NotFound />} />

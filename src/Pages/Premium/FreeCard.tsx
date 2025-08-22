@@ -10,6 +10,8 @@ interface Card {
   title: string;
   price: string;
   onClick: () => void;
+  yearly?: boolean;
+  name?: string;
   color: "gray" | "purple" | "yellow" | "default";
   heading: string;
   priceTitle: string;
