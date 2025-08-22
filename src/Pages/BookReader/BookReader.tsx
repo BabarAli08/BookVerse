@@ -4,18 +4,13 @@ import useFetchSingleBook from "../../Data/useFetchSingleBook";
 import BookFetchError from "../../Component/BookFetchError";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  setAnnotationsLoading,
-  setHighlighted,
-  setNotes,
-  setReadingBook,
-} from "../../Store/BookReadingSlice";
+import { setReadingBook } from "../../Store/BookReadingSlice";
 import Header from "./Header";
 import type { RootState } from "../../Store/store";
 import ReadingSidebar from "./SideBar";
 import Highlighting from "./Highlighting";
 import Navbar from "../../Component/Navbar/Navbar";
-import supabase from "../../supabase-client";
+import FocusModeSettings from "./FocusModeSettings";
 
 function debounce<T extends (...args: any[]) => void>(
   func: T,
@@ -48,6 +43,7 @@ const BookReader = () => {
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
   const [showOptions, setShowOptions] = useState<boolean>(false);
   const [isProgressHovered, setIsProgressHovered] = useState(false);
+  const [focusSettingsOpen, setFocusSettingsOpen] = useState<boolean>(false);
   const [progressTooltip, setProgressTooltip] = useState({
     show: false,
     percentage: 0,
@@ -67,16 +63,12 @@ const BookReader = () => {
   const {
     togglDark,
     toggleSidebar,
-    completePercentage,
-    bookMarks,
     lineHeight,
     fontFamily,
     fontSize,
-    highlited,
+    theme,
+    isFocused,
   } = useSelector((state: RootState) => state.bookReading);
-
- 
-
 
   const handleScroll = useCallback(
     throttle(() => {
@@ -106,7 +98,6 @@ const BookReader = () => {
     const container = bookContentRef.current;
     if (container && isContentReady) {
       container.addEventListener("scroll", handleScroll);
-
       handleScroll();
     }
 
@@ -308,7 +299,7 @@ const BookReader = () => {
 
   useEffect(() => {
     if (book?.id && scrollProgress > 0) {
-      debouncedSaveProgress(book?.id, Number(scrollProgress));
+      debouncedSaveProgress(Number(book?.id), scrollProgress);
     }
   }, [book?.id, scrollProgress, debouncedSaveProgress]);
 
@@ -418,21 +409,26 @@ const BookReader = () => {
 
   return (
     <div className={`${togglDark ? "bg-gray-900" : "bg-gray-50"}`}>
-      <Navbar />
+      {!isFocused && <Navbar />}
+      
+      {/* Move FocusModeSettings outside the main layout flow */}
+      <FocusModeSettings />
+      
       {showOptions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75">
           <Highlighting onClose={handleCloseHighlighting} text={selectedText} />
         </div>
       )}
+      
       <div
         className={`min-h-screen transition-colors duration-300 ${
           togglDark ? "bg-gray-900" : "bg-gray-50"
         }`}
       >
-        <Header />
+        {!isFocused && <Header />}
 
         <div className="flex h-[calc(100vh-64px)]">
-          {toggleSidebar && (
+          {toggleSidebar && !isFocused && ( // Hide sidebar in focus mode
             <div className="flex-shrink-0">
               <ReadingSidebar />
             </div>
@@ -441,21 +437,23 @@ const BookReader = () => {
           <div className="flex-1 flex justify-center items-start p-6">
             <div
               className={`
-              w-full max-w-5xl h-full rounded-xl shadow-2xl transition-all duration-300
+              w-full h-full rounded-xl shadow-2xl transition-all duration-300
               book-reader-container
               ${
                 togglDark
                   ? "bg-gradient-to-br from-gray-800 to-gray-850 text-gray-100 shadow-black/30 border border-gray-700/50"
                   : "bg-gradient-to-br from-white to-gray-50 text-gray-900 shadow-gray-300/40 border border-gray-200/50"
               }
+              ${isFocused ? "max-w-4xl mx-auto" : "max-w-5xl"}
               `}
             >
               <div
                 ref={bookContentRef}
                 className={`
-                h-full overflow-auto px-12 py-10 rounded-xl
-                custom-scrollbar
-                ${togglDark ? "text-gray-100" : "text-gray-800"}
+                h-full overflow-auto rounded-xl custom-scrollbar
+                ${theme?.bg || (togglDark ? 'bg-gray-800' : 'bg-white')}
+                ${theme?.text || (togglDark ? "text-gray-100" : "text-gray-800")}
+                ${isFocused ? "px-16 py-12" : "px-12 py-10"}
               `}
                 dangerouslySetInnerHTML={{ __html: bookContent }}
                 style={{
@@ -466,362 +464,363 @@ const BookReader = () => {
               />
             </div>
           </div>
+        </div>
 
-          <div className="fixed top-0 left-0 w-full z-40">
+        {/* Progress Bar */}
+        <div className={`fixed top-0 left-0 w-full z-40 ${isFocused ? 'opacity-30 hover:opacity-80' : ''} transition-opacity duration-300`}>
+          <div
+            className={`
+              w-full cursor-pointer transition-all duration-300 relative group
+              ${isProgressHovered ? "h-3" : "h-1.5"}
+              backdrop-blur-sm
+            `}
+            onClick={handleProgressBarClick}
+            onMouseEnter={() => setIsProgressHovered(true)}
+            onMouseLeave={() => {
+              setIsProgressHovered(false);
+              setProgressTooltip({ show: false, percentage: 0, x: 0 });
+            }}
+            onMouseMove={handleProgressBarMouseMove}
+            title={`Reading progress: ${Math.round(scrollProgress)}%`}
+          >
             <div
               className={`
-                w-full cursor-pointer transition-all duration-300 relative group
-                ${isProgressHovered ? "h-3" : "h-1.5"}
-                backdrop-blur-sm
+                w-full h-full rounded-full transition-all duration-300
+                ${
+                  togglDark
+                    ? "bg-gradient-to-r from-gray-800/60 via-gray-700/60 to-gray-800/60 shadow-lg shadow-black/20"
+                    : "bg-gradient-to-r from-gray-200/80 via-gray-300/80 to-gray-200/80 shadow-md shadow-gray-400/20"
+                }
+                ${isProgressHovered ? "shadow-xl scale-y-110" : ""}
               `}
-              onClick={handleProgressBarClick}
-              onMouseEnter={() => setIsProgressHovered(true)}
-              onMouseLeave={() => {
-                setIsProgressHovered(false);
-                setProgressTooltip({ show: false, percentage: 0, x: 0 });
-              }}
-              onMouseMove={handleProgressBarMouseMove}
-              title={`Reading progress: ${Math.round(scrollProgress)}%`}
             >
               <div
                 className={`
-                  w-full h-full rounded-full transition-all duration-300
-                  ${
-                    togglDark
-                      ? "bg-gradient-to-r from-gray-800/60 via-gray-700/60 to-gray-800/60 shadow-lg shadow-black/20"
-                      : "bg-gradient-to-r from-gray-200/80 via-gray-300/80 to-gray-200/80 shadow-md shadow-gray-400/20"
-                  }
-                  ${isProgressHovered ? "shadow-xl scale-y-110" : ""}
+                  h-full transition-all duration-500 ease-out relative overflow-hidden rounded-full
+                  ${isProgressHovered ? "shadow-lg" : ""}
                 `}
+                style={{
+                  width: `${Math.max(0, Math.min(100, scrollProgress))}%`,
+                  background: togglDark
+                    ? `linear-gradient(90deg, 
+                        #6366f1 0%,
+                        #8b5cf6 25%,
+                        #a855f7 50%,
+                        #ec4899 75%,
+                        #f43f5e 100%)`
+                    : `linear-gradient(90deg,
+                        #3b82f6 0%,
+                        #6366f1 25%,
+                        #8b5cf6 50%,
+                        #a855f7 75%,
+                        #d946ef 100%)`,
+                  boxShadow: isProgressHovered
+                    ? togglDark
+                      ? "0 4px 20px rgba(99, 102, 241, 0.4), 0 0 40px rgba(139, 92, 246, 0.2)"
+                      : "0 4px 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(99, 102, 241, 0.15)"
+                    : undefined,
+                }}
               >
                 <div
                   className={`
-                    h-full transition-all duration-500 ease-out relative overflow-hidden rounded-full
-                    ${isProgressHovered ? "shadow-lg" : ""}
+                    absolute inset-0 opacity-40
+                    bg-gradient-to-r from-transparent via-white to-transparent
+                    transform -skew-x-12 w-20
+                    ${scrollProgress > 0 ? "animate-shimmer" : ""}
+                  `}
+                />
+
+                <div
+                  className={`
+                    absolute top-0 right-0 w-4 h-full
+                    bg-gradient-to-l from-white/60 to-transparent
+                    rounded-full blur-sm
+                    ${scrollProgress > 2 ? "opacity-100" : "opacity-0"}
+                    transition-opacity duration-300
+                  `}
+                />
+              </div>
+
+              {scrollProgress > 1 && (
+                <div
+                  className={`
+                    absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2
+                    rounded-full transition-all duration-300 z-10
+                    ${
+                      isProgressHovered
+                        ? "w-4 h-4 scale-125"
+                        : "w-2.5 h-2.5 scale-100"
+                    }
+                    ${
+                      togglDark
+                        ? "bg-white shadow-lg ring-2 ring-indigo-400/40"
+                        : "bg-white shadow-xl ring-2 ring-blue-400/50"
+                    }
+                    ${isProgressHovered ? "animate-pulse" : ""}
                   `}
                   style={{
-                    width: `${Math.max(0, Math.min(100, scrollProgress))}%`,
-                    background: togglDark
-                      ? `linear-gradient(90deg, 
-                          #6366f1 0%,
-                          #8b5cf6 25%,
-                          #a855f7 50%,
-                          #ec4899 75%,
-                          #f43f5e 100%)`
-                      : `linear-gradient(90deg,
-                          #3b82f6 0%,
-                          #6366f1 25%,
-                          #8b5cf6 50%,
-                          #a855f7 75%,
-                          #d946ef 100%)`,
+                    left: `${Math.max(2, Math.min(98, scrollProgress))}%`,
                     boxShadow: isProgressHovered
                       ? togglDark
-                        ? "0 4px 20px rgba(99, 102, 241, 0.4), 0 0 40px rgba(139, 92, 246, 0.2)"
-                        : "0 4px 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(99, 102, 241, 0.15)"
+                        ? "0 0 20px rgba(99, 102, 241, 0.6), 0 0 40px rgba(139, 92, 246, 0.3)"
+                        : "0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(99, 102, 241, 0.2)"
                       : undefined,
                   }}
                 >
                   <div
                     className={`
-                      absolute inset-0 opacity-40
-                      bg-gradient-to-r from-transparent via-white to-transparent
-                      transform -skew-x-12 w-20
-                      ${scrollProgress > 0 ? "animate-shimmer" : ""}
-                    `}
-                  />
-
-                  <div
-                    className={`
-                      absolute top-0 right-0 w-4 h-full
-                      bg-gradient-to-l from-white/60 to-transparent
-                      rounded-full blur-sm
-                      ${scrollProgress > 2 ? "opacity-100" : "opacity-0"}
-                      transition-opacity duration-300
+                      absolute inset-1 rounded-full
+                      ${togglDark ? "bg-indigo-400" : "bg-blue-500"}
+                      ${isProgressHovered ? "animate-ping" : ""}
                     `}
                   />
                 </div>
+              )}
 
-                {scrollProgress > 1 && (
-                  <div
-                    className={`
-                      absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2
-                      rounded-full transition-all duration-300 z-10
-                      ${
-                        isProgressHovered
-                          ? "w-4 h-4 scale-125"
-                          : "w-2.5 h-2.5 scale-100"
-                      }
-                      ${
-                        togglDark
-                          ? "bg-white shadow-lg ring-2 ring-indigo-400/40"
-                          : "bg-white shadow-xl ring-2 ring-blue-400/50"
-                      }
-                      ${isProgressHovered ? "animate-pulse" : ""}
-                    `}
-                    style={{
-                      left: `${Math.max(2, Math.min(98, scrollProgress))}%`,
-                      boxShadow: isProgressHovered
-                        ? togglDark
-                          ? "0 0 20px rgba(99, 102, 241, 0.6), 0 0 40px rgba(139, 92, 246, 0.3)"
-                          : "0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(99, 102, 241, 0.2)"
-                        : undefined,
-                    }}
-                  >
-                    <div
-                      className={`
-                        absolute inset-1 rounded-full
-                        ${togglDark ? "bg-indigo-400" : "bg-blue-500"}
-                        ${isProgressHovered ? "animate-ping" : ""}
-                      `}
-                    />
-                  </div>
-                )}
-
-                {progressTooltip.show && isProgressHovered && (
-                  <div
-                    className={`
-                      absolute top-4 px-4 py-3 rounded-xl text-xs font-medium pointer-events-none
-                      transition-all duration-200 z-20 backdrop-blur-md transform -translate-x-1/2
-                      ${
-                        togglDark
-                          ? "bg-gray-900/95 text-gray-100 border border-gray-700/50 shadow-2xl shadow-black/40"
-                          : "bg-white/95 text-gray-800 border border-gray-200/50 shadow-2xl shadow-gray-500/20"
-                      }
-                      animate-in fade-in slide-in-from-top-2 duration-200
-                    `}
-                    style={{
-                      left: `${progressTooltip.x}px`,
-                    }}
-                  >
-                    <div className="text-center">
-                      <div className="font-bold text-sm flex items-center gap-2">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            togglDark ? "bg-indigo-400" : "bg-blue-500"
-                          } animate-pulse`}
-                        ></div>
-                        {progressTooltip.percentage}%
-                      </div>
-                      <div className="text-xs opacity-75 mt-1">
-                        {progressTooltip.percentage === 0
-                          ? "Beginning"
-                          : progressTooltip.percentage === 100
-                          ? "The End"
-                          : "Click to jump here"}
-                      </div>
+              {progressTooltip.show && isProgressHovered && (
+                <div
+                  className={`
+                    absolute top-4 px-4 py-3 rounded-xl text-xs font-medium pointer-events-none
+                    transition-all duration-200 z-20 backdrop-blur-md transform -translate-x-1/2
+                    ${
+                      togglDark
+                        ? "bg-gray-900/95 text-gray-100 border border-gray-700/50 shadow-2xl shadow-black/40"
+                        : "bg-white/95 text-gray-800 border border-gray-200/50 shadow-2xl shadow-gray-500/20"
+                    }
+                    animate-in fade-in slide-in-from-top-2 duration-200
+                  `}
+                  style={{
+                    left: `${progressTooltip.x}px`,
+                  }}
+                >
+                  <div className="text-center">
+                    <div className="font-bold text-sm flex items-center gap-2">
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          togglDark ? "bg-indigo-400" : "bg-blue-500"
+                        } animate-pulse`}
+                      ></div>
+                      {progressTooltip.percentage}%
                     </div>
-
-                    <div
-                      className={`
-                        absolute top-full left-1/2 transform -translate-x-1/2
-                        w-0 h-0 border-l-4 border-r-4 border-t-4
-                        ${
-                          togglDark
-                            ? "border-l-transparent border-r-transparent border-t-gray-900/95"
-                            : "border-l-transparent border-r-transparent border-t-white/95"
-                        }
-                      `}
-                    />
+                    <div className="text-xs opacity-75 mt-1">
+                      {progressTooltip.percentage === 0
+                        ? "Beginning"
+                        : progressTooltip.percentage === 100
+                        ? "The End"
+                        : "Click to jump here"}
+                    </div>
                   </div>
-                )}
-              </div>
 
-              <div
-                className={`
-                  absolute top-2 right-4 px-3 py-1.5 rounded-full text-xs font-medium
-                  transition-all duration-300 backdrop-blur-sm
-                  ${
-                    scrollProgress > 1
-                      ? "opacity-80 translate-y-0 scale-100"
-                      : "opacity-0 -translate-y-4 scale-90"
-                  }
-                  ${
-                    togglDark
-                      ? "bg-gray-800/90 text-gray-300 border border-gray-700/50 shadow-lg"
-                      : "bg-white/90 text-gray-600 border border-gray-300/50 shadow-md"
-                  }
-                `}
-              >
-                <div className="flex items-center space-x-2">
                   <div
-                    className={`w-2 h-2 rounded-full ${
-                      togglDark ? "bg-indigo-400" : "bg-blue-500"
-                    } animate-pulse`}
-                  ></div>
-                  <span>{Math.round(scrollProgress)}% complete</span>
+                    className={`
+                      absolute top-full left-1/2 transform -translate-x-1/2
+                      w-0 h-0 border-l-4 border-r-4 border-t-4
+                      ${
+                        togglDark
+                          ? "border-l-transparent border-r-transparent border-t-gray-900/95"
+                          : "border-l-transparent border-r-transparent border-t-white/95"
+                      }
+                    `}
+                  />
                 </div>
+              )}
+            </div>
+
+            <div
+              className={`
+                absolute top-2 right-4 px-3 py-1.5 rounded-full text-xs font-medium
+                transition-all duration-300 backdrop-blur-sm
+                ${
+                  scrollProgress > 1
+                    ? "opacity-80 translate-y-0 scale-100"
+                    : "opacity-0 -translate-y-4 scale-90"
+                }
+                ${
+                  togglDark
+                    ? "bg-gray-800/90 text-gray-300 border border-gray-700/50 shadow-lg"
+                    : "bg-white/90 text-gray-600 border border-gray-300/50 shadow-md"
+                }
+              `}
+            >
+              <div className="flex items-center space-x-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    togglDark ? "bg-indigo-400" : "bg-blue-500"
+                  } animate-pulse`}
+                ></div>
+                <span>{Math.round(scrollProgress)}% complete</span>
               </div>
             </div>
           </div>
         </div>
-
-        <style>{`
-          @keyframes shimmer {
-            0% { transform: translateX(-100%) skewX(-12deg); }
-            100% { transform: translateX(400%) skewX(-12deg); }
-          }
-
-          .animate-shimmer {
-            animation: shimmer 3s infinite linear;
-          }
-
-          @keyframes fade-in {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-
-          @keyframes slide-in-from-top-2 {
-            from { transform: translateY(-8px) translateX(-50%); }
-            to { transform: translateY(0) translateX(-50%); }
-          }
-
-          .animate-in {
-            animation-fill-mode: both;
-          }
-
-          .fade-in {
-            animation: fade-in 0.2s ease-out;
-          }
-
-          .slide-in-from-top-2 {
-            animation: slide-in-from-top-2 0.2s ease-out;
-          }
-
-          .custom-scrollbar {
-            scrollbar-width: thin;
-            scrollbar-color: ${
-              togglDark ? "#4B5563 #1F2937" : "#CBD5E1 #F1F5F9"
-            };
-          }
-
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 20px;
-          }
-
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: ${togglDark ? "#1F2937" : "#F1F5F9"};
-            border-radius: 10px;
-            margin: 20px 0;
-          }
-
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: ${
-              togglDark
-                ? "linear-gradient(180deg, #6B7280 0%, #4B5563 100%)"
-                : "linear-gradient(180deg, #94A3B8 0%, #64748B 100%)"
-            };
-            border-radius: 10px;
-            border: 2px solid ${togglDark ? "#1F2937" : "#F1F5F9"};
-            transition: all 0.3s ease;
-          }
-
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: ${
-              togglDark
-                ? "linear-gradient(180deg, #9CA3AF 0%, #6B7280 100%)"
-                : "linear-gradient(180deg, #64748B 0%, #475569 100%)"
-            };
-            transform: scaleY(1.1);
-          }
-
-          .custom-scrollbar::-webkit-scrollbar-thumb:active {
-            background: ${togglDark ? "#374151" : "#334155"};
-          }
-
-          .custom-scrollbar::-webkit-scrollbar-corner {
-            background: ${togglDark ? "#1F2937" : "#F1F5F9"};
-          }
-
-          /* Enhanced book content styling */
-          .book-reader-container h1,
-          .book-reader-container h2,
-          .book-reader-container h3,
-          .book-reader-container h4,
-          .book-reader-container h5,
-          .book-reader-container h6 {
-            color: ${togglDark ? "#F3F4F6" : "#1F2937"};
-            margin-top: 2em;
-            margin-bottom: 1em;
-            font-weight: 600;
-            letter-spacing: -0.025em;
-          }
-
-          .book-reader-container h1 {
-            font-size: 2em;
-            border-bottom: 2px solid ${togglDark ? "#374151" : "#E5E7EB"};
-            padding-bottom: 0.5em;
-          }
-
-          .book-reader-container h2 {
-            font-size: 1.6em;
-          }
-
-          .book-reader-container h3 {
-            font-size: 1.3em;
-          }
-
-          .book-reader-container p {
-            margin-bottom: 1.5em;
-            text-align: justify;
-            hyphens: auto;
-            word-spacing: 0.05em;
-          }
-
-          .book-reader-container blockquote {
-            border-left: 4px solid ${togglDark ? "#6366F1" : "#3B82F6"};
-            padding-left: 1.5em;
-            margin: 2em 0;
-            font-style: italic;
-            background: ${
-              togglDark ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.05)"
-            };
-            padding: 1em 1.5em;
-            border-radius: 0.5em;
-          }
-
-          .book-reader-container a {
-            color: ${togglDark ? "#60A5FA" : "#2563EB"};
-            text-decoration: underline;
-            text-decoration-color: transparent;
-            transition: all 0.2s ease;
-          }
-
-          .book-reader-container a:hover {
-            text-decoration-color: currentColor;
-            text-decoration-thickness: 2px;
-          }
-
-          .book-reader-container img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 0.5em;
-            box-shadow: 0 4px 12px ${
-              togglDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
-            };
-            margin: 2em 0;
-          }
-
-          .book-reader-container ul,
-          .book-reader-container ol {
-            margin-left: 1.5em;
-          }
-
-          .book-reader-container ul li,
-          .book-reader-container ol li {
-            margin-bottom: 0.5em;
-          }
-
-          .book-reader-container code {
-            color: ${togglDark ? "#60A5FA" : "#2563EB"};
-            background: ${
-              togglDark ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.05)"
-            };
-            padding: 0.2em 0.4em;
-            border-radius: 0.25em;
-            font-size: 0.9em;
-          }
-        `}</style>
       </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%) skewX(-12deg); }
+          100% { transform: translateX(400%) skewX(-12deg); }
+        }
+
+        .animate-shimmer {
+          animation: shimmer 3s infinite linear;
+        }
+
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slide-in-from-top-2 {
+          from { transform: translateY(-8px) translateX(-50%); }
+          to { transform: translateY(0) translateX(-50%); }
+        }
+
+        .animate-in {
+          animation-fill-mode: both;
+        }
+
+        .fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+
+        .slide-in-from-top-2 {
+          animation: slide-in-from-top-2 0.2s ease-out;
+        }
+
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: ${
+            togglDark ? "#4B5563 #1F2937" : "#CBD5E1 #F1F5F9"
+          };
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 20px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: ${togglDark ? "#1F2937" : "#F1F5F9"};
+          border-radius: 10px;
+          margin: 20px 0;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: ${
+            togglDark
+              ? "linear-gradient(180deg, #6B7280 0%, #4B5563 100%)"
+              : "linear-gradient(180deg, #94A3B8 0%, #64748B 100%)"
+          };
+          border-radius: 10px;
+          border: 2px solid ${togglDark ? "#1F2937" : "#F1F5F9"};
+          transition: all 0.3s ease;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: ${
+            togglDark
+              ? "linear-gradient(180deg, #9CA3AF 0%, #6B7280 100%)"
+              : "linear-gradient(180deg, #64748B 0%, #475569 100%)"
+          };
+          transform: scaleY(1.1);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:active {
+          background: ${togglDark ? "#374151" : "#334155"};
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-corner {
+          background: ${togglDark ? "#1F2937" : "#F1F5F9"};
+        }
+
+        /* Enhanced book content styling */
+        .book-reader-container h1,
+        .book-reader-container h2,
+        .book-reader-container h3,
+        .book-reader-container h4,
+        .book-reader-container h5,
+        .book-reader-container h6 {
+          color: ${togglDark ? "#F3F4F6" : "#1F2937"};
+          margin-top: 2em;
+          margin-bottom: 1em;
+          font-weight: 600;
+          letter-spacing: -0.025em;
+        }
+
+        .book-reader-container h1 {
+          font-size: 2em;
+          border-bottom: 2px solid ${togglDark ? "#374151" : "#E5E7EB"};
+          padding-bottom: 0.5em;
+        }
+
+        .book-reader-container h2 {
+          font-size: 1.6em;
+        }
+
+        .book-reader-container h3 {
+          font-size: 1.3em;
+        }
+
+        .book-reader-container p {
+          margin-bottom: 1.5em;
+          text-align: justify;
+          hyphens: auto;
+          word-spacing: 0.05em;
+        }
+
+        .book-reader-container blockquote {
+          border-left: 4px solid ${togglDark ? "#6366F1" : "#3B82F6"};
+          padding-left: 1.5em;
+          margin: 2em 0;
+          font-style: italic;
+          background: ${
+            togglDark ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.05)"
+          };
+          padding: 1em 1.5em;
+          border-radius: 0.5em;
+        }
+
+        .book-reader-container a {
+          color: ${togglDark ? "#60A5FA" : "#2563EB"};
+          text-decoration: underline;
+          text-decoration-color: transparent;
+          transition: all 0.2s ease;
+        }
+
+        .book-reader-container a:hover {
+          text-decoration-color: currentColor;
+          text-decoration-thickness: 2px;
+        }
+
+        .book-reader-container img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 0.5em;
+          box-shadow: 0 4px 12px ${
+            togglDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
+          };
+          margin: 2em 0;
+        }
+
+        .book-reader-container ul,
+        .book-reader-container ol {
+          margin-left: 1.5em;
+        }
+
+        .book-reader-container ul li,
+        .book-reader-container ol li {
+          margin-bottom: 0.5em;
+        }
+
+        .book-reader-container code {
+          color: ${togglDark ? "#60A5FA" : "#2563EB"};
+          background: ${
+            togglDark ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.05)"
+          };
+          padding: 0.2em 0.4em;
+          border-radius: 0.25em;
+          font-size: 0.9em;
+        }
+      `}</style>
     </div>
   );
 };

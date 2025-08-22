@@ -1,2 +1,34 @@
 @import "tailwindcss";
 @import "@radix-ui/themes/styles.css";
+
+@layer utilities {
+  @keyframes shimmer {
+    0% { transform: translateX(-100%) skewX(-12deg); }
+    100% { transform: translateX(400%) skewX(-12deg); }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s infinite linear;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 20px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-900 rounded-lg;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700
+           border-2 border-gray-100 dark:border-gray-900 rounded-lg;
+  }
+
+  .book-reader-container h1 {
+    @apply text-2xl font-semibold border-b pb-2 mt-8 mb-4;
+  }
+  .book-reader-container blockquote {
+    @apply border-l-4 pl-6 my-6 italic rounded-md;
+  }
+}

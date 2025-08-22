@@ -11,6 +11,12 @@ interface notesState {
   selectedText: string;
   note: string;
 }
+interface themeState{
+  id:string,
+  name:string,
+  bg:string,
+  text:string
+}
 interface BookState {
   book: book;
   togglDark: boolean;
@@ -24,6 +30,8 @@ interface BookState {
   letterSpacing: string;
   toggleSidebar: boolean;
   highlights:string[]
+  theme?:themeState,
+  isFocused:boolean
   annotationsLoading:boolean
 }
 const initialState: BookState = {
@@ -39,6 +47,7 @@ const initialState: BookState = {
   letterSpacing: "0",
   toggleSidebar: false,
   highlights:[],
+  isFocused:false,
   annotationsLoading:true
 };
 const BookReadingSlice = createSlice({
@@ -71,8 +80,15 @@ const BookReadingSlice = createSlice({
     },
     setAnnotationsLoading:(state,action:{payload:boolean})=>{
       state.annotationsLoading=action.payload
+    },
+    setTheme:(state,action:{payload:themeState})=>{
+      state.theme=action.payload
     }
     ,
+    setIsFocused:(state,action:{payload:boolean})=>{
+      state.isFocused=action.payload
+    
+    },
     setFontFamily: (
       state,
       action: {
@@ -110,6 +126,8 @@ export const {
   setFontFamily,
   setLetterSpacing,
   setSidebar,
+  setIsFocused,
+  setTheme,
   setAnnotationsLoading
 } = BookReadingSlice.actions;
 export default BookReadingSlice.reducer;

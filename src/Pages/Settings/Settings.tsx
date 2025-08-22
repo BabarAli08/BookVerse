@@ -149,7 +149,7 @@ export default function Settings() {
         return;
       }
 
-      const { data: existingProfile, error: checkError } = await supabase
+      const {  error: checkError } = await supabase
         .from("profiles")
         .select("id")
         .eq("id", userId)

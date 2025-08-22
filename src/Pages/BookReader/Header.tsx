@@ -1,19 +1,21 @@
-import { Menu, Bookmark, Search, MessageSquare, Moon, Sun } from 'lucide-react';
+import { Menu, Bookmark, Search, MessageSquare, Moon, Sun, FocusIcon } from 'lucide-react';
 
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../../Store/store';
-import { setSidebar, toggleDark } from '../../Store/BookReadingSlice';
+import { setIsFocused, setSidebar, toggleDark } from '../../Store/BookReadingSlice';
 
 const Header = () => {
   
     const dispatch=useDispatch()
-    const {togglDark: isDarkMode,book}=useSelector((state:RootState)=>state.bookReading)
+    const {togglDark: isDarkMode,book,isFocused}=useSelector((state:RootState)=>state.bookReading)
 
   const toggleTheme = () => {
     dispatch(toggleDark());
   };
 
- 
+ const handleFocus=()=>{
+    dispatch(setIsFocused(!isFocused))
+ }
 
   return (
     
@@ -44,8 +46,8 @@ const Header = () => {
             <button className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600'} transition-colors`}>
               <Search className="w-5 h-5" />
             </button>
-            <button className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600'} transition-colors`}>
-              <MessageSquare className="w-5 h-5" />
+            <button onClick={handleFocus} className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-200 text-gray-600'} transition-colors`}>
+              <FocusIcon className="w-5 h-5 text-gray-500" />
             </button>
             <button 
               onClick={toggleTheme}
