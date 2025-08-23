@@ -67,6 +67,8 @@ const BookReader = () => {
     fontFamily,
     fontSize,
     theme,
+    letterSpacing,
+    background,
     isFocused,
   } = useSelector((state: RootState) => state.bookReading);
 
@@ -411,7 +413,6 @@ const BookReader = () => {
     <div className={`${togglDark ? "bg-gray-900" : "bg-gray-50"}`}>
       {!isFocused && <Navbar />}
       
-      {/* Move FocusModeSettings outside the main layout flow */}
       <FocusModeSettings />
       
       {showOptions && (
@@ -459,6 +460,8 @@ const BookReader = () => {
                 style={{
                   fontFamily: fontFamily,
                   fontSize: fontSize + "px",
+                  backgroundColor:background.pattern,
+                  letterSpacing: letterSpacing + "px",
                   lineHeight: lineHeight,
                 }}
               />
@@ -466,7 +469,7 @@ const BookReader = () => {
           </div>
         </div>
 
-        {/* Progress Bar */}
+    
         <div className={`fixed top-0 left-0 w-full z-40 ${isFocused ? 'opacity-30 hover:opacity-80' : ''} transition-opacity duration-300`}>
           <div
             className={`

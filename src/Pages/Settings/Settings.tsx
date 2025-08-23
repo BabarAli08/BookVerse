@@ -71,11 +71,7 @@ export default function Settings() {
               <Billing/>
             )}
 
-            {activeTab !== "Profile" && (
-              <p className="text-gray-600">
-                Settings for {activeTab} will go here.
-              </p>
-            )}
+            
           </div>
         </div>
       </div>

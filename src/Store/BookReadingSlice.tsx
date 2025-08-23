@@ -11,11 +11,17 @@ interface notesState {
   selectedText: string;
   note: string;
 }
-interface themeState{
-  id:string,
-  name:string,
-  bg:string,
-  text:string
+interface themeState {
+  id: string;
+  name: string;
+  bg: string;
+  text: string;
+}
+interface backgroundState{
+  id:string
+  name:string
+  pattern:string
+  preview:string
 }
 interface BookState {
   book: book;
@@ -23,19 +29,27 @@ interface BookState {
   completePercentage: number;
   bookMarks: number[];
   fontSize: string;
+  background:backgroundState,
   highlited: highlightState[];
   notes: notesState[];
   lineHeight: string;
   fontFamily: "Georgia, serif" | "sans-serif" | "cursive" | "monospace";
   letterSpacing: string;
   toggleSidebar: boolean;
-  highlights:string[]
-  theme?:themeState,
-  isFocused:boolean
-  annotationsLoading:boolean
+  highlights: string[];
+  theme?: themeState;
+  isFocused: boolean;
+  annotationsLoading: boolean;
 }
 const initialState: BookState = {
   book: {},
+  theme: {
+    id: "sepia",
+    name: "Sepia",
+    bg: "bg-amber-50",
+    text: "text-amber-900",
+  },
+  background: { id: "none", name: "None", pattern: "", preview: "bg-transparent" },
   togglDark: false,
   completePercentage: 0,
   bookMarks: [],
@@ -46,9 +60,9 @@ const initialState: BookState = {
   fontFamily: "Georgia, serif",
   letterSpacing: "0",
   toggleSidebar: false,
-  highlights:[],
-  isFocused:false,
-  annotationsLoading:true
+  highlights: [],
+  isFocused: false,
+  annotationsLoading: true,
 };
 const BookReadingSlice = createSlice({
   name: "bookReading",
@@ -78,16 +92,17 @@ const BookReadingSlice = createSlice({
     setLineHeight: (state, action: { payload: string }) => {
       state.lineHeight = action.payload;
     },
-    setAnnotationsLoading:(state,action:{payload:boolean})=>{
-      state.annotationsLoading=action.payload
+    setAnnotationsLoading: (state, action: { payload: boolean }) => {
+      state.annotationsLoading = action.payload;
     },
-    setTheme:(state,action:{payload:themeState})=>{
-      state.theme=action.payload
-    }
-    ,
-    setIsFocused:(state,action:{payload:boolean})=>{
-      state.isFocused=action.payload
-    
+    setTheme: (state, action: { payload: themeState }) => {
+      state.theme = action.payload;
+    },
+    setIsFocused: (state, action: { payload: boolean }) => {
+      state.isFocused = action.payload;
+    },
+    setBackground:(state,action:{payload:backgroundState})=>{
+      state.background=action.payload
     },
     setFontFamily: (
       state,
@@ -124,10 +139,11 @@ export const {
   deleteHighlight,
   setLineHeight,
   setFontFamily,
+  setBackground,
   setLetterSpacing,
   setSidebar,
   setIsFocused,
   setTheme,
-  setAnnotationsLoading
+  setAnnotationsLoading,
 } = BookReadingSlice.actions;
 export default BookReadingSlice.reducer;
