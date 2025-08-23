@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Settings2 } from "lucide-react";
 
 import Profile from "./Profile";
+import Notifications from "./Notifications";
+import Privacy from "./Privacy";
+import ReadingPreferences from "./Reading";
+import Billing from "./Billing";
 
 const tabs = ["Profile", "Notifications", "Privacy", "Reading", "Billing"];
 
@@ -51,6 +55,20 @@ export default function Settings() {
           <div className="mt-6 bg-white rounded-xl shadow-md p-6">
             {activeTab === "Profile" && (
               <Profile setLoading={() => setLoading} />
+            )}
+            {activeTab==="Notifications" &&(
+              <Notifications/>
+            )}
+
+            {activeTab==="Privacy"&&(
+              <Privacy/>
+            )}
+            {activeTab === "Reading" && (
+              <ReadingPreferences/>
+            )}
+
+            {activeTab==="Billing" &&(
+              <Billing/>
             )}
 
             {activeTab !== "Profile" && (
