@@ -91,7 +91,7 @@ const FocusModeSettings = () => {
         </div>
       </div>
 
-      {/* Settings Modal - Only when opened */}
+     
       {focusSettingsOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100] animate-in fade-in duration-200">
           <div className={`rounded-xl shadow-2xl w-full max-w-sm animate-in slide-in-from-top-4 duration-300 ${

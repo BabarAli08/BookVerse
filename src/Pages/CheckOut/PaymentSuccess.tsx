@@ -183,7 +183,7 @@ const PaymentSuccess = () => {
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {features.map((feature, index) => (
+                {features?.map((feature, index) => (
                   <div 
                     key={index}
                     className="flex items-center p-3 bg-green-50 rounded-xl transition-all duration-300 hover:bg-green-100"

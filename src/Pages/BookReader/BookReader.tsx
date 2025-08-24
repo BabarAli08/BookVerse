@@ -4,13 +4,29 @@ import useFetchSingleBook from "../../Data/useFetchSingleBook";
 import BookFetchError from "../../Component/BookFetchError";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setReadingBook } from "../../Store/BookReadingSlice";
+import { setPreferances, setReadingBook } from "../../Store/BookReadingSlice";
 import Header from "./Header";
 import type { RootState } from "../../Store/store";
 import ReadingSidebar from "./SideBar";
 import Highlighting from "./Highlighting";
 import Navbar from "../../Component/Navbar/Navbar";
 import FocusModeSettings from "./FocusModeSettings";
+import supabase from "../../supabase-client";
+import { toast } from "sonner";
+
+interface ThemeOption {
+  id: string;
+  name: string;
+  bg: string;
+  text: string;
+}
+
+interface BackgroundOption {
+  id: string;
+  name: string;
+  pattern: string;
+  preview: string;
+}
 
 function debounce<T extends (...args: any[]) => void>(
   func: T,
@@ -53,6 +69,7 @@ const BookReader = () => {
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
   const [isContentReady, setIsContentReady] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const bookContentRef = useRef<HTMLDivElement>(null);
   const { id } = useParams();
@@ -71,6 +88,195 @@ const BookReader = () => {
     background,
     isFocused,
   } = useSelector((state: RootState) => state.bookReading);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const backgroundOptions: BackgroundOption[] = [
+    { id: "none", name: "None", pattern: "", preview: "bg-transparent" },
+    {
+      id: "notebook-paper",
+      name: "Notebook Paper",
+      pattern:
+        "repeating-linear-gradient(transparent, transparent 23px, #3b82f6 24px, #3b82f6 25px), linear-gradient(90deg, #ef4444 0px, #ef4444 1px, transparent 1px, transparent 80px)",
+      preview: "bg-white",
+    },
+    {
+      id: "graph-paper",
+      name: "Graph Paper",
+      pattern:
+        "linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)",
+      preview: "bg-blue-50",
+    },
+    {
+      id: "parchment",
+      name: "Parchment",
+      pattern:
+        "radial-gradient(circle at 30% 20%, rgba(139, 69, 19, 0.06) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(160, 82, 45, 0.08) 0%, transparent 50%), radial-gradient(circle at 20% 70%, rgba(205, 133, 63, 0.04) 0%, transparent 50%)",
+      preview: "bg-amber-100",
+    },
+    {
+      id: "aged-paper",
+      name: "Aged Paper",
+      pattern:
+        "radial-gradient(circle at 10% 10%, rgba(139, 69, 19, 0.1) 0%, transparent 30%), radial-gradient(circle at 90% 20%, rgba(160, 82, 45, 0.08) 0%, transparent 40%), radial-gradient(circle at 30% 90%, rgba(205, 133, 63, 0.09) 0%, transparent 35%), radial-gradient(circle at 80% 80%, rgba(222, 184, 135, 0.06) 0%, transparent 45%)",
+      preview: "bg-yellow-100",
+    },
+    {
+      id: "watermark",
+      name: "Watermark",
+      pattern:
+        "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.04) 0%, transparent 70%)",
+      preview: "bg-gray-50",
+    },
+    {
+      id: "rice-paper",
+      name: "Rice Paper",
+      pattern:
+        "radial-gradient(circle at 2px 2px, rgba(0,0,0,0.08) 1px, transparent 1px), radial-gradient(circle at 6px 14px, rgba(0,0,0,0.06) 1px, transparent 1px), radial-gradient(circle at 14px 6px, rgba(0,0,0,0.07) 1px, transparent 1px)",
+      preview: "bg-stone-50",
+    },
+    {
+      id: "canvas",
+      name: "Canvas",
+      pattern:
+        "repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.06) 1px, rgba(0,0,0,0.06) 2px), repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(0,0,0,0.06) 1px, rgba(0,0,0,0.06) 2px)",
+      preview: "bg-neutral-50",
+    },
+    {
+      id: "linen",
+      name: "Linen",
+      pattern:
+        "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px), repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px)",
+      preview: "bg-slate-50",
+    },
+    {
+      id: "fabric",
+      name: "Fabric",
+      pattern:
+        "repeating-linear-gradient(0deg, rgba(0,0,0,0.04), rgba(0,0,0,0.04) 1px, transparent 1px, transparent 4px), repeating-linear-gradient(90deg, rgba(0,0,0,0.04), rgba(0,0,0,0.04) 1px, transparent 1px, transparent 4px)",
+      preview: "bg-gray-100",
+    },
+    {
+      id: "vintage-dots",
+      name: "Vintage Dots",
+      pattern:
+        "radial-gradient(circle at 2px 2px, rgba(139, 69, 19, 0.15) 1px, transparent 1px), radial-gradient(circle at 12px 12px, rgba(160, 82, 45, 0.12) 1px, transparent 1px)",
+      preview: "bg-amber-50",
+    },
+    {
+      id: "crosshatch",
+      name: "Crosshatch",
+      pattern:
+        "repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0,0,0,0.06) 8px, rgba(0,0,0,0.06) 10px), repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0,0,0,0.06) 8px, rgba(0,0,0,0.06) 10px)",
+      preview: "bg-slate-100",
+    },
+    {
+      id: "manuscript",
+      name: "Manuscript",
+      pattern:
+        "linear-gradient(90deg, rgba(139, 69, 19, 0.15) 0px, rgba(139, 69, 19, 0.15) 2px, transparent 2px, transparent 100%), repeating-linear-gradient(transparent, transparent 19px, rgba(139, 69, 19, 0.3) 20px, rgba(139, 69, 19, 0.3) 21px)",
+      preview: "bg-orange-50",
+    },
+    {
+      id: "stipple",
+      name: "Stipple",
+      pattern:
+        "radial-gradient(circle at 1px 1px, rgba(0,0,0,0.1) 0.5px, transparent 0.5px), radial-gradient(circle at 5px 3px, rgba(0,0,0,0.08) 0.5px, transparent 0.5px), radial-gradient(circle at 3px 7px, rgba(0,0,0,0.09) 0.5px, transparent 0.5px), radial-gradient(circle at 8px 6px, rgba(0,0,0,0.07) 0.5px, transparent 0.5px)",
+      preview: "bg-stone-100",
+    },
+    {
+      id: "zen-waves",
+      name: "Zen Waves",
+      pattern:
+        "repeating-radial-gradient(ellipse at 50% 0%, transparent 0%, transparent 40%, rgba(0,0,0,0.04) 41%, rgba(0,0,0,0.04) 43%, transparent 44%)",
+      preview: "bg-blue-50",
+    },
+    {
+      id: "organic",
+      name: "Organic",
+      pattern:
+        "radial-gradient(ellipse at 20% 30%, rgba(34, 197, 94, 0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(16, 185, 129, 0.08) 0%, transparent 60%), radial-gradient(ellipse at 60% 20%, rgba(52, 211, 153, 0.04) 0%, transparent 40%)",
+      preview: "bg-emerald-50",
+    },
+    {
+      id: "minimalist-lines",
+      name: "Minimalist Lines",
+      pattern:
+        "repeating-linear-gradient(180deg, transparent, transparent 40px, rgba(0,0,0,0.04) 40px, rgba(0,0,0,0.04) 42px)",
+      preview: "bg-neutral-50",
+    },
+    {
+      id: "dots",
+      name: "Simple Dots",
+      pattern:
+        "radial-gradient(circle at 1px 1px, rgba(0,0,0,0.1) 1px, transparent 0)",
+      preview: "bg-white",
+    },
+    {
+      id: "diagonal-stripes",
+      name: "Diagonal Stripes",
+      pattern:
+        "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.05) 10px, rgba(0,0,0,0.05) 20px)",
+      preview: "bg-gray-50",
+    },
+  ];
+
+  const themeOptions: ThemeOption[] = [
+    { id: "light", name: "Light", bg: "bg-white", text: "text-gray-900" },
+    { id: "sepia", name: "Sepia", bg: "bg-amber-50", text: "text-amber-900" },
+    { id: "dark", name: "Dark", bg: "bg-slate-800", text: "text-white" },
+    { id: "forest", name: "Forest", bg: "bg-green-50", text: "text-green-800" },
+    { id: "ocean", name: "Ocean", bg: "bg-blue-50", text: "text-blue-800" },
+    {
+      id: "lavender",
+      name: "Lavender",
+      bg: "bg-purple-50",
+      text: "text-purple-800",
+    },
+  ];
+
+  useEffect(() => {
+    const getUserPreferances = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) return;
+
+      const { data: userSettings, error } = await supabase
+        .from("reading_preferances")
+        .select("*")
+        .eq("user_id", user.id);
+      if (error) {
+        toast.warning("could not load your preferances");
+        return;
+      } else if (userSettings && userSettings.length > 0) {
+        const preferances = {
+          readingTheme:
+            themeOptions.find((theme) => theme.id === userSettings[0]?.theme) ||
+            themeOptions[0],
+          background:
+            backgroundOptions.find(
+              (background) => background.id === userSettings[0]?.background
+            ) || backgroundOptions[0],
+          fontFamily: userSettings[0]?.font_family || "Serif",
+          fontSize: userSettings[0]?.font_size || "Medium",
+          lineSpacing: userSettings[0]?.line_spacing || "Normal",
+        };
+        dispatch(setPreferances(preferances));
+      }
+    };
+    getUserPreferances();
+  }, []);
 
   const handleScroll = useCallback(
     throttle(() => {
@@ -236,6 +442,36 @@ const BookReader = () => {
     );
   };
 
+  const mapFontFamily = (fontFamily: string): string => {
+    switch (fontFamily) {
+      case "Sans Serif":
+        return "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+      case "Monospace":
+        return "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace";
+      case "Dyslexic":
+        return "OpenDyslexic, sans-serif";
+      case "Serif":
+        return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
+      default:
+        return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
+    }
+  };
+
+  const mapLineHeight = (lineHeight: string): string => {
+    switch (lineHeight) {
+      case "Tight":
+        return "1.4";
+      case "Normal":
+        return "1.6";
+      case "Relaxed":
+        return "1.8";
+      case "Double":
+        return "2.0";
+      default:
+        return "1.6";
+    }
+  };
+
   const htmlUrl = getBookUrl();
 
   useEffect(() => {
@@ -305,6 +541,22 @@ const BookReader = () => {
     }
   }, [book?.id, scrollProgress, debouncedSaveProgress]);
 
+  const mapFontSize = (fontSize: string) => {
+    const baseSize = isMobile ? 16 : 18;
+    switch (fontSize) {
+      case "Small":
+        return `${baseSize - 2}px`;
+      case "Medium":
+        return `${baseSize}px`;
+      case "Large":
+        return `${baseSize + 4}px`;
+      case "Extra Large":
+        return `${baseSize + 8}px`;
+      default:
+        return `${baseSize}px`;
+    }
+  };
+
   useEffect(() => {
     if (book?.id && bookContentRef.current && isContentReady) {
       const savedProgress = localStorage.getItem(`reading-progress-${book.id}`);
@@ -351,7 +603,10 @@ const BookReader = () => {
           togglDark ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900"
         }`}
       >
-        <h1 className="text-2xl">Loading book...</h1>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <h1 className="text-xl md:text-2xl">Loading book...</h1>
+        </div>
       </div>
     );
 
@@ -371,36 +626,46 @@ const BookReader = () => {
           togglDark ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900"
         }`}
       >
-        <h1 className="text-2xl">Loading book content...</h1>
+        <div className="text-center">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-300 rounded w-3/4 mx-auto mb-4"></div>
+            <div className="h-4 bg-gray-300 rounded w-1/2 mx-auto mb-4"></div>
+            <div className="h-4 bg-gray-300 rounded w-5/6 mx-auto"></div>
+          </div>
+          <h1 className="text-xl md:text-2xl mt-6">Loading book content...</h1>
+        </div>
       </div>
     );
 
   if (contentError)
     return (
       <div
-        className={`min-h-screen flex items-center justify-center ${
+        className={`min-h-screen flex items-center justify-center px-4 ${
           togglDark ? "bg-gray-900 text-gray-100" : "bg-gray-50 text-gray-900"
         }`}
       >
-        <div className="text-center">
+        <div className="text-center max-w-md">
+          <div className="mb-6">
+            <div className={`text-6xl ${togglDark ? "text-red-400" : "text-red-500"}`}>📚</div>
+          </div>
           <h1
-            className={`text-2xl mb-4 ${
+            className={`text-xl md:text-2xl mb-4 font-semibold ${
               togglDark ? "text-red-400" : "text-red-600"
             }`}
           >
             Error Loading Book
           </h1>
           <p
-            className={`mb-4 ${togglDark ? "text-gray-300" : "text-gray-600"}`}
+            className={`mb-6 text-sm md:text-base ${togglDark ? "text-gray-300" : "text-gray-600"}`}
           >
             {contentError}
           </p>
           <button
             onClick={() => window.location.reload()}
-            className={`px-4 py-2 rounded transition-colors duration-200 ${
+            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 ${
               togglDark
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-blue-500 text-white hover:bg-blue-600"
+                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/25"
+                : "bg-blue-500 text-white hover:bg-blue-600 shadow-lg shadow-blue-500/25"
             }`}
           >
             Try Again
@@ -410,17 +675,17 @@ const BookReader = () => {
     );
 
   return (
-    <div className={`${togglDark ? "bg-gray-900" : "bg-gray-50"}`}>
+    <div className={`${togglDark ? "bg-gray-900" : "bg-gray-50"} min-h-screen`}>
       {!isFocused && <Navbar />}
-      
+
       <FocusModeSettings />
-      
+
       {showOptions && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
           <Highlighting onClose={handleCloseHighlighting} text={selectedText} />
         </div>
       )}
-      
+
       <div
         className={`min-h-screen transition-colors duration-300 ${
           togglDark ? "bg-gray-900" : "bg-gray-50"
@@ -428,234 +693,91 @@ const BookReader = () => {
       >
         {!isFocused && <Header />}
 
-        <div className="flex h-[calc(100vh-64px)]">
-          {toggleSidebar && !isFocused && ( // Hide sidebar in focus mode
-            <div className="flex-shrink-0">
+        <div className={`flex ${isMobile ? 'flex-col' : ''} ${isFocused ? 'h-screen' : isMobile ? 'h-screen' : 'h-[calc(100vh-64px)]'}`}>
+          {toggleSidebar && !isFocused && !isMobile && (
+            <div className="flex-shrink-0 w-80">
               <ReadingSidebar />
             </div>
           )}
 
-          <div className="flex-1 flex justify-center items-start p-6">
+          {/* Mobile sidebar overlay */}
+          {toggleSidebar && !isFocused && isMobile && (
+            <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm">
+              <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw]">
+                <ReadingSidebar />
+              </div>
+            </div>
+          )}
+
+          {/* Main Content Area */}
+          <div className={`flex-1 flex justify-center items-start ${
+            isMobile ? 'p-0 h-full' : 'p-4 lg:p-6'
+          }`}>
             <div
               className={`
-              w-full h-full rounded-xl shadow-2xl transition-all duration-300
-              book-reader-container
-              ${
-                togglDark
-                  ? "bg-gradient-to-br from-gray-800 to-gray-850 text-gray-100 shadow-black/30 border border-gray-700/50"
-                  : "bg-gradient-to-br from-white to-gray-50 text-gray-900 shadow-gray-300/40 border border-gray-200/50"
-              }
-              ${isFocused ? "max-w-4xl mx-auto" : "max-w-5xl"}
+                w-full h-full transition-all duration-300 book-reader-container
+                ${
+                  togglDark
+                    ? "bg-gradient-to-br from-gray-800 to-gray-850 text-gray-100 shadow-2xl shadow-black/40"
+                    : "bg-gradient-to-br from-white to-gray-50 text-gray-900 shadow-2xl shadow-gray-300/50"
+                }
+                ${isFocused ? "max-w-4xl mx-auto" : "max-w-6xl"}
+                ${isMobile ? 'rounded-none border-0' : 'rounded-xl border border-opacity-30'}
+                ${togglDark ? 'border-gray-600' : 'border-gray-300'}
               `}
             >
               <div
                 ref={bookContentRef}
                 className={`
-                h-[90vh] overflow-auto rounded-xl custom-scrollbar
-                ${theme?.bg || (togglDark ? 'bg-gray-800' : 'bg-white')}
-                ${theme?.text || (togglDark ? "text-gray-100" : "text-gray-800")}
-                ${isFocused ? "px-16 py-12" : "px-12 py-10"}
-              `}
+                  ${isMobile ? 'h-screen' : 'h-[95vh]'} 
+                  overflow-auto custom-scrollbar
+                  ${theme?.bg || (togglDark ? "bg-gray-800" : "bg-white")}
+                  ${theme?.text || (togglDark ? "text-gray-100" : "text-gray-800")}
+                  ${isMobile ? 'px-4 py-6 rounded-none' : isFocused ? 'px-8 lg:px-16 py-8 lg:py-12 rounded-xl' : 'px-6 lg:px-12 py-6 lg:py-10 rounded-xl'}
+                  leading-relaxed
+                `}
                 dangerouslySetInnerHTML={{ __html: bookContent }}
                 style={{
-                  fontFamily: fontFamily,
-                  fontSize: fontSize + "px",
-                  backgroundColor:background.pattern,
+                  fontFamily: mapFontFamily(fontFamily),
+                  fontSize: mapFontSize(fontSize),
                   letterSpacing: letterSpacing + "px",
-                  lineHeight: lineHeight,
+                  lineHeight: mapLineHeight(lineHeight),
+                  backgroundImage: background.pattern || "none",
+                  backgroundSize:
+                    background.id === "graph-paper"
+                      ? "20px 20px"
+                      : background.id === "notebook-paper"
+                      ? "80px 25px"
+                      : background.id === "canvas"
+                      ? "4px 4px"
+                      : background.id === "fabric"
+                      ? "4px 4px"
+                      : background.id === "crosshatch"
+                      ? "16px 16px"
+                      : background.id === "vintage-dots"
+                      ? "14px 14px"
+                      : background.id === "stipple"
+                      ? "10px 10px"
+                      : background.id === "zen-waves"
+                      ? "100px 50px"
+                      : background.id === "minimalist-lines"
+                      ? "100% 42px"
+                      : background.id === "dots"
+                      ? "10px 10px"
+                      : background.id === "diagonal-stripes"
+                      ? "30px 30px"
+                      : background.id === "rice-paper"
+                      ? "16px 16px"
+                      : "auto",
+                  backgroundRepeat: "repeat",
+                  backgroundAttachment: "local",
                 }}
               />
             </div>
           </div>
         </div>
 
-    
-        <div className={`fixed top-0 left-0 w-full z-40 ${isFocused ? 'opacity-30 hover:opacity-80' : ''} transition-opacity duration-300`}>
-          <div
-            className={`
-              w-full cursor-pointer transition-all duration-300 relative group
-              ${isProgressHovered ? "h-3" : "h-1.5"}
-              backdrop-blur-sm
-            `}
-            onClick={handleProgressBarClick}
-            onMouseEnter={() => setIsProgressHovered(true)}
-            onMouseLeave={() => {
-              setIsProgressHovered(false);
-              setProgressTooltip({ show: false, percentage: 0, x: 0 });
-            }}
-            onMouseMove={handleProgressBarMouseMove}
-            title={`Reading progress: ${Math.round(scrollProgress)}%`}
-          >
-            <div
-              className={`
-                w-full h-full rounded-full transition-all duration-300
-                ${
-                  togglDark
-                    ? "bg-gradient-to-r from-gray-800/60 via-gray-700/60 to-gray-800/60 shadow-lg shadow-black/20"
-                    : "bg-gradient-to-r from-gray-200/80 via-gray-300/80 to-gray-200/80 shadow-md shadow-gray-400/20"
-                }
-                ${isProgressHovered ? "shadow-xl scale-y-110" : ""}
-              `}
-            >
-              <div
-                className={`
-                  h-full transition-all duration-500 ease-out relative overflow-hidden rounded-full
-                  ${isProgressHovered ? "shadow-lg" : ""}
-                `}
-                style={{
-                  width: `${Math.max(0, Math.min(100, scrollProgress))}%`,
-                  background: togglDark
-                    ? `linear-gradient(90deg, 
-                        #6366f1 0%,
-                        #8b5cf6 25%,
-                        #a855f7 50%,
-                        #ec4899 75%,
-                        #f43f5e 100%)`
-                    : `linear-gradient(90deg,
-                        #3b82f6 0%,
-                        #6366f1 25%,
-                        #8b5cf6 50%,
-                        #a855f7 75%,
-                        #d946ef 100%)`,
-                  boxShadow: isProgressHovered
-                    ? togglDark
-                      ? "0 4px 20px rgba(99, 102, 241, 0.4), 0 0 40px rgba(139, 92, 246, 0.2)"
-                      : "0 4px 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(99, 102, 241, 0.15)"
-                    : undefined,
-                }}
-              >
-                <div
-                  className={`
-                    absolute inset-0 opacity-40
-                    bg-gradient-to-r from-transparent via-white to-transparent
-                    transform -skew-x-12 w-20
-                    ${scrollProgress > 0 ? "animate-shimmer" : ""}
-                  `}
-                />
 
-                <div
-                  className={`
-                    absolute top-0 right-0 w-4 h-full
-                    bg-gradient-to-l from-white/60 to-transparent
-                    rounded-full blur-sm
-                    ${scrollProgress > 2 ? "opacity-100" : "opacity-0"}
-                    transition-opacity duration-300
-                  `}
-                />
-              </div>
-
-              {scrollProgress > 1 && (
-                <div
-                  className={`
-                    absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2
-                    rounded-full transition-all duration-300 z-10
-                    ${
-                      isProgressHovered
-                        ? "w-4 h-4 scale-125"
-                        : "w-2.5 h-2.5 scale-100"
-                    }
-                    ${
-                      togglDark
-                        ? "bg-white shadow-lg ring-2 ring-indigo-400/40"
-                        : "bg-white shadow-xl ring-2 ring-blue-400/50"
-                    }
-                    ${isProgressHovered ? "animate-pulse" : ""}
-                  `}
-                  style={{
-                    left: `${Math.max(2, Math.min(98, scrollProgress))}%`,
-                    boxShadow: isProgressHovered
-                      ? togglDark
-                        ? "0 0 20px rgba(99, 102, 241, 0.6), 0 0 40px rgba(139, 92, 246, 0.3)"
-                        : "0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(99, 102, 241, 0.2)"
-                      : undefined,
-                  }}
-                >
-                  <div
-                    className={`
-                      absolute inset-1 rounded-full
-                      ${togglDark ? "bg-indigo-400" : "bg-blue-500"}
-                      ${isProgressHovered ? "animate-ping" : ""}
-                    `}
-                  />
-                </div>
-              )}
-
-              {progressTooltip.show && isProgressHovered && (
-                <div
-                  className={`
-                    absolute top-4 px-4 py-3 rounded-xl text-xs font-medium pointer-events-none
-                    transition-all duration-200 z-20 backdrop-blur-md transform -translate-x-1/2
-                    ${
-                      togglDark
-                        ? "bg-gray-900/95 text-gray-100 border border-gray-700/50 shadow-2xl shadow-black/40"
-                        : "bg-white/95 text-gray-800 border border-gray-200/50 shadow-2xl shadow-gray-500/20"
-                    }
-                    animate-in fade-in slide-in-from-top-2 duration-200
-                  `}
-                  style={{
-                    left: `${progressTooltip.x}px`,
-                  }}
-                >
-                  <div className="text-center">
-                    <div className="font-bold text-sm flex items-center gap-2">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          togglDark ? "bg-indigo-400" : "bg-blue-500"
-                        } animate-pulse`}
-                      ></div>
-                      {progressTooltip.percentage}%
-                    </div>
-                    <div className="text-xs opacity-75 mt-1">
-                      {progressTooltip.percentage === 0
-                        ? "Beginning"
-                        : progressTooltip.percentage === 100
-                        ? "The End"
-                        : "Click to jump here"}
-                    </div>
-                  </div>
-
-                  <div
-                    className={`
-                      absolute top-full left-1/2 transform -translate-x-1/2
-                      w-0 h-0 border-l-4 border-r-4 border-t-4
-                      ${
-                        togglDark
-                          ? "border-l-transparent border-r-transparent border-t-gray-900/95"
-                          : "border-l-transparent border-r-transparent border-t-white/95"
-                      }
-                    `}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div
-              className={`
-                absolute top-2 right-4 px-3 py-1.5 rounded-full text-xs font-medium
-                transition-all duration-300 backdrop-blur-sm
-                ${
-                  scrollProgress > 1
-                    ? "opacity-80 translate-y-0 scale-100"
-                    : "opacity-0 -translate-y-4 scale-90"
-                }
-                ${
-                  togglDark
-                    ? "bg-gray-800/90 text-gray-300 border border-gray-700/50 shadow-lg"
-                    : "bg-white/90 text-gray-600 border border-gray-300/50 shadow-md"
-                }
-              `}
-            >
-              <div className="flex items-center space-x-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    togglDark ? "bg-indigo-400" : "bg-blue-500"
-                  } animate-pulse`}
-                ></div>
-                <span>{Math.round(scrollProgress)}% complete</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <style>{`
@@ -690,19 +812,18 @@ const BookReader = () => {
           animation: slide-in-from-top-2 0.2s ease-out;
         }
 
+        /* Enhanced Scrollbar */
         .custom-scrollbar {
           scrollbar-width: thin;
-          scrollbar-color: ${
-            togglDark ? "#4B5563 #1F2937" : "#CBD5E1 #F1F5F9"
-          };
+          scrollbar-color: ${togglDark ? "#4B5563 #1F2937" : "#CBD5E1 #F8FAFC"};
         }
 
         .custom-scrollbar::-webkit-scrollbar {
-          width: 20px;
+          width: ${isMobile ? "8px" : "12px"};
         }
 
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: ${togglDark ? "#1F2937" : "#F1F5F9"};
+          background: ${togglDark ? "#1F2937" : "#F8FAFC"};
           border-radius: 10px;
           margin: 20px 0;
         }
@@ -710,118 +831,305 @@ const BookReader = () => {
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: ${
             togglDark
-              ? "linear-gradient(180deg, #6B7280 0%, #4B5563 100%)"
-              : "linear-gradient(180deg, #94A3B8 0%, #64748B 100%)"
+              ? "linear-gradient(180deg, #6366F1 0%, #4F46E5 50%, #4338CA 100%)"
+              : "linear-gradient(180deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%)"
           };
           border-radius: 10px;
-          border: 2px solid ${togglDark ? "#1F2937" : "#F1F5F9"};
+          border: 2px solid ${togglDark ? "#1F2937" : "#F8FAFC"};
           transition: all 0.3s ease;
+          box-shadow: ${
+            togglDark 
+              ? "0 2px 8px rgba(79, 70, 229, 0.3)" 
+              : "0 2px 8px rgba(37, 99, 235, 0.2)"
+          };
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: ${
             togglDark
-              ? "linear-gradient(180deg, #9CA3AF 0%, #6B7280 100%)"
-              : "linear-gradient(180deg, #64748B 0%, #475569 100%)"
+              ? "linear-gradient(180deg, #7C3AED 0%, #6366F1 50%, #4F46E5 100%)"
+              : "linear-gradient(180deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)"
           };
-          transform: scaleY(1.1);
+          transform: scaleY(1.05);
+          box-shadow: ${
+            togglDark 
+              ? "0 4px 15px rgba(124, 58, 237, 0.4)" 
+              : "0 4px 15px rgba(29, 78, 216, 0.3)"
+          };
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb:active {
-          background: ${togglDark ? "#374151" : "#334155"};
+          background: ${togglDark ? "#5B21B6" : "#1E3A8A"};
         }
 
         .custom-scrollbar::-webkit-scrollbar-corner {
-          background: ${togglDark ? "#1F2937" : "#F1F5F9"};
+          background: ${togglDark ? "#1F2937" : "#F8FAFC"};
         }
 
-        /* Enhanced book content styling */
+        /* Enhanced Book Content Styling */
         .book-reader-container h1,
         .book-reader-container h2,
         .book-reader-container h3,
         .book-reader-container h4,
         .book-reader-container h5,
         .book-reader-container h6 {
-          color: ${togglDark ? "#F3F4F6" : "#1F2937"};
-          margin-top: 2em;
-          margin-bottom: 1em;
-          font-weight: 600;
-          letter-spacing: -0.025em;
+          color: ${togglDark ? "#F9FAFB" : "#111827"};
+          margin-top: ${isMobile ? "1.5em" : "2em"};
+          margin-bottom: ${isMobile ? "0.75em" : "1em"};
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          line-height: 1.25;
         }
 
         .book-reader-container h1 {
-          font-size: 2em;
-          border-bottom: 2px solid ${togglDark ? "#374151" : "#E5E7EB"};
+          font-size: ${isMobile ? "1.75em" : "2.25em"};
+          border-bottom: 3px solid ${togglDark ? "#4338CA" : "#2563EB"};
           padding-bottom: 0.5em;
+          background: ${
+            togglDark 
+              ? "linear-gradient(135deg, #F9FAFB 0%, #E5E7EB 100%)"
+              : "linear-gradient(135deg, #111827 0%, #374151 100%)"
+          };
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .book-reader-container h2 {
-          font-size: 1.6em;
+          font-size: ${isMobile ? "1.5em" : "1.875em"};
+          color: ${togglDark ? "#A78BFA" : "#3730A3"};
         }
 
         .book-reader-container h3 {
-          font-size: 1.3em;
+          font-size: ${isMobile ? "1.25em" : "1.5em"};
+          color: ${togglDark ? "#C4B5FD" : "#4338CA"};
+        }
+
+        .book-reader-container h4 {
+          font-size: ${isMobile ? "1.125em" : "1.25em"};
+          color: ${togglDark ? "#DDD6FE" : "#4F46E5"};
         }
 
         .book-reader-container p {
-          margin-bottom: 1.5em;
+          margin-bottom: ${isMobile ? "1.25em" : "1.75em"};
           text-align: justify;
           hyphens: auto;
           word-spacing: 0.05em;
+          line-height: inherit;
+          color: ${togglDark ? "#F3F4F6" : "#374151"};
+        }
+
+        .book-reader-container p:first-of-type {
+          font-size: 1.05em;
+          font-weight: 500;
+          color: ${togglDark ? "#F9FAFB" : "#1F2937"};
         }
 
         .book-reader-container blockquote {
-          border-left: 4px solid ${togglDark ? "#6366F1" : "#3B82F6"};
-          padding-left: 1.5em;
-          margin: 2em 0;
+          border-left: 4px solid ${togglDark ? "#7C3AED" : "#3B82F6"};
+          padding: ${isMobile ? "1em 1.25em" : "1.5em 2em"};
+          margin: ${isMobile ? "1.5em 0" : "2.5em 0"};
           font-style: italic;
           background: ${
-            togglDark ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.05)"
+            togglDark 
+              ? "linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%)"
+              : "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 197, 253, 0.05) 100%)"
           };
-          padding: 1em 1.5em;
-          border-radius: 0.5em;
+          border-radius: ${isMobile ? "0.5em" : "0.75em"};
+          position: relative;
+          box-shadow: ${
+            togglDark 
+              ? "0 4px 15px rgba(124, 58, 237, 0.1)" 
+              : "0 4px 15px rgba(59, 130, 246, 0.1)"
+          };
+        }
+
+        .book-reader-container blockquote::before {
+          content: '"';
+          position: absolute;
+          top: -0.2em;
+          left: 0.5em;
+          font-size: 4em;
+          color: ${togglDark ? "#7C3AED" : "#3B82F6"};
+          opacity: 0.3;
+          font-family: serif;
         }
 
         .book-reader-container a {
           color: ${togglDark ? "#60A5FA" : "#2563EB"};
-          text-decoration: underline;
-          text-decoration-color: transparent;
-          transition: all 0.2s ease;
+          text-decoration: none;
+          border-bottom: 2px solid transparent;
+          transition: all 0.3s ease;
+          font-weight: 500;
         }
 
         .book-reader-container a:hover {
-          text-decoration-color: currentColor;
-          text-decoration-thickness: 2px;
+          border-bottom-color: currentColor;
+          background: ${
+            togglDark 
+              ? "rgba(96, 165, 250, 0.1)" 
+              : "rgba(37, 99, 235, 0.05)"
+          };
+          padding: 0.1em 0.2em;
+          border-radius: 0.25em;
+          transform: translateY(-1px);
         }
 
         .book-reader-container img {
           max-width: 100%;
           height: auto;
-          border-radius: 0.5em;
-          box-shadow: 0 4px 12px ${
-            togglDark ? "rgba(0, 0, 0, 0.3)" : "rgba(0, 0, 0, 0.1)"
+          border-radius: ${isMobile ? "0.5em" : "0.75em"};
+          box-shadow: ${
+            togglDark 
+              ? "0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)" 
+              : "0 10px 30px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.1)"
           };
-          margin: 2em 0;
+          margin: ${isMobile ? "1.5em 0" : "2.5em 0"};
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .book-reader-container img:hover {
+          transform: scale(1.02);
+          box-shadow: ${
+            togglDark 
+              ? "0 15px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.2)" 
+              : "0 15px 40px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.15)"
+          };
         }
 
         .book-reader-container ul,
         .book-reader-container ol {
-          margin-left: 1.5em;
+          margin-left: ${isMobile ? "1.25em" : "1.75em"};
+          margin-bottom: ${isMobile ? "1.25em" : "1.5em"};
         }
 
         .book-reader-container ul li,
         .book-reader-container ol li {
-          margin-bottom: 0.5em;
+          margin-bottom: ${isMobile ? "0.5em" : "0.75em"};
+          color: ${togglDark ? "#E5E7EB" : "#4B5563"};
+          line-height: 1.6;
+        }
+
+        .book-reader-container ul li::marker {
+          color: ${togglDark ? "#7C3AED" : "#3B82F6"};
+        }
+
+        .book-reader-container ol li::marker {
+          color: ${togglDark ? "#7C3AED" : "#3B82F6"};
+          font-weight: bold;
         }
 
         .book-reader-container code {
-          color: ${togglDark ? "#60A5FA" : "#2563EB"};
+          color: ${togglDark ? "#A78BFA" : "#7C2D12"};
           background: ${
-            togglDark ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.05)"
+            togglDark 
+              ? "linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%)"
+              : "linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)"
           };
-          padding: 0.2em 0.4em;
+          padding: 0.25em 0.5em;
+          border-radius: 0.375em;
+          font-size: 0.875em;
+          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+          border: 1px solid ${togglDark ? "rgba(124, 58, 237, 0.2)" : "rgba(251, 191, 36, 0.2)"};
+          box-shadow: ${
+            togglDark 
+              ? "0 2px 4px rgba(124, 58, 237, 0.1)" 
+              : "0 2px 4px rgba(251, 191, 36, 0.1)"
+          };
+        }
+
+        .book-reader-container pre {
+          background: ${togglDark ? "#1E293B" : "#F8FAFC"};
+          padding: ${isMobile ? "1em" : "1.5em"};
+          border-radius: ${isMobile ? "0.5em" : "0.75em"};
+          overflow-x: auto;
+          margin: ${isMobile ? "1.5em 0" : "2em 0"};
+          border: 1px solid ${togglDark ? "#334155" : "#E2E8F0"};
+          box-shadow: ${
+            togglDark 
+              ? "inset 0 2px 4px rgba(0, 0, 0, 0.3)" 
+              : "inset 0 2px 4px rgba(0, 0, 0, 0.05)"
+          };
+        }
+
+        .book-reader-container pre code {
+          background: none;
+          padding: 0;
+          border: none;
+          box-shadow: none;
+          color: ${togglDark ? "#F1F5F9" : "#334155"};
+        }
+
+        /* Enhanced focus styles for better accessibility */
+        .book-reader-container *:focus {
+          outline: 2px solid ${togglDark ? "#7C3AED" : "#3B82F6"};
+          outline-offset: 2px;
           border-radius: 0.25em;
-          font-size: 0.9em;
+        }
+
+        /* Better text selection */
+        .book-reader-container ::selection {
+          background: ${togglDark ? "rgba(124, 58, 237, 0.3)" : "rgba(59, 130, 246, 0.2)"};
+          color: ${togglDark ? "#F9FAFB" : "#1F2937"};
+        }
+
+        /* Mobile-specific optimizations */
+        @media (max-width: 768px) {
+          .book-reader-container {
+            font-size: 16px !important;
+          }
+          
+          .book-reader-container p {
+            text-align: left;
+            hyphens: none;
+          }
+          
+          .book-reader-container blockquote {
+            margin-left: -0.5em;
+            margin-right: -0.5em;
+          }
+        }
+
+        /* Dark mode enhancements */
+        @media (prefers-color-scheme: dark) {
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+          }
+        }
+
+        /* Reduced motion accessibility */
+        @media (prefers-reduced-motion: reduce) {
+          .animate-shimmer,
+          .animate-pulse,
+          .animate-ping {
+            animation: none;
+          }
+          
+          .book-reader-container img:hover {
+            transform: none;
+          }
+          
+          * {
+            transition: none !important;
+          }
+        }
+
+        /* High contrast mode */
+        @media (prefers-contrast: high) {
+          .book-reader-container {
+            border: 2px solid currentColor;
+          }
+          
+          .book-reader-container h1,
+          .book-reader-container h2,
+          .book-reader-container h3,
+          .book-reader-container h4,
+          .book-reader-container h5,
+          .book-reader-container h6 {
+            border-bottom-width: 3px;
+            border-bottom-style: solid;
+            border-bottom-color: currentColor;
+          }
         }
       `}</style>
     </div>

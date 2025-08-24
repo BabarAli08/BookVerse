@@ -22,11 +22,9 @@ const Checkout = () => {
   });
 
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [loading, setLoading] = useState(false); 
-  
+  const [loading, setLoading] = useState(false);
 
-
-  const navigate=useNavigate()
+  const navigate = useNavigate();
   const { plan } = useSelector((state: RootState) => state.payment);
 
   const handleInputChange = (field: string, value: string) => {
@@ -72,47 +70,57 @@ const Checkout = () => {
 
   // Form validation
   const validateForm = () => {
-    const required = ['cardNumber', 'expiryDate', 'cvc', 'cardholderName', 'email', 'address_line_1', 'city', 'state', 'zip'];
-    
+    const required = [
+      "cardNumber",
+      "expiryDate",
+      "cvc",
+      "cardholderName",
+      "email",
+      "address_line_1",
+      "city",
+      "state",
+      "zip",
+    ];
+
     for (let field of required) {
       if (!formData[field as keyof typeof formData]?.trim()) {
-        alert(`Please fill in ${field.replace('_', ' ')}`);
+        alert(`Please fill in ${field.replace("_", " ")}`);
         return false;
       }
     }
 
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      alert('Please enter a valid email address');
+      alert("Please enter a valid email address");
       return false;
     }
 
-    if (formData.cardNumber.replace(/\s/g, '').length < 13) {
-      alert('Please enter a valid card number');
+    if (formData.cardNumber.replace(/\s/g, "").length < 13) {
+      alert("Please enter a valid card number");
       return false;
     }
 
     if (formData.cvc.length < 3) {
-      alert('Please enter a valid CVC');
+      alert("Please enter a valid CVC");
       return false;
     }
 
     return true;
   };
 
-  const getNextBillingDate = (isYearly:boolean) => {
+  const getNextBillingDate = (isYearly: boolean) => {
     const today = new Date();
     const nextBilling = new Date(today);
-    
+
     if (isYearly) {
       nextBilling.setFullYear(today.getFullYear() + 1);
     } else {
       nextBilling.setMonth(today.getMonth() + 1);
     }
-    
-    return nextBilling.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+
+    return nextBilling.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -133,30 +141,28 @@ const Checkout = () => {
         return;
       }
 
-   
+      // Get ALL fields from existing subscription
       const { data: existingSub, error: checkError } = await supabase
         .from("subscriptions")
-        .select("id")
+        .select("*") // Changed from "id" to "*"
         .eq("user_id", user.id)
         .single();
 
-      if (checkError && checkError.code !== 'PGRST116') { 
+      if (checkError && checkError.code !== "PGRST116") {
         console.error("Error checking existing subscription:", checkError);
         alert("Error checking subscription status");
         return;
       }
 
-
-
       const subscriptionData = {
         user_id: user.id,
-        plan_type: plan?.name || 'premium',
+        plan_type: plan?.name || "premium",
         billing_cycle: plan?.yearly ? "yearly" : "monthly",
         status: "active",
-        card_number: `****${formData.cardNumber.slice(-4)}`, 
+        card_number: `****${formData.cardNumber.slice(-4)}`,
         card_holder_name: formData.cardholderName,
         expiry_date: formData.expiryDate,
-        cvc: formData.cvc, 
+        cvc: formData.cvc,
         email: formData.email,
         country: formData.country,
         address_line_1: formData.address_line_1,
@@ -165,36 +171,68 @@ const Checkout = () => {
         next_billing_date: getNextBillingDate(plan?.yearly || false),
         state: formData.state,
         postal_code: formData.zip,
+        amount: parseFloat(plan?.price?.replace("$", "") || "9.99"), 
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-
       };
 
-      let result;
+      // If there's an existing subscription, archive it first
       if (existingSub) {
-        
-        result = await supabase
+        // Archive the old subscription
+        const historyResult = await supabase
+          .from("subscription_history")
+          .insert([
+            {
+              user_id: existingSub.user_id,
+              plan_type: existingSub.plan_type,
+              billing_cycle: existingSub.billing_cycle,
+              status: "cancelled",
+              start_date: existingSub.created_at,
+              end_date: new Date().toISOString(),
+              amount: parseFloat(existingSub.amount || "0"),
+              card_number: existingSub.card_number,
+              card_holder_name: existingSub.card_holder_name,
+              created_at: existingSub.created_at,
+            },
+          ]);
+
+        if (historyResult.error) {
+          console.error("Error archiving subscription:", historyResult.error);
+          alert("Error processing subscription history");
+          return;
+        }
+
+        const updateResult = await supabase
           .from("subscriptions")
           .update(subscriptionData)
           .eq("user_id", user.id);
-      } else {
-       
-        result = await supabase
-          .from("subscriptions")
-          .insert([subscriptionData]); 
-      }
 
-      if (result.error) {
-        console.error("Database error:", result.error);
-        alert("There was a problem processing payment: " + result.error.message);
-        return;
+        if (updateResult.error) {
+          console.error("Database error:", updateResult.error);
+          alert(
+            "There was a problem processing payment: " +
+              updateResult.error.message
+          );
+          return;
+        }
+      } else {
+ 
+        const insertResult = await supabase
+          .from("subscriptions")
+          .insert([subscriptionData]);
+
+        if (insertResult.error) {
+          console.error("Database error:", insertResult.error);
+          alert(
+            "There was a problem processing payment: " +
+              insertResult.error.message
+          );
+          return;
+        }
       }
 
       alert("Payment successful!");
-      
-      navigate('/success')
-     
-      
+      navigate("/success");
     } catch (error) {
       console.error("Unexpected error:", error);
       alert("An unexpected error occurred. Please try again.");
@@ -203,8 +241,6 @@ const Checkout = () => {
     }
   };
 
-
-  
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -471,7 +507,9 @@ const Checkout = () => {
 
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-semibold text-gray-900">{plan?.name || "Premium Plan"}</h4>
+                  <h4 className="font-semibold text-gray-900">
+                    {plan?.name || "Premium Plan"}
+                  </h4>
                   <p className="text-sm text-gray-600">
                     Billed {plan?.yearly ? "Yearly" : "Monthly"}
                   </p>
@@ -511,14 +549,17 @@ const Checkout = () => {
                 <div className="pt-4 border-t border-gray-200 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-medium">${Number(plan?.price).toFixed(2) || "9.99"}</span>
+                    <span className="font-medium">
+                      ${Number(plan?.price).toFixed(2) || "9.99"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tax</span>
                     <span className="font-medium">
                       $
                       {(
-                        (parseFloat(plan?.price?.replace("$", "") || "9.99") / 10) *
+                        (parseFloat(plan?.price?.replace("$", "") || "9.99") /
+                          10) *
                         0.8
                       ).toFixed(2)}
                     </span>
@@ -542,12 +583,12 @@ const Checkout = () => {
                   disabled={loading}
                   className={`w-full py-3 px-4 rounded-lg font-medium transition-colors mt-6 ${
                     loading
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-black hover:bg-gray-800'
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-black hover:bg-gray-800"
                   } text-white`}
                 >
                   <Lock className="w-4 h-4 inline mr-2" />
-                  {loading ? 'Processing...' : 'Complete Purchase'}
+                  {loading ? "Processing..." : "Complete Purchase"}
                 </button>
 
                 <div className="flex items-center justify-center text-xs text-gray-500 mt-3">

@@ -68,6 +68,7 @@ const ReadingSidebar = () => {
   const [bookCompleted, setBookCompleted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [isMobile,setIsMobile]=useState<boolean>(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -80,6 +81,17 @@ const ReadingSidebar = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [book.id]);
+
+
+   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const checkBookCompletionStatus = async () => {
@@ -300,7 +312,9 @@ const ReadingSidebar = () => {
 
   return (
     <div
-      className={`w-80 h-[90vh] border-r ${
+      className={` border-r 
+        ${isMobile ? 'w-80 h-full':"w-80 h-[90vh]"}
+        ${
         togglDark ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
       }`}
     >

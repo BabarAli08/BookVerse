@@ -118,6 +118,16 @@ const BookReadingSlice = createSlice({
     setSidebar: (state) => {
       state.toggleSidebar = !state.toggleSidebar;
     },
+    setPreferances:(state,action:{payload:any})=>{
+        const prefs=action.payload
+        
+        state.theme=prefs.readingTheme
+        state.background=prefs.background
+        state.fontFamily=prefs.fontFamily
+        state.fontSize=prefs.fontSize
+        state.lineHeight=prefs.lineSpacing
+        state.letterSpacing=prefs.letterSpacing
+    },
     deleteHighlight: (state, action: { payload: number }) => {
       state.highlited = state.highlited.filter((h) => h.id !== action.payload);
     },
@@ -136,6 +146,7 @@ export const {
   setHighlighted,
   setNotes,
   deleteNote,
+  setPreferances,
   deleteHighlight,
   setLineHeight,
   setFontFamily,
