@@ -24,7 +24,7 @@ const Checkout = () => {
 
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [loading, setLoading] = useState(false);
-
+  
   const navigate = useNavigate();
   const { plan } = useSelector((state: RootState) => state.payment);
 
@@ -69,7 +69,6 @@ const Checkout = () => {
     }
   };
 
-  // Form validation
   const validateForm = () => {
     const required = [
       "cardNumber",

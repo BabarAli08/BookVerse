@@ -19,7 +19,7 @@ const PaymentSuccess = () => {
   const navigate=useNavigate()
   const [animateCheck, setAnimateCheck] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [showCancelSubscription,setShowCancelSubscription]=useState(false)
+ 
  
   const { plan } = useSelector((state:RootState)=>state.payment)
 
