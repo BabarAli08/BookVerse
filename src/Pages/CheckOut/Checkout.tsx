@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
 import supabase from "../../supabase-client";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 
 const Checkout = () => {
   const [formData, setFormData] = useState({
@@ -141,7 +142,6 @@ const Checkout = () => {
         return;
       }
 
-      // Get ALL fields from existing subscription
       const { data: existingSub, error: checkError } = await supabase
         .from("subscriptions")
         .select("*") // Changed from "id" to "*"
@@ -176,9 +176,8 @@ const Checkout = () => {
         updated_at: new Date().toISOString(),
       };
 
-      // If there's an existing subscription, archive it first
       if (existingSub) {
-        // Archive the old subscription
+        
         const historyResult = await supabase
           .from("subscription_history")
           .insert([
@@ -231,7 +230,7 @@ const Checkout = () => {
         }
       }
 
-      alert("Payment successful!");
+      toast.success("Payment successful!");
       navigate("/success");
     } catch (error) {
       console.error("Unexpected error:", error);
@@ -366,7 +365,7 @@ const Checkout = () => {
                       onChange={(e) =>
                         handleInputChange("cardholderName", e.target.value)
                       }
-                      placeholder="John Doe"
+                      placeholder="Babar ALi"
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
@@ -389,7 +388,7 @@ const Checkout = () => {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    placeholder="john@example.com"
+                    placeholder="babaralidev08@gmail.com"
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />

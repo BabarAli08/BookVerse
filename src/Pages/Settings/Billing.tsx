@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CreditCard, Crown, Plus, Loader2 } from "lucide-react";
 import supabase from "../../supabase-client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router";
 
 interface planState {
   id: string;
@@ -27,19 +28,19 @@ interface planState {
 }
 
 export default function Billing() {
-  
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
-  const [downloadingInvoice, setDownloadingInvoice] = useState<number | null>(null);
+  const [showCancelSubscriptionModal, setShowCancelSubscriptionModal] =
+    useState<boolean>(false);
 
   const [currentPlan, setCurrentPlan] = useState({
     name: "free",
     price: "$0.00/month",
     nextBilling: "lifetime",
     status: "active",
-    isYearly:false
+    isYearly: false,
   });
 
   const [paymentMethod, setPaymentMethod] = useState({
@@ -48,18 +49,21 @@ export default function Billing() {
     expires: "12/25",
   });
 
-  const [billingHistory, setBillingHistory] = useState<Array<{
-    id: string;
-    plan: string;
-    date: string;
-    amount: string;
-  }>>([]);
+  const [billingHistory, setBillingHistory] = useState<
+    Array<{
+      id: string;
+      plan: string;
+      date: string;
+      amount: string;
+    }>
+  >([]);
 
+  const navigate = useNavigate();
   useEffect(() => {
     const getCurrentPlan = async () => {
       try {
         setIsLoading(true);
-        
+
         const {
           data: { user },
           error: userError,
@@ -71,14 +75,13 @@ export default function Billing() {
         }
 
         if (user) {
-          // Get current subscription
           const { data, error: currentPlanError } = await supabase
             .from("subscriptions")
             .select("*")
             .eq("user_id", user.id)
             .single();
 
-          if (currentPlanError && currentPlanError.code !== 'PGRST116') {
+          if (currentPlanError && currentPlanError.code !== "PGRST116") {
             toast.error("Error fetching current plan");
             console.error("Current plan error:", currentPlanError);
           }
@@ -87,11 +90,14 @@ export default function Billing() {
             setCurrentPlan({
               name: data.plan_type,
               price: `$${data.amount}`,
-              nextBilling: new Date(data.next_billing_date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              }),
+              nextBilling: new Date(data.next_billing_date).toLocaleDateString(
+                "en-US",
+                {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }
+              ),
               status: data.status,
               isYearly: data.billing_cycle === "yearly",
             });
@@ -99,17 +105,16 @@ export default function Billing() {
             setPaymentMethod({
               type: "visa",
               lastFour: data.card_number.slice(-4),
-              expires: data.expiry_date, // Fixed typo
+              expires: data.expiry_date,
             });
           }
 
-          // Get billing history
           const { data: previousPlans, error: previousPlansError } =
             await supabase
               .from("subscription_history")
               .select("*")
               .eq("user_id", user.id)
-              .order('created_at', { ascending: false });
+              .order("created_at", { ascending: false });
 
           if (previousPlansError) {
             toast.error("Error fetching previous plans");
@@ -139,16 +144,198 @@ export default function Billing() {
       }
     };
 
-    getCurrentPlan(); 
+    getCurrentPlan();
+  }, [isCanceling, isUpdatingPlan, isUpdatingPayment]);
+
+  const handleCancelSubscription = async () => {
+    try {
+      setIsCanceling(true);
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        toast.warning("Unable to get user information");
+        return;
+      }
+
+      const { data: userSubscription, error: subscriptionError } =
+        await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+      if (subscriptionError) {
+        toast.error("Error fetching subscription details");
+        return;
+      }
+
+      if (!userSubscription) {
+        toast.warning("No active subscription found");
+        return;
+      }
+
+      // Remove the id field to avoid duplicate key constraint
+      const { id, ...subscriptionData } = userSubscription;
+
+      const cancelledSubscription = {
+        ...subscriptionData,
+        status: "canceled",
+        end_date: new Date().toISOString(),
+      };
+      console.log("Cancelled Subscription:", cancelledSubscription);
+
+      const { error: historyError } = await supabase
+        .from("subscription_history")
+        .insert([cancelledSubscription]);
+
+      if (historyError) {
+        toast.error(
+          `Error saving subscription history: ${
+            historyError.message || JSON.stringify(historyError)
+          }`
+        );
+        console.error("History error:", historyError);
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from("subscriptions")
+        .update({
+          status: "canceled",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+
+      if (updateError) {
+        toast.error(
+          `Unable to cancel subscription, please try again: ${updateError.message}`
+        );
+        console.error("Update error:", updateError);
+        return;
+      }
+
+      setCurrentPlan((prev) => ({
+        ...prev,
+        status: "canceled",
+      }));
+
+      toast.success("Subscription cancelled successfully");
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("Unable to cancel subscription, please try again");
+    } finally {
+      setIsCanceling(false);
+      setShowCancelSubscriptionModal(false); // Close the modal
+    }
+  };
+
+  useEffect(() => {
+    const getCurrentPlan = async () => {
+      try {
+        setIsLoading(true);
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          toast.error("Error getting user information");
+          return;
+        }
+
+        if (user) {
+          const { data, error: currentPlanError } = await supabase
+            .from("subscriptions")
+            .select("*")
+            .eq("user_id", user.id)
+            .single();
+
+          if (currentPlanError) {
+            if (currentPlanError.code === "PGRST116") {
+              setCurrentPlan({
+                name: "Free",
+                price: "$0.00",
+                nextBilling: "No billing",
+                status: "free",
+                isYearly: false,
+              });
+            } else {
+              toast.error("Error fetching current plan");
+              console.error("Current plan error:", currentPlanError);
+            }
+          }
+
+          if (data) {
+            setCurrentPlan({
+              name: data.plan_type,
+              price: `$${data.amount}`,
+              nextBilling:
+                data.status === "cancelled"
+                  ? "Cancelled"
+                  : new Date(data.next_billing_date).toLocaleDateString(
+                      "en-US",
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }
+                    ),
+              status: data.status,
+              isYearly: data.billing_cycle === "yearly",
+            });
+
+            if (data.status === "active") {
+              setPaymentMethod({
+                type: "visa",
+                lastFour: data.card_number.slice(-4),
+                expires: data.expiry_date,
+              });
+            }
+          }
+
+          const { data: previousPlans, error: previousPlansError } =
+            await supabase
+              .from("subscription_history")
+              .select("*")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false });
+
+          if (previousPlansError) {
+            toast.error("Error fetching previous plans");
+            console.error("Previous plans error:", previousPlansError);
+          }
+
+          if (previousPlans && previousPlans.length > 0) {
+            setBillingHistory(
+              (previousPlans as planState[]).map((plan: planState) => ({
+                id: plan.id,
+                plan: plan.plan_type,
+                date: new Date(plan.created_at).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                }),
+                amount: `$${plan.amount}`,
+              }))
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+        toast.error("An unexpected error occurred");
+      } finally {
+        setIsLoading(false);
+        setShowCancelSubscriptionModal(false);
+      }
+    };
+
+    getCurrentPlan();
   }, []);
-
-
-
-  
-  
-
-  
-  
 
   const LoadingSkeleton = () => (
     <div className="space-y-8">
@@ -156,7 +343,7 @@ export default function Billing() {
         <div className="w-6 h-6 bg-gray-200 rounded animate-pulse"></div>
         <div className="w-16 h-6 bg-gray-200 rounded animate-pulse"></div>
       </div>
-      
+
       {[1, 2, 3].map((i) => (
         <div key={i} className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="animate-pulse">
@@ -174,12 +361,116 @@ export default function Billing() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 flex w-full flex-col">
+      {showCancelSubscriptionModal && (
+        <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+            <div className="p-6">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                  <Crown className="w-6 h-6 text-red-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Cancel Subscription
+                </h2>
+                <p className="text-gray-600">
+                  You'll lose access to these features:
+                </p>
+              </div>
+
+              {/* Features List */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="space-y-3">
+                  {currentPlan.name === "free" &&
+                    [
+                      "Access to 1,000+ free books",
+                      "Basic reading features",
+                      "Mobile app access",
+                      "Community discussions",
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-green-600 text-xs">✓</span>
+                        </div>
+                        <p className="text-sm text-gray-700">{item}</p>
+                      </div>
+                    ))}
+
+                  {currentPlan.name === "pro" &&
+                    [
+                      "Everything in Free",
+                      "Unlimited book library access",
+                      "Offline reading",
+                      "Priority support",
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-green-600 text-xs">✓</span>
+                        </div>
+                        <p className="text-sm text-gray-700">{item}</p>
+                      </div>
+                    ))}
+
+                  {currentPlan.name === "ultimate" &&
+                    [
+                      "Everything in Pro",
+                      "Exclusive early access to new books",
+                      "Audiobook support",
+                      "Family sharing (up to 5 members)",
+                      "Premium community features",
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-green-600 text-xs">✓</span>
+                        </div>
+                        <p className="text-sm text-gray-700">{item}</p>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Warning Message */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> Your subscription will remain active
+                  until {currentPlan.nextBilling}. After that, you'll be moved
+                  to the free plan.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  onClick={() => setShowCancelSubscriptionModal(false)}
+                  disabled={isCanceling}
+                >
+                  Keep Subscription
+                </button>
+                <button
+                  className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  onClick={handleCancelSubscription}
+                  disabled={isCanceling}
+                >
+                  {isCanceling ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Canceling...
+                    </>
+                  ) : (
+                    "Cancel Subscription"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3 mb-6">
         <CreditCard className="text-gray-700" size={24} />
         <h2 className="text-xl font-semibold text-gray-800">Billing</h2>
       </div>
-
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
           <Crown className="text-gray-700" size={20} />
@@ -192,11 +483,14 @@ export default function Billing() {
               <h4 className="text-xl font-bold text-gray-900">
                 {currentPlan.name}
               </h4>
-              <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+              <span className={`${currentPlan.status==="active"?"bg-green-100 text-green-800":"bg-red-300 text-red-600"}  text-xs font-medium px-2.5 py-0.5 rounded-full`}>
                 {currentPlan.status}
               </span>
             </div>
-            <p className="text-gray-600 mt-1">{currentPlan.price.slice(0,7)}/{currentPlan.isYearly ? 'Yearly' : "Monthly"}</p>
+            <p className="text-gray-600 mt-1">
+              {currentPlan.price.slice(0, 7)}/
+              {currentPlan.isYearly ? "Yearly" : "Monthly"}
+            </p>
             <p className="text-sm text-gray-500 mt-2">
               Next billing date: {currentPlan.nextBilling}
             </p>
@@ -205,7 +499,7 @@ export default function Billing() {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <button
-          
+            onClick={() => navigate("/premium")}
             disabled={isUpdatingPlan}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
@@ -219,7 +513,7 @@ export default function Billing() {
             )}
           </button>
           <button
-       
+            onClick={() => setShowCancelSubscriptionModal(true)}
             disabled={isCanceling}
             className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
@@ -234,8 +528,6 @@ export default function Billing() {
           </button>
         </div>
       </div>
-
-      {/* Payment Method */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
           <CreditCard className="text-gray-700" size={20} />
@@ -259,7 +551,6 @@ export default function Billing() {
             </div>
           </div>
           <button
-       
             disabled={isUpdatingPayment}
             className="text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
@@ -274,16 +565,11 @@ export default function Billing() {
           </button>
         </div>
 
-        <button
-         
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
-        >
+        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
           <Plus size={16} />
           Add Payment Method
         </button>
       </div>
-
-      {/* Billing History */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Billing History
@@ -303,13 +589,8 @@ export default function Billing() {
                 <span className="font-semibold text-gray-900">
                   {invoice.amount}
                 </span>
-                <button
-                
-                  className="text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                 
-                    Download
-                 
+                <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+                  Download
                 </button>
               </div>
             </div>
@@ -323,8 +604,6 @@ export default function Billing() {
           </div>
         )}
       </div>
-
-    
       <div className="bg-blue-50 rounded-lg p-4">
         <div className="flex items-start">
           <CreditCard className="text-blue-500 mt-0.5" size={16} />

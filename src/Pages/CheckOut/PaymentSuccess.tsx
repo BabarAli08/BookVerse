@@ -19,7 +19,7 @@ const PaymentSuccess = () => {
   const navigate=useNavigate()
   const [animateCheck, setAnimateCheck] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-
+  const [showCancelSubscription,setShowCancelSubscription]=useState(false)
  
   const { plan } = useSelector((state:RootState)=>state.payment)
 
@@ -241,7 +241,7 @@ const PaymentSuccess = () => {
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </button>
 
-                  <button className="w-full bg-white border-2 border-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all duration-200">
+                  <button onClick={()=>navigate("/settings")} className="w-full bg-white border-2 border-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all duration-200">
                     Manage Subscription
                   </button>
                 </div>
