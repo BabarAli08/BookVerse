@@ -96,7 +96,7 @@ const BookCard = ({ book }: { book: book }) => {
           Free
         </div>
 
-        {/* Wishlist Heart (shows on hover) */}
+    
         <button
           className="absolute top-3 right-3 bg-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:scale-110"
           onClick={handleFav}

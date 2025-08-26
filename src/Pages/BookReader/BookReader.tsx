@@ -1,4 +1,4 @@
-// src/Pages/BookReader/BookReader.tsx
+
 import { useNavigate, useParams } from "react-router-dom";
 import useFetchSingleBook from "../../Data/useFetchSingleBook";
 import BookFetchError from "../../Component/BookFetchError";
@@ -89,7 +89,7 @@ const BookReader = () => {
     isFocused,
   } = useSelector((state: RootState) => state.bookReading);
 
-  // Mobile detection
+ 
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -700,7 +700,6 @@ const BookReader = () => {
             </div>
           )}
 
-          {/* Mobile sidebar overlay */}
           {toggleSidebar && !isFocused && isMobile && (
             <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm">
               <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw]">
@@ -709,7 +708,6 @@ const BookReader = () => {
             </div>
           )}
 
-          {/* Main Content Area */}
           <div className={`flex-1 flex justify-center items-start ${
             isMobile ? 'p-0 h-full' : 'p-4 lg:p-6'
           }`}>
@@ -732,7 +730,7 @@ const BookReader = () => {
                   ${isMobile ? 'h-screen' : 'h-[95vh]'} 
                   overflow-auto custom-scrollbar
                   ${theme?.bg || (togglDark ? "bg-gray-800" : "bg-white")}
-                  ${theme?.text || (togglDark ? "text-gray-100" : "text-gray-800")}
+                  ${theme?.text ||  "text-black"}
                   ${isMobile ? 'px-4 py-6 rounded-none' : isFocused ? 'px-8 lg:px-16 py-8 lg:py-12 rounded-xl' : 'px-6 lg:px-12 py-6 lg:py-10 rounded-xl'}
                   leading-relaxed
                 `}

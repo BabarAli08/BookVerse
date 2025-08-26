@@ -30,7 +30,7 @@ const Books = () => {
         return;
       }
       const value=data && data.status === "active" && data.plan_type !== "free"
-     
+    
       dispatch(setBoughtPremium(value));
     };
     getUserSubscriptions();

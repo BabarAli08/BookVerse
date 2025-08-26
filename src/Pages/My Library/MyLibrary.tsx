@@ -3,6 +3,9 @@ import supabase from "../../supabase-client"
 import { useNavigate } from "react-router"
 import { PiBookOpenBold } from "react-icons/pi"
 import { BookOpen, Clock, CheckCircle, Star } from "lucide-react"
+import { useDispatch, useSelector } from "react-redux"
+import type { RootState } from "../../Store/store"
+import { toast } from "sonner"
 
 interface book{
   id:number,
@@ -23,6 +26,9 @@ const MyLibrary = () => {
   const [activeTab, setActiveTab] = useState('currently-reading')
   const [loading, setLoading] = useState(true)
   const navigate=useNavigate()
+  const dispatch=useDispatch()
+  const {boughtPremium}=useSelector((state:RootState)=>state.premiumBooks)
+
 
   useEffect(()=>{
     const getUser=async ()=>{
@@ -73,10 +79,26 @@ const MyLibrary = () => {
     getUser()
   },[navigate])
 
-  const BookCard = ({ book }: { book: book }) => (
+  const handleNavigate=(status:string,book:book)=>{
+    console.log(`book clicke is ${status} and bought premium is ${boughtPremium}`)
+    if(status==="free"){
+
+      navigate(`/books/${book?.id}`)
+    }
+    if(status!=="free" && boughtPremium){
+      navigate(`/books/${book?.id}`)
+    }
+    if(status!=="free" && !boughtPremium){
+     toast.warning("buy premium to read this book")
+      navigate('/premium')
+    }
+    
+  }
+  const BookCard = ({ book,bookStatus="free" }: { book: book,bookStatus:string } ) => (
     <div 
       className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200 cursor-pointer group"
-      onClick={() => navigate(`/books/${book.id}`)}
+      
+      onClick={()=> handleNavigate(bookStatus,book)}
     >
       <div className="flex gap-4">
         <div className="w-16 h-20 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
@@ -131,13 +153,13 @@ const MyLibrary = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Header */}
+
         <div className="flex items-center gap-3 mb-8">
           <PiBookOpenBold size={32} className="text-blue-600"/>
           <h1 className="text-3xl font-bold text-gray-900">My Library</h1>
         </div>
 
-        {/* Stats Cards */}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
@@ -164,7 +186,7 @@ const MyLibrary = () => {
           </div>
         </div>
 
-        {/* Tab Navigation */}
+     
         <div className="flex justify-between items-center space-x-1 w-full bg-gray-100 p-1 rounded-xl mb-6 ">
           <button
             onClick={() => setActiveTab('currently-reading')}
@@ -188,14 +210,13 @@ const MyLibrary = () => {
           </button>
         </div>
 
-        {/* Books Grid */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           {activeTab === 'currently-reading' && (
             <>
               {currentlyReading.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
                   {currentlyReading.map((book) => (
-                    <BookCard key={book.id} book={book} />
+                    <BookCard bookStatus={book.tier} key={book.id} book={book} />
                   ))}
                 </div>
               ) : (
@@ -219,7 +240,7 @@ const MyLibrary = () => {
               {completedReading.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
                   {completedReading.map((book) => (
-                    <BookCard key={book.id} book={book} />
+                    <BookCard bookStatus={book.tier} key={book.id} book={book} />
                   ))}
                 </div>
               ) : (

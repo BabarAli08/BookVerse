@@ -63,7 +63,6 @@ const premiumBookSlice = createSlice({
       const startIndex = state.allBooks.length;
       state.allBooks = [...state.allBooks, ...action.payload];
       
-      // If we're at the end and new data came in, update displayed books
       if (state.currentIndex + state.batchSize >= startIndex) {
         const newDisplayedBooks = state.allBooks.slice(
           state.currentIndex,

@@ -35,8 +35,8 @@ const BookDetails = () => {
 
   const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
   useEffect(()=>{
-    if(!premiumBookClicked) return 
     const getSubscriptionStatus=async()=>{
+      if(!premiumBookClicked) return 
 
       try{
         setCredentialsLoading(true)
@@ -71,7 +71,7 @@ const BookDetails = () => {
   },[])
 
 
-  if(credentialsLoading) return <BookDetailsLoader/>
+  
   useEffect(() => {
     const fetchWishlist = async () => {
       setWishlistLoading(true);
