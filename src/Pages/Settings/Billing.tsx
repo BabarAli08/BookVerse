@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CreditCard, Crown, Plus, Loader2 } from "lucide-react";
+import { CreditCard, Crown, Plus, Loader2, Download } from "lucide-react";
 import supabase from "../../supabase-client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
@@ -45,6 +45,11 @@ export default function Billing() {
   });
   const [changePlanModal, setChangePlanModal] = useState<boolean>(false);
 
+  const [autoRenewal, setAutoRenewal] = useState<boolean | null>(null);
+  const [billingNotifications, setBillingNotifications] = useState<
+    boolean | null
+  >(null);
+
   const [paymentMethod, setPaymentMethod] = useState({
     type: "visa",
     lastFour: "4242",
@@ -73,7 +78,153 @@ export default function Billing() {
     }>
   >([]);
 
-  const navigate = useNavigate();
+  const toggleAutoRenewal = async () => {
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        toast.error("Error getting user information");
+        return;
+      }
+
+      const newValue = !autoRenewal;
+
+      const { data: existingPrefs } = await supabase
+        .from("user_preferences")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      const { error } = await supabase.from("user_preferences").upsert({
+        user_id: user.id,
+        auto_renewal: newValue,
+        billing_notifications: existingPrefs?.billing_notifications ?? true, // Keep existing or default
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        console.error("Database error:", error);
+        toast.error("Failed to update auto-renewal setting: " + error.message);
+        return;
+      }
+
+      setAutoRenewal(newValue);
+      toast.success(`Auto-renewal ${newValue ? "enabled" : "disabled"}`);
+    } catch (error) {
+      console.error("Error toggling auto-renewal:", error);
+      toast.error("An unexpected error occurred");
+    }
+  };
+
+  const toggleBillingNotifications = async () => {
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        toast.error("Error getting user information");
+        return;
+      }
+
+      const newValue = !billingNotifications;
+
+      const { data: existingPrefs } = await supabase
+        .from("user_preferences")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      const { error } = await supabase.from("user_preferences").upsert({
+        user_id: user.id,
+        billing_notifications: newValue,
+        auto_renewal: existingPrefs?.auto_renewal ?? true,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        console.error("Database error:", error);
+        toast.error("Failed to update notification settings: " + error.message);
+        return;
+      }
+
+      setBillingNotifications(newValue);
+      toast.success(
+        `Billing notifications ${newValue ? "enabled" : "disabled"}`
+      );
+    } catch (error) {
+      console.error("Error toggling billing notifications:", error);
+      toast.error("An unexpected error occurred");
+    }
+  };
+
+  useEffect(() => {
+    const getUserPreferences = async () => {
+      try {
+        setIsLoading(true);
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          console.error("Error getting user:", userError);
+          return;
+        }
+
+        const { data: preferences, error: preferencesError } = await supabase
+          .from("user_preferences")
+          .select("auto_renewal,billing_notifications")
+          .eq("user_id", user.id)
+          .single();
+
+        console.log("user preferences row from useEffect", preferences);
+
+        if (preferencesError) {
+          if (preferencesError.code === "PGRST116") {
+            console.log("No preferences found, using defaults");
+            setAutoRenewal(true);
+            setBillingNotifications(true);
+          } else {
+            console.error("Error getting user preferences:", preferencesError);
+            toast.error(
+              "Error loading preferences: " + preferencesError.message
+            );
+          }
+          return;
+        }
+
+        console.log(
+          `Database values - Auto Renewal: ${preferences?.auto_renewal}, Billing: ${preferences?.billing_notifications}`
+        );
+
+        // Fix: Use nullish coalescing instead of truthy check
+        const autoRenewalValue = preferences?.auto_renewal ?? true;
+        const billingValue = preferences?.billing_notifications ?? true;
+
+        console.log(`Setting Auto Renewal to: ${autoRenewalValue}`);
+        console.log(`Setting Billing Notifications to: ${billingValue}`);
+
+        setAutoRenewal(autoRenewalValue);
+        setBillingNotifications(billingValue);
+      } catch (error) {
+        console.error("Unexpected error:", error);
+        toast.error("An unexpected error occurred while loading preferences");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    getUserPreferences();
+  }, []);
+
+  console.log("auto renweal ", autoRenewal);
+  console.log("billing notifications ", billingNotifications);
+
   useEffect(() => {
     const getCurrentPlan = async () => {
       try {
@@ -122,6 +273,20 @@ export default function Billing() {
               lastFour: data.card_number.slice(-4),
               expires: data.expiry_date,
             });
+
+            setAutoRenewal(data.auto_renewal !== false);
+          }
+
+          const { data: preferences } = await supabase
+            .from("user_preferences")
+            .select("billing_notifications")
+            .eq("user_id", user.id)
+            .single();
+
+          if (preferences) {
+            setBillingNotifications(
+              preferences.billing_notifications !== false
+            );
           }
 
           const { data: previousPlans, error: previousPlansError } =
@@ -139,7 +304,7 @@ export default function Billing() {
           if (previousPlans && previousPlans.length > 0) {
             setBillingHistory(
               (previousPlans as planState[]).map((plan: planState) => ({
-                id: plan.id, // Keep as string, don't parse as int
+                id: plan.id,
                 plan: plan.plan_type,
                 date: new Date(plan.created_at).toLocaleDateString("en-US", {
                   year: "numeric",
@@ -163,7 +328,7 @@ export default function Billing() {
   }, [isCanceling, isUpdatingPlan, isUpdatingPayment]);
 
   const handleCancelSubscription = async () => {
-    if(currentPlan.status==="canceled"){
+    if (currentPlan.status === "canceled") {
       toast.warning("Already canceled");
       setShowCancelSubscriptionModal(false);
       return;
@@ -248,7 +413,6 @@ export default function Billing() {
       toast.error("Unable to cancel subscription, please try again");
     } finally {
       setIsCanceling(false);
-    
       setShowCancelSubscriptionModal(false);
     }
   };
@@ -411,7 +575,6 @@ export default function Billing() {
         return;
       }
 
-      // Remove the id field to avoid duplicate key constraint
       const { id, ...planDataWithoutId } = currentPlanData;
 
       const previousPlan = {
@@ -434,7 +597,7 @@ export default function Billing() {
 
       const updateData = {
         plan_type: selectedPlan,
-        billing_cycle: selectedPlan === "free" ? "monthly" : "yearly",
+        billing_cycle: "monthly",
         status: "active",
         updated_at: new Date().toISOString(),
         amount: planPrice,
@@ -453,7 +616,6 @@ export default function Billing() {
         return;
       }
 
-      // Fix: Update the currentPlan state with correct structure
       setCurrentPlan({
         name: selectedPlan,
         price: `$${planPrice}/month`,
@@ -489,7 +651,7 @@ export default function Billing() {
         toast.error("Error getting user information");
         return;
       }
-      const { data: currentPlan, error: currentPlanError } = await supabase
+      const { error: currentPlanError } = await supabase
         .from("subscriptions")
         .select("*")
         .eq("user_id", user?.id)
@@ -507,7 +669,7 @@ export default function Billing() {
         card_holder_name: updatedPaymentMethod.cardHolderName,
         updated_at: new Date().toISOString(),
       };
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("subscriptions")
         .update(updateData)
         .eq("user_id", user?.id);
@@ -527,13 +689,13 @@ export default function Billing() {
     }
   };
 
+  console.log("history of billing length:", billingHistory.length);
   return (
     <div className="space-y-8 flex w-full flex-col">
       {showCancelSubscriptionModal && (
         <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
             <div className="p-6">
-              
               <div className="text-center mb-6">
                 <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
                   <Crown className="w-6 h-6 text-red-600" />
@@ -596,7 +758,6 @@ export default function Billing() {
                 </div>
               </div>
 
-              {/* Warning Message */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
                 <p className="text-sm text-yellow-800">
                   <strong>Note:</strong> Your subscription will remain active
@@ -636,7 +797,6 @@ export default function Billing() {
       {changePlanModal && (
         <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-md bg-white rounded-xl shadow-2xl transform transition-all">
-            {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-xl font-bold text-gray-900">
                 Change Your Plan
@@ -705,12 +865,14 @@ export default function Billing() {
                       </h3>
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          currentPlan.name === "premium" && currentPlan.status === "active"
+                          currentPlan.name === "premium" &&
+                          currentPlan.status === "active"
                             ? "bg-purple-600"
                             : "bg-green-600"
                         } text-white`}
                       >
-                        {currentPlan.name === "premium" && currentPlan.status === "active"
+                        {currentPlan.name === "premium" &&
+                        currentPlan.status === "active"
                           ? "Current"
                           : "Favorite"}
                       </span>
@@ -746,12 +908,14 @@ export default function Billing() {
                       </h3>
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          currentPlan.name === "ultimate" && currentPlan.status === "active"
+                          currentPlan.name === "ultimate" &&
+                          currentPlan.status === "active"
                             ? "bg-purple-600"
                             : "bg-yellow-600"
                         } text-white`}
                       >
-                        {currentPlan.name === "ultimate" && currentPlan.status === "active"
+                        {currentPlan.name === "ultimate" &&
+                        currentPlan.status === "active"
                           ? "Current"
                           : "Popular"}
                       </span>
@@ -786,7 +950,8 @@ export default function Billing() {
                 disabled={isUpdatingPlan}
                 className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
-                {selectedPlan === currentPlan.name && currentPlan.status === "active"
+                {selectedPlan === currentPlan.name &&
+                currentPlan.status === "active"
                   ? "Keep Current Plan"
                   : "Change Plan"}
               </button>
@@ -798,7 +963,6 @@ export default function Billing() {
       {showUpdatePaymentMethodModal && (
         <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-md bg-white rounded-xl shadow-2xl transform transition-all">
-            {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center space-x-2">
                 <CreditCard className="w-5 h-5 text-gray-700" />
@@ -826,9 +990,7 @@ export default function Billing() {
               </button>
             </div>
 
-            {/* Form */}
             <div className="p-6 space-y-4">
-              {/* Card Number */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Card Number
@@ -838,17 +1000,11 @@ export default function Billing() {
                   placeholder="1234 5678 9012 3456"
                   value={updatedPaymentMethod.lastFour}
                   onChange={(e) => {
-                    // Remove all non-digit characters
                     let value = e.target.value.replace(/\D/g, "");
-
-                    // Limit to 16 digits
                     if (value.length > 16) {
                       value = value.slice(0, 16);
                     }
-
-                    // Add spaces every 4 digits
                     value = value.replace(/(.{4})/g, "$1 ").trim();
-
                     setUpdatedPaymentMethod({
                       ...updatedPaymentMethod,
                       lastFour: value,
@@ -861,7 +1017,7 @@ export default function Billing() {
                       ? "border-red-300 focus:ring-red-500"
                       : "border-gray-300 focus:ring-blue-500"
                   }`}
-                  maxLength={19} // 16 digits + 3 spaces
+                  maxLength={19}
                 />
                 {updatedPaymentMethod.lastFour.replace(/\s/g, "").length > 0 &&
                   updatedPaymentMethod.lastFour.replace(/\s/g, "").length <
@@ -872,7 +1028,6 @@ export default function Billing() {
                   )}
               </div>
 
-              {/* Expiry and CVC */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -883,18 +1038,13 @@ export default function Billing() {
                     placeholder="MM/YY"
                     value={updatedPaymentMethod.expires}
                     onChange={(e) => {
-                      let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
-
-                      // Limit to 4 digits (MMYY)
+                      let value = e.target.value.replace(/\D/g, "");
                       if (value.length > 4) {
                         value = value.slice(0, 4);
                       }
-
-                      // Add slash after MM
                       if (value.length >= 2) {
                         value = value.slice(0, 2) + "/" + value.slice(2);
                       }
-
                       setUpdatedPaymentMethod({
                         ...updatedPaymentMethod,
                         expires: value,
@@ -906,7 +1056,7 @@ export default function Billing() {
                         ? "border-red-300 focus:ring-red-500"
                         : "border-gray-300 focus:ring-blue-500"
                     }`}
-                    maxLength={5} // MM/YY format
+                    maxLength={5}
                   />
                   {updatedPaymentMethod.expires.length > 0 &&
                     updatedPaymentMethod.expires.length < 5 && (
@@ -924,7 +1074,6 @@ export default function Billing() {
                     placeholder="123"
                     value={updatedPaymentMethod.cvc}
                     onChange={(e) => {
-                      // Only allow digits and limit to 3 characters
                       const value = e.target.value
                         .replace(/\D/g, "")
                         .slice(0, 3);
@@ -950,7 +1099,6 @@ export default function Billing() {
                 </div>
               </div>
 
-              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Cardholder Name
@@ -965,21 +1113,10 @@ export default function Billing() {
                       cardHolderName: e.target.value,
                     })
                   }
-                  className={`w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                    updatedPaymentMethod.cardHolderName.trim() === ""
-                      ? "border-gray-300 focus:ring-blue-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  }`}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                {updatedPaymentMethod.cardHolderName.trim() === "" &&
-                  updatedPaymentMethod.cardHolderName.length === 0 && (
-                    <p className="mt-1 text-sm text-red-600 hidden">
-                      Cardholder name is required
-                    </p>
-                  )}
               </div>
 
-              {/* Security Notice */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <div className="flex items-start space-x-2">
                   <svg
@@ -1000,7 +1137,6 @@ export default function Billing() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex space-x-3 p-6 bg-gray-50 rounded-b-xl">
               <button
                 onClick={() => setShowUpdatePaymentModal(false)}
@@ -1034,10 +1170,12 @@ export default function Billing() {
           </div>
         </div>
       )}
+
       <div className="flex items-center gap-3 mb-6">
         <CreditCard className="text-gray-700" size={24} />
         <h2 className="text-xl font-semibold text-gray-800">Billing</h2>
       </div>
+
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
           <Crown className="text-gray-700" size={20} />
@@ -1087,10 +1225,10 @@ export default function Billing() {
           </button>
           <button
             onClick={() => {
-              if(currentPlan.status==="canceled"){
-                toast.warning("plan Already Canceled")
-                return 
-              }else{
+              if (currentPlan.status === "canceled") {
+                toast.warning("plan Already Canceled");
+                return;
+              } else {
                 setShowCancelSubscriptionModal(true);
               }
             }}
@@ -1108,6 +1246,7 @@ export default function Billing() {
           </button>
         </div>
       </div>
+
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
           <CreditCard className="text-gray-700" size={20} />
@@ -1151,31 +1290,47 @@ export default function Billing() {
           Add Payment Method
         </button>
       </div>
+
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Billing History
         </h3>
 
         <div className="space-y-4">
-          {billingHistory.map((invoice) => (
-            <div
-              key={invoice.id}
-              className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0"
-            >
-              <div>
-                <p className="font-medium text-gray-900">{invoice.plan}</p>
-                <p className="text-sm text-gray-500">{invoice.date}</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="font-semibold text-gray-900">
-                  {invoice.amount}
-                </span>
-                <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
-                  Download
-                </button>
-              </div>
+          <div
+            className={`border border-gray-100 rounded-lg ${
+              billingHistory.length > 3 ? "max-h-48 overflow-y-auto" : ""
+            }`}
+          >
+            <div className="space-y-0">
+              {billingHistory.map((invoice, index) => (
+                <div
+                  key={invoice.id}
+                  className={`flex items-center justify-between py-3 px-4 ${
+                    index !== billingHistory.length - 1
+                      ? "border-b border-gray-100"
+                      : ""
+                  } hover:bg-gray-50 transition-colors`}
+                >
+                  <div>
+                    <p className="font-medium text-gray-900 capitalize">
+                      {invoice.plan} Plan
+                    </p>
+                    <p className="text-sm text-gray-500">{invoice.date}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-semibold text-gray-900">
+                      {invoice.amount}
+                    </span>
+                    <button className="text-sm text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1">
+                      <Download size={14} />
+                      Download
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
 
         {billingHistory.length === 0 && (
@@ -1185,6 +1340,74 @@ export default function Billing() {
           </div>
         )}
       </div>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-6">
+          Subscription Management
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-gray-900">Auto-Renewal</h4>
+              <button
+                onClick={toggleAutoRenewal}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  autoRenewal ? "bg-gray-800" : "bg-gray-200"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    autoRenewal ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600">
+              {autoRenewal
+                ? `Your subscription will automatically renew on ${currentPlan.nextBilling}`
+                : "Your subscription will not automatically renew"}
+            </p>
+          </div>
+
+          <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-gray-900">
+                Billing Notifications
+              </h4>
+              <button
+                onClick={toggleBillingNotifications}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  billingNotifications ? "bg-gray-800" : "bg-gray-200"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    billingNotifications ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600">
+              {billingNotifications
+                ? "Get notified 3 days before your next billing date"
+                : "You will not receive billing notifications"}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h4 className="font-medium text-yellow-800 mb-2">Need Help?</h4>
+          <p className="text-sm text-yellow-700 mb-3">
+            Having issues with billing or need to make changes? Our support team
+            is here to help.
+          </p>
+          <button className="px-4 py-2 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors text-sm font-medium">
+            Contact Support
+          </button>
+        </div>
+      </div>
+
       <div className="bg-blue-50 rounded-lg p-4">
         <div className="flex items-start">
           <CreditCard className="text-blue-500 mt-0.5" size={16} />
