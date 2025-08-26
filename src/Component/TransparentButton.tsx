@@ -14,7 +14,7 @@ const TransparentButton = ({ title="button", onClick,isBlack=false }:button) => 
         px-6 
        
         
-        border-gray-200
+        ${isBlack?"border-gray-500":"border-gray-200"}
         border-1 
         rounded-lg 
         hover:bg-gray-100 

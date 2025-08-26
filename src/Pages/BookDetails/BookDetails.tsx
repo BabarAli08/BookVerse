@@ -352,7 +352,7 @@ const BookDetails = () => {
           description: book?.summaries?.[0],
           published_at: book?.authors?.[0].death_year,
           tier: premiumBookClicked ? "premium" : "free",
-          authors: book?.authors?.map((author) => author.name).join(", "),
+          authors: book?.authors?.map((author) => author.name).join(", ") || null,
         };
 
         const { error } = await supabase

@@ -15,7 +15,7 @@ const Mission = () => {
         <div className="flex items-center gap-4 mb-5">
 
             <WhiteButton title="Start Reading" onClick={()=>navigate('/books') } isBlack={true}/>
-            <TransparentButton title="Get Premium" onClick={()=>navigate('/premium')}/>
+            <TransparentButton title="Get Premium" isBlack={true} onClick={()=>navigate('/premium')}/>
         </div>
       </div>
       <div className="w-[50%] overflow-hidden">

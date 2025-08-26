@@ -1,25 +1,25 @@
 const MeetOurTeam = () => {
   const teamMembers = [
     {
-      name: "Sarah Chen",
+      name: "Babar ALi",
       role: "Founder & CEO",
       description: "Former librarian turned tech entrepreneur, passionate about making reading accessible to everyone.",
-      image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face"
+      image: "https://imgs.search.brave.com/trMsdXy39kDHLkMWiMQ1IQVejaTu_JxGFkjeQjNvur4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/c2h1dHRlcnN0b2Nr/LmNvbS9pbWFnZS1w/aG90by9oYXBweS1t/aWQtYWdlZC1idXNp/bmVzcy1tYW4tMjYw/bnctMjMwNzIxMjMz/MS5qcGc"
     },
     {
-      name: "Michael Torres", 
+      name: "mark luther", 
       role: "Head of Content",
       description: "Curates our extensive book collection and works with publishers to bring you the best titles.",
       image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face"
     },
     {
-      name: "Emma Watson",
+      name: "Emma brown",
       role: "UX Designer", 
       description: "Designs intuitive reading experiences that make digital books feel natural and enjoyable.",
       image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face"
     },
     {
-      name: "Alex Thompson",
+      name: "Alex harmozi",
       role: "Engineering Lead",
       description: "Builds the technology that powers our platform and ensures a seamless reading experience.",
       image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
