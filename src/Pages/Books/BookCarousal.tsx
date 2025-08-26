@@ -30,10 +30,12 @@ const BookCarousel = ({
   title,
   subtitle,
   isPremium = false,
+
 }: {
   title: string;
   subtitle: string;
   isPremium?: boolean;
+  
 }) => {
   const dispatch = useDispatch();
   const { filters } = useSelector((state: RootState) => state.filteredBooks);
@@ -44,21 +46,18 @@ const BookCarousel = ({
   const booksState = isPremium ? premiumBooks : freeBooks;
   const booksPerView = isPremium ? 4 : 5;
 
-  // Check if filters are active
   const hasActiveFilters = filters.search.length > 0 || filters.category !== "All Tiers";
   
-  // Set default pages based on filter status
   const getDefaultPage = () => {
     if (hasActiveFilters) {
       if(isPremium) return 2
       else return 1
       
     } else {
-      return isPremium ? 10 : 1; // Premium: page 10, Free: page 1 when no filters
+      return isPremium ? 10 : 1;
     }
   };
 
-  // Reset books and set initial page when filters change
   useEffect(() => {
     const defaultPage = getDefaultPage();
     
@@ -76,7 +75,6 @@ const BookCarousel = ({
     page: booksState.page,
   });
 
-  // Handle data fetching with proper condition checks
   useEffect(() => {
     console.log('Data effect triggered:', { 
       hasData: !!data, 
@@ -91,12 +89,11 @@ const BookCarousel = ({
 
     const currentBooksLength = booksState.allBooks.length;
     
-    // Determine if this is initial load
     const isInitialLoad = currentBooksLength === 0;
     
     if (isInitialLoad) {
       console.log('Initial load - Setting books:', isPremium ? 'premium' : 'free');
-      // Set new books (initial load)
+   
       if (isPremium) {
         dispatch(setPremiumBooks(data));
       } else {
@@ -104,7 +101,7 @@ const BookCarousel = ({
       }
     } else {
       console.log('Fetching more books (append):', isPremium ? 'premium' : 'free');
-      // Append books for pagination
+    
       if (isPremium) {
         dispatch(fetchMorePremium(data));
       } else {
@@ -127,14 +124,12 @@ const BookCarousel = ({
       willNeedMoreData: nextIndex >= totalLoaded
     });
 
-    // First, move to next batch
     if (isPremium) {
       dispatch(nextPremiumBatch());
     } else {
       dispatch(nextFreeBatch());
     }
 
-    // Then check if we need to fetch more data (but don't block navigation)
     if (nextIndex >= totalLoaded) {
       console.log('Need to fetch more data, incrementing page...');
       const newPage = booksState.page + 1;
@@ -156,13 +151,12 @@ const BookCarousel = ({
 
   const { displayedBooks, allBooks, currentIndex } = booksState;
 
-  // Check if next button should be disabled
-  const isNextDisabled = loading && allBooks.length === 0; // Only disable if loading AND no books
+  const isNextDisabled = loading && allBooks.length === 0; 
   const isPrevDisabled = (loading && allBooks.length === 0) || currentIndex === 0;
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
+ 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           {isPremium ? (
@@ -200,10 +194,9 @@ const BookCarousel = ({
         </div>
       </div>
 
-      {/* Books */}
+    
       <div className="flex gap-6 overflow-hidden">
         {loading && allBooks.length === 0 ? (
-          // Only show loading spinner on initial load (no books exist)
           Array(booksPerView)
             .fill(0)
             .map((_, i) => <LoaderCard3 key={i} />)

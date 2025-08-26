@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import type { book as bookState } from "../../Data/Interfaces";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setBook, setClicked } from "../../Data/PremiumBookClickedSlice";
 import { Heart } from "lucide-react";
+import type { RootState } from "../../Store/store";
 import supabase from "../../supabase-client";
+import { useNavigate } from "react-router";
+import { setPremiumBookClicked } from "../../Store/ReadSlice";
 
 interface PremiumBookProps {
   book: bookState;
@@ -16,6 +19,9 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
     dispatch(setClicked(true));
     dispatch(setBook([book]));
   };
+  const {boughtPremium}=useSelector((state:RootState)=>state.premiumBooks)
+
+
   const allAuthors = book.authors
     ?.map((a: { name: string }) => a.name)
     .join(",");
@@ -85,7 +91,12 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
       }
     }
   };
-
+  const navigate=useNavigate()
+  const handlePremiumBookRead=()=>{
+    dispatch(setPremiumBookClicked(true))
+    dispatch(setBook([book]))
+    navigate(`/books/${book.id}`)
+  }
   const imageUrl =
     book.formats?.["image/jpeg"] ||
     book.formats?.["image/png"] ||
@@ -98,12 +109,12 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
 
   return (
     <div className="w-full max-w-xs bg-white rounded-xl border border-gray-300 shadow-md overflow-hidden relative flex flex-col group">
-      {/* Premium Badge */}
+      
       <span className="absolute top-2 left-2 z-10 bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded">
         Premium
       </span>
 
-      {/* Wishlist Heart */}
+  
       <button
         className="absolute top-2 right-2 z-10 bg-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
         onClick={handleFav}
@@ -169,13 +180,18 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
         </div>
 
         <button
-          onClick={handleClick}
+          onClick={()=>{
+            if(!boughtPremium) handleClick()
+            else{
+              handlePremiumBookRead()
+            }
+          }}
           className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 py-2.5 px-4 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center space-x-2 mt-3"
         >
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
           </svg>
-          <span>Upgrade to Read</span>
+          <span>{boughtPremium?"Read Premium" : 'Upgrade to read'}</span>
         </button>
       </div>
     </div>

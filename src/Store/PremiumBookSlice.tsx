@@ -7,6 +7,7 @@ interface premiumBookSlice {
   currentIndex: number;
   batchSize: number;
   page: number;
+  boughtPremium: boolean
 }
 
 const initialState: premiumBookSlice = {
@@ -15,6 +16,7 @@ const initialState: premiumBookSlice = {
   currentIndex: 0,
   batchSize: 4,
   page: 10,
+  boughtPremium: false
 };
 
 const premiumBookSlice = createSlice({
@@ -46,7 +48,6 @@ const premiumBookSlice = createSlice({
         prevIndex,
         prevIndex + state.batchSize
       );
-      // Don't modify page here - let the component handle it
     },
     
     setInitialPage: (state, action: PayloadAction<number>) => {
@@ -54,6 +55,9 @@ const premiumBookSlice = createSlice({
     },
     
     resetPremiumBooks: () => initialState,
+    setBoughtPremium: (state, action: PayloadAction<boolean>) => {
+      state.boughtPremium = action.payload;
+    },
     
     fetchMore: (state, action: PayloadAction<book[]>) => {
       const startIndex = state.allBooks.length;
@@ -75,6 +79,7 @@ export const {
   setPremiumBooks,
   nextPremiumBatch,
   prevPremiumBatch,
+  setBoughtPremium,
   setInitialPage,
   fetchMore,
   resetPremiumBooks,

@@ -18,8 +18,11 @@ import BookDetailsLoader from "../../Component/BookDetailsLoader";
 import { useEffect, useState } from "react";
 import supabase from "../../supabase-client";
 import BookDetailsLoadingButton from "../../Component/BookDetailsLoadingButton";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../Store/store";
 
 const BookDetails = () => {
+  const [credentialsLoading, setCredentialsLoading] = useState<boolean>(true);
   const [wishlisted, setWishlisted] = useState<boolean>(false);
   const [readingProgress, setReadingProgress] = useState<number>(0);
   const [wishlistLoading, setWishlistLoading] = useState<boolean>(false);
@@ -27,9 +30,48 @@ const BookDetails = () => {
 
   const { id } = useParams();
   const navigate = useNavigate();
+  const [boughtPremium,setBoughtPremium]=useState<boolean>(false)
+  const {premiumBookClicked}=useSelector((state:RootState)=>state.read)
 
   const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
+  useEffect(()=>{
+    if(!premiumBookClicked) return 
+    const getSubscriptionStatus=async()=>{
 
+      try{
+        setCredentialsLoading(true)
+
+        const {data:{user},error:userError}=await supabase.auth.getUser()
+  
+        if(userError){
+          toast.error("could not find the user subscription Kindly login")
+          navigate("/signup")
+          return
+        }
+        const {data,error}=await supabase.from("subscriptions").select("*").eq("user_id",user?.id).single()
+        if(error){
+          setBoughtPremium(false)
+          return 
+        }
+        setBoughtPremium(data.status==="active" && data.plan_type!=="free")
+      }catch(err){
+        toast.error("error getting the user subscripion status")
+        setBoughtPremium(false)
+
+        navigate("/signup")
+        return
+      }
+      finally{
+        setCredentialsLoading(false)
+      }
+
+
+    }
+    getSubscriptionStatus()
+  },[])
+
+
+  if(credentialsLoading) return <BookDetailsLoader/>
   useEffect(() => {
     const fetchWishlist = async () => {
       setWishlistLoading(true);
@@ -40,7 +82,7 @@ const BookDetails = () => {
         } = await supabase.auth.getUser();
 
         if (userError || !user) {
-          navigate("/login");
+          navigate("/signup");
           setWishlistLoading(false);
           return;
         }
@@ -68,6 +110,8 @@ const BookDetails = () => {
     fetchWishlist();
   }, [id, navigate]);
 
+
+
   useEffect(() => {
     if (book?.id) {
       const storedProgress = localStorage.getItem(
@@ -80,6 +124,11 @@ const BookDetails = () => {
   }, [book?.id]);
 
   const handleReadFree = async () => {
+    if(!boughtPremium) {
+      toast.warning("buy premium to read this book")
+      navigate('/premium')
+      return 
+    }
   try {
     setBookLoading(true);
 
@@ -138,7 +187,7 @@ const BookDetails = () => {
       cover: imageUrl,
       published_at: book?.authors?.[0].death_year,
       authors: book?.authors?.map((author) => author.name).join(", "),
-      tier: "free",
+      tier: premiumBookClicked ? "premium" : "free",
     };
 
     const { error: insertError } = await supabase
@@ -302,7 +351,7 @@ const BookDetails = () => {
           cover: imageUrl,
           description: book?.summaries?.[0],
           published_at: book?.authors?.[0].death_year,
-          tier: "free",
+          tier: premiumBookClicked ? "premium" : "free",
           authors: book?.authors?.map((author) => author.name).join(", "),
         };
 
@@ -350,8 +399,8 @@ const BookDetails = () => {
                     />
                   </div>
 
-                  <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-md text-sm font-medium">
-                    Free
+                  <div className={`absolute top-3 left-3 ${premiumBookClicked ? "bg-purple-600 " : 'bg-green-500'} text-white px-3 py-1 rounded-md text-sm font-medium`}>
+                    {boughtPremium ? "Premium book" : "Free"}
                   </div>
                 </div>
               </div>
@@ -376,7 +425,7 @@ const BookDetails = () => {
                 <BookDetailsButton
                   logo={BookOpen}
                   isBlack={true}
-                  title="Read Free"
+                  title={premiumBookClicked ? "Read Premium" : "Read Free"}
                   onClick={handleReadFree}
                 />
                 }
