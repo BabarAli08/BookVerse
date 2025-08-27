@@ -19,17 +19,16 @@ interface cardState {
 
 const Pricing = () => {
   const { prices, Yearly } = useSelector((state: RootState) => state.prices);
-  const dispatch=useDispatch()
-  const {plan}=useSelector((state:RootState)=>state.payment)
-
-  const navigate=useNavigate()
-  const handlePayment =(plan: cardState) => {
-    console.log("plan Clicked");
-    const originalPrice = parseFloat(plan.price.replace('$', '')); 
-    const taxed_price = originalPrice * 1.08;
+  const dispatch = useDispatch();
   
-      dispatch(setPlan({...plan,"price":String(taxed_price)}))
-    navigate('/checkout')
+  const navigate = useNavigate();
+  const handlePayment = (plan: cardState) => {
+    console.log("plan Clicked");
+    const originalPrice = parseFloat(plan.price.replace("$", ""));
+    const taxed_price = originalPrice * 1.08;
+
+    dispatch(setPlan({ ...plan, price: String(taxed_price) }));
+    navigate("/checkout");
   };
   const cards = [
     {
@@ -98,7 +97,7 @@ const Pricing = () => {
   ];
 
   return (
-    <div className="flex items-center gap-4 justify-center p-4 w-full h-[50%]">
+    <div className="flex flex-wrap lg:flex-nowrap justify-center items-center gap-4 p-4 w-full   overflow-x-auto">
       {cards.map((card, i: number) => (
         <FreeCard {...card} key={i} onClick={() => handlePayment(card)} />
       ))}

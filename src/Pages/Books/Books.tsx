@@ -4,14 +4,20 @@ import BookCarousel from "./BookCarousal";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../Store/store";
 import UpgradeToSee from "../../Component/UpgradeToSee";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import supabase from "../../supabase-client";
 import { setBoughtPremium } from "../../Store/PremiumBookSlice";
 const Books = () => {
   const { filters } = useSelector((state: RootState) => state.filteredBooks);
   const { clicked } = useSelector((state: RootState) => state.PremiumBookCLick);
   const dispatch=useDispatch()
+  
+    
+  const hasCheckedSubscription = useRef(false);
+
   useEffect(() => {
+    if (hasCheckedSubscription.current) return;
+
     const getUserSubscriptions = async () => {
       const {
         data: { user },
@@ -29,13 +35,17 @@ const Books = () => {
         console.error("Error fetching subscription:", error);
         return;
       }
-      const value=data && data.status === "active" && data.plan_type !== "free"
-    
+      const value =
+        data && data.status === "active" && data.plan_type !== "free";
+      
       dispatch(setBoughtPremium(value));
+      hasCheckedSubscription.current = true;
     };
-    getUserSubscriptions();
-  },[]);
 
+    getUserSubscriptions();
+  }, []);
+
+  
   return (
     <>
       <div className="w-full min-h-screen bg-gray-50 flex flex-col relative z-0">

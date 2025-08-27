@@ -6,10 +6,13 @@ import ToggleSwitch from "./TogglSwitch"
 const Premium = () => {
   return (
     <>
+    <div className="w-full h-full flex items-center justify-center flex-col overflow-hidden ">
     <Hero/>
     <ToggleSwitch/>
     <Offers/>
     <FrequentlyAskedQuestions/>
+
+    </div>
     </>
   )
 }

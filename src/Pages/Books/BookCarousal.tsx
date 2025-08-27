@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import { BookOpen, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -24,19 +24,30 @@ import {
   fetchMore as fetchMorePremium,
 } from "../../Store/PremiumBookSlice";
 import type { RootState } from "../../Store/store";
-import { DotsLoader } from "../../Component/Loading";
 
 const BookCarousel = ({
   title,
   subtitle,
   isPremium = false,
-
 }: {
   title: string;
   subtitle: string;
   isPremium?: boolean;
-  
 }) => {
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const dispatch = useDispatch();
   const { filters } = useSelector((state: RootState) => state.filteredBooks);
 
@@ -46,13 +57,13 @@ const BookCarousel = ({
   const booksState = isPremium ? premiumBooks : freeBooks;
   const booksPerView = isPremium ? 4 : 5;
 
-  const hasActiveFilters = filters.search.length > 0 || filters.category !== "All Tiers";
-  
+  const hasActiveFilters =
+    filters.search.length > 0 || filters.category !== "All Tiers";
+
   const getDefaultPage = () => {
     if (hasActiveFilters) {
-      if(isPremium) return 2
-      else return 1
-      
+      if (isPremium) return 2;
+      else return 1;
     } else {
       return isPremium ? 10 : 1;
     }
@@ -60,7 +71,7 @@ const BookCarousel = ({
 
   useEffect(() => {
     const defaultPage = getDefaultPage();
-    
+
     if (isPremium) {
       dispatch(resetPremiumBooks());
       dispatch(setInitialPage(defaultPage));
@@ -76,32 +87,38 @@ const BookCarousel = ({
   });
 
   useEffect(() => {
-    console.log('Data effect triggered:', { 
-      hasData: !!data, 
-      dataLength: data?.length, 
+    console.log("Data effect triggered:", {
+      hasData: !!data,
+      dataLength: data?.length,
       currentBooks: booksState.allBooks.length,
       hasFilters: hasActiveFilters,
       page: booksState.page,
-      isPremium 
+      isPremium,
     });
-    
+
     if (!data || data.length === 0) return;
 
     const currentBooksLength = booksState.allBooks.length;
-    
+
     const isInitialLoad = currentBooksLength === 0;
-    
+
     if (isInitialLoad) {
-      console.log('Initial load - Setting books:', isPremium ? 'premium' : 'free');
-   
+      console.log(
+        "Initial load - Setting books:",
+        isPremium ? "premium" : "free"
+      );
+
       if (isPremium) {
         dispatch(setPremiumBooks(data));
       } else {
         dispatch(setFreeBooks(data));
       }
     } else {
-      console.log('Fetching more books (append):', isPremium ? 'premium' : 'free');
-    
+      console.log(
+        "Fetching more books (append):",
+        isPremium ? "premium" : "free"
+      );
+
       if (isPremium) {
         dispatch(fetchMorePremium(data));
       } else {
@@ -115,13 +132,13 @@ const BookCarousel = ({
     const currentIndex = booksState.currentIndex;
     const nextIndex = currentIndex + booksPerView;
 
-    console.log('Next slide clicked:', {
+    console.log("Next slide clicked:", {
       totalLoaded,
       currentIndex,
       nextIndex,
       booksPerView,
       loading,
-      willNeedMoreData: nextIndex >= totalLoaded
+      willNeedMoreData: nextIndex >= totalLoaded,
     });
 
     if (isPremium) {
@@ -131,7 +148,7 @@ const BookCarousel = ({
     }
 
     if (nextIndex >= totalLoaded) {
-      console.log('Need to fetch more data, incrementing page...');
+      console.log("Need to fetch more data, incrementing page...");
       const newPage = booksState.page + 1;
       if (isPremium) {
         dispatch(setInitialPage(newPage));
@@ -151,12 +168,12 @@ const BookCarousel = ({
 
   const { displayedBooks, allBooks, currentIndex } = booksState;
 
-  const isNextDisabled = loading && allBooks.length === 0; 
-  const isPrevDisabled = (loading && allBooks.length === 0) || currentIndex === 0;
+  const isNextDisabled = loading && allBooks.length === 0;
+  const isPrevDisabled =
+    (loading && allBooks.length === 0) || currentIndex === 0;
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-8">
- 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           {isPremium ? (
@@ -193,42 +210,68 @@ const BookCarousel = ({
           </button>
         </div>
       </div>
+      {!isMobile && (
+        <div className="flex gap-6 overflow-hidden">
+          {loading && allBooks.length === 0 ? (
+            Array(booksPerView)
+              .fill(0)
+              .map((_, i) => <LoaderCard3 key={i} />)
+          ) : error ? (
+            <h1 className="bg-red-400 text-xl text-white p-4 rounded-md">
+              No {isPremium ? "Premium" : "Free"} Books Available for this tier
+            </h1>
+          ) : (
+            <>
+              {displayedBooks.map((book: book) =>
+                isPremium ? (
+                  <PremiumBook key={book.id} book={book} />
+                ) : (
+                  <BookCard key={book.id} book={book} />
+                )
+              )}
 
-    
-      <div className="flex gap-6 overflow-hidden">
-        {loading && allBooks.length === 0 ? (
-          Array(booksPerView)
-            .fill(0)
-            .map((_, i) => <LoaderCard3 key={i} />)
-        ) : error ? (
-          <h1 className="bg-red-400 text-xl text-white p-4 rounded-md">
-            No {isPremium ? "Premium" : "Free"} Books Available for this tier
-          </h1>
-        ) : (
-          // Always show books if they exist, even while loading more
-          displayedBooks.map((book: book) =>
-            isPremium ? (
-              <PremiumBook key={book.id} book={book} />
-            ) : (
-              <BookCard key={book.id} book={book} />
-            )
-          )
-        )}
-        
-        
-        {loading && allBooks.length > 0 && ( // Check if loading and if there are already books displayed
-          <div className="flex items-center justify-center min-w-[200px]">
-            <div className="text-gray-500 text-lg mt-1">{<DotsLoader/>}</div>
-          </div>
-        )}
-      </div>
-      
-     
-      {import.meta.env.MODE === 'development' && (
+              {loading &&
+                Array(booksPerView)
+                  .fill(0)
+                  .map((_, i) => <LoaderCard3 key={`loader-${i}`} />)}
+            </>
+          )}
+        </div>
+      )}
+      {isMobile&&(
+        <div className="grid grid-cols-2 gap-6 overflow-hidden">
+          {loading && allBooks.length === 0 ? (
+            Array(booksPerView)
+              .fill(0)
+              .map((_, i) => <LoaderCard3 key={i} />)
+          ) : error ? (
+            <h1 className="bg-red-400 text-xl text-white p-4 rounded-md">
+              No {isPremium ? "Premium" : "Free"} Books Available for this tier
+            </h1>
+          ) : (
+            <>
+              {displayedBooks.map((book: book) =>
+                isPremium ? (
+                  <PremiumBook key={book.id} book={book} />
+                ) : (
+                  <BookCard key={book.id} book={book} />
+                )
+              )}
+
+              {loading &&
+                Array(booksPerView)
+                  .fill(0)
+                  .map((_, i) => <LoaderCard3 key={`loader-${i}`} />)}
+            </>
+          )}
+        </div>
+      )}
+
+      {import.meta.env.MODE === "development" && (
         <div className="mt-4 text-xs text-gray-500">
-          Page: {booksState.page} | Total: {allBooks.length} | 
-          Current: {currentIndex} | Filters: {hasActiveFilters ? 'Active' : 'None'} |
-          Loading: {loading ? 'Yes' : 'No'} | Displayed: {displayedBooks.length}
+          Page: {booksState.page} | Total: {allBooks.length} | Current:{" "}
+          {currentIndex} | Filters: {hasActiveFilters ? "Active" : "None"} |
+          Loading: {loading ? "Yes" : "No"} | Displayed: {displayedBooks.length}
         </div>
       )}
     </div>

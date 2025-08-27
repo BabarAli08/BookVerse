@@ -235,6 +235,8 @@ const ReadingSidebar = () => {
     return togglDark ? `border border-gray-600/30` : `border border-gray-200`;
   };
 
+  const {premiumBookClicked}=useSelector((state:RootState)=>state.read)
+
   const bookAuthors = book.authors?.map((a) => a.name).join(", ");
 
   const toggleBookCompleted = async () => {
@@ -260,6 +262,7 @@ const ReadingSidebar = () => {
         description: book?.summaries?.[0],
         title: book?.title,
         authors: bookAuthors,
+        tier:premiumBookClicked?"premium":"free"
       };
       const { data, error } = await supabase
         .from("currently_reading")
@@ -435,7 +438,6 @@ const ReadingSidebar = () => {
                 </div>
               </div>
 
-              {/* Font Family */}
               <div>
                 <label
                   className={`block text-sm font-medium mb-2 ${
@@ -471,7 +473,6 @@ const ReadingSidebar = () => {
                 </select>
               </div>
 
-              {/* Line Height */}
               <div>
                 <label
                   className={`block text-sm font-medium mb-2 ${
@@ -496,7 +497,6 @@ const ReadingSidebar = () => {
                 </div>
               </div>
 
-              {/* Letter Spacing */}
               <div>
                 <label
                   className={`block text-sm font-medium mb-2 ${
@@ -521,7 +521,6 @@ const ReadingSidebar = () => {
                 </div>
               </div>
 
-              {/* Preview */}
               <div
                 className={`p-3 border rounded-lg ${
                   togglDark

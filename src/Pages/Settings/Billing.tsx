@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { CreditCard, Crown, Plus, Loader2, Download } from "lucide-react";
 import supabase from "../../supabase-client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router";
-import { current } from "@reduxjs/toolkit";
+import { setBoughtPremium } from "../../Store/PremiumBookSlice";
+import { useDispatch } from "react-redux";
 
 interface planState {
   id: string;
@@ -43,6 +43,7 @@ export default function Billing() {
     status: "active",
     isYearly: false,
   });
+  const dispatch = useDispatch();
   const [changePlanModal, setChangePlanModal] = useState<boolean>(false);
 
   const [autoRenewal, setAutoRenewal] = useState<boolean | null>(null);
@@ -162,6 +163,9 @@ export default function Billing() {
     }
   };
 
+  const checkPremiumStatus = (planName: string, status: string) => {
+    return status === "active" && planName !== "free";
+  };
   useEffect(() => {
     const getUserPreferences = async () => {
       try {
@@ -202,7 +206,6 @@ export default function Billing() {
           `Database values - Auto Renewal: ${preferences?.auto_renewal}, Billing: ${preferences?.billing_notifications}`
         );
 
-        // Fix: Use nullish coalescing instead of truthy check
         const autoRenewalValue = preferences?.auto_renewal ?? true;
         const billingValue = preferences?.billing_notifications ?? true;
 
@@ -407,6 +410,8 @@ export default function Billing() {
         status: "canceled",
       }));
 
+      dispatch(setBoughtPremium(false));
+
       toast.success("Subscription cancelled successfully");
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -472,6 +477,8 @@ export default function Billing() {
               status: data.status,
               isYearly: data.billing_cycle === "yearly",
             });
+            const hasPremium = checkPremiumStatus(data.plan_type, data.status);
+            dispatch(setBoughtPremium(hasPremium));
 
             if (data.status === "active") {
               setPaymentMethod({
@@ -480,6 +487,8 @@ export default function Billing() {
                 expires: data.expiry_date,
               });
             }
+          } else {
+            dispatch(setBoughtPremium(false));
           }
 
           const { data: previousPlans, error: previousPlansError } =
@@ -519,7 +528,7 @@ export default function Billing() {
     };
 
     getCurrentPlan();
-  }, []);
+  }, [dispatch]);
 
   const LoadingSkeleton = () => (
     <div className="space-y-8">
@@ -605,6 +614,9 @@ export default function Billing() {
           new Date().setMonth(new Date().getMonth() + 1)
         ).toISOString(),
       };
+
+      const plan=checkPremiumStatus(selectedPlan, "active");
+      dispatch(setBoughtPremium(plan));
 
       const { error: updateError } = await supabase
         .from("subscriptions")

@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleYearly } from "../../Store/PricesSlices";
+import type { RootState } from "../../Store/store";
 
 const ToggleSwitch = () => {
    const isYearly = useSelector((state: RootState) => state.prices.Yearly);
@@ -12,8 +12,8 @@ const ToggleSwitch = () => {
   };
 
   return (
-    <div className="flex items-center justify-center p-8">
-      <div className="flex items-center gap-4">
+    <div className="flex w-full  items-center justify-center p-8">
+      <div className="flex bg-gray-50 rounded-full justify-center px-4 h-[7vh] shadow-md items-center gap-4">
         
         <span 
           className={`text-sm font-medium transition-colors duration-200 cursor-pointer select-none ${

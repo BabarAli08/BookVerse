@@ -1,4 +1,3 @@
-
 import { useNavigate, useParams } from "react-router-dom";
 import useFetchSingleBook from "../../Data/useFetchSingleBook";
 import BookFetchError from "../../Component/BookFetchError";
@@ -56,15 +55,9 @@ function throttle<T extends (...args: any[]) => void>(
 const BookReader = () => {
   const [selectedText, setSelectedText] = useState<string>("");
   const [scrollProgress, setScrollProgress] = useState<number>(0);
-  const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
+  const [setSelectedPosition] = useState({ x: 0, y: 0 });
   const [showOptions, setShowOptions] = useState<boolean>(false);
-  const [isProgressHovered, setIsProgressHovered] = useState(false);
-  const [focusSettingsOpen, setFocusSettingsOpen] = useState<boolean>(false);
-  const [progressTooltip, setProgressTooltip] = useState({
-    show: false,
-    percentage: 0,
-    x: 0,
-  });
+
   const [bookContent, setBookContent] = useState<string>("");
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
@@ -89,15 +82,14 @@ const BookReader = () => {
     isFocused,
   } = useSelector((state: RootState) => state.bookReading);
 
- 
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const backgroundOptions: BackgroundOption[] = [
@@ -443,16 +435,25 @@ const BookReader = () => {
   };
 
   const mapFontFamily = (fontFamily: string): string => {
-    switch (fontFamily) {
-      case "Sans Serif":
+    switch (fontFamily.toLowerCase()) {
+      case "sans serif":
+      case "sans-serif":
+      case "system-ui, -apple-system, blinkmacsystemfont, 'segoe ui', roboto, 'helvetica neue', arial, sans-serif":
         return "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
-      case "Monospace":
+      case "monospace":
+      case "'sf mono', monaco, 'cascadia code', 'roboto mono', consolas, 'courier new', monospace":
         return "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace";
-      case "Dyslexic":
+      case "dyslexic":
         return "OpenDyslexic, sans-serif";
-      case "Serif":
+      case "serif":
+      case "georgia, serif":
+      case "ui-serif, georgia, cambria, 'times new roman', times, serif":
         return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
       default:
+        if (fontFamily.includes(",")) {
+          return fontFamily;
+        }
+
         return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
     }
   };
@@ -468,7 +469,7 @@ const BookReader = () => {
       case "Double":
         return "2.0";
       default:
-        return "1.6";
+        return lineHeight;
     }
   };
 
@@ -541,8 +542,13 @@ const BookReader = () => {
     }
   }, [book?.id, scrollProgress, debouncedSaveProgress]);
 
-  const mapFontSize = (fontSize: string) => {
+  const mapFontSize = (fontSize: string | number) => {
     const baseSize = isMobile ? 16 : 18;
+
+    if (typeof fontSize === "number" || !isNaN(Number(fontSize))) {
+      return `${fontSize}px`;
+    }
+
     switch (fontSize) {
       case "Small":
         return `${baseSize - 2}px`;
@@ -576,25 +582,6 @@ const BookReader = () => {
       }
     }
   }, [book?.id, isContentReady, handleSeek]);
-
-  const handleProgressBarClick = (e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
-    handleSeek(percentage);
-  };
-
-  const handleProgressBarMouseMove = (e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(100, (mouseX / rect.width) * 100));
-
-    setProgressTooltip({
-      show: true,
-      percentage: Math.round(percentage),
-      x: Math.max(20, Math.min(rect.width - 20, mouseX)),
-    });
-  };
 
   if (loading)
     return (
@@ -646,7 +633,13 @@ const BookReader = () => {
       >
         <div className="text-center max-w-md">
           <div className="mb-6">
-            <div className={`text-6xl ${togglDark ? "text-red-400" : "text-red-500"}`}>📚</div>
+            <div
+              className={`text-6xl ${
+                togglDark ? "text-red-400" : "text-red-500"
+              }`}
+            >
+              📚
+            </div>
           </div>
           <h1
             className={`text-xl md:text-2xl mb-4 font-semibold ${
@@ -656,7 +649,9 @@ const BookReader = () => {
             Error Loading Book
           </h1>
           <p
-            className={`mb-6 text-sm md:text-base ${togglDark ? "text-gray-300" : "text-gray-600"}`}
+            className={`mb-6 text-sm md:text-base ${
+              togglDark ? "text-gray-300" : "text-gray-600"
+            }`}
           >
             {contentError}
           </p>
@@ -693,7 +688,15 @@ const BookReader = () => {
       >
         {!isFocused && <Header />}
 
-        <div className={`flex ${isMobile ? 'flex-col' : ''} ${isFocused ? 'h-screen' : isMobile ? 'h-screen' : 'h-[calc(100vh-64px)]'}`}>
+        <div
+          className={`flex ${isMobile ? "flex-col" : ""} ${
+            isFocused
+              ? "h-screen"
+              : isMobile
+              ? "h-screen"
+              : "h-[calc(100vh-64px)]"
+          }`}
+        >
           {toggleSidebar && !isFocused && !isMobile && (
             <div className="flex-shrink-0 w-80">
               <ReadingSidebar />
@@ -708,9 +711,11 @@ const BookReader = () => {
             </div>
           )}
 
-          <div className={`flex-1 flex justify-center items-start ${
-            isMobile ? 'p-0 h-full' : 'p-4 lg:p-6'
-          }`}>
+          <div
+            className={`flex-1 flex justify-center items-start ${
+              isMobile ? "p-0 h-full" : "p-4 lg:p-6"
+            }`}
+          >
             <div
               className={`
                 w-full h-full transition-all duration-300 book-reader-container
@@ -720,18 +725,28 @@ const BookReader = () => {
                     : "bg-gradient-to-br from-white to-gray-50 text-gray-900 shadow-2xl shadow-gray-300/50"
                 }
                 ${isFocused ? "max-w-4xl mx-auto" : "max-w-6xl"}
-                ${isMobile ? 'rounded-none border-0' : 'rounded-xl border border-opacity-30'}
-                ${togglDark ? 'border-gray-600' : 'border-gray-300'}
+                ${
+                  isMobile
+                    ? "rounded-none border-0"
+                    : "rounded-xl border border-opacity-30"
+                }
+                ${togglDark ? "border-gray-600" : "border-gray-300"}
               `}
             >
               <div
                 ref={bookContentRef}
                 className={`
-                  ${isMobile ? 'h-screen' : 'h-[95vh]'} 
+                  ${isMobile ? "h-screen" : "h-[95vh]"} 
                   overflow-auto custom-scrollbar
                   ${theme?.bg || (togglDark ? "bg-gray-800" : "bg-white")}
-                  ${theme?.text ||  "text-black"}
-                  ${isMobile ? 'px-4 py-6 rounded-none' : isFocused ? 'px-8 lg:px-16 py-8 lg:py-12 rounded-xl' : 'px-6 lg:px-12 py-6 lg:py-10 rounded-xl'}
+                  ${theme?.text || "text-black"}
+                  ${
+                    isMobile
+                      ? "px-4 py-6 rounded-none"
+                      : isFocused
+                      ? "px-8 lg:px-16 py-8 lg:py-12 rounded-xl"
+                      : "px-6 lg:px-12 py-6 lg:py-10 rounded-xl"
+                  }
                   leading-relaxed
                 `}
                 dangerouslySetInnerHTML={{ __html: bookContent }}
@@ -774,8 +789,6 @@ const BookReader = () => {
             </div>
           </div>
         </div>
-
-
       </div>
 
       <style>{`
@@ -836,8 +849,8 @@ const BookReader = () => {
           border: 2px solid ${togglDark ? "#1F2937" : "#F8FAFC"};
           transition: all 0.3s ease;
           box-shadow: ${
-            togglDark 
-              ? "0 2px 8px rgba(79, 70, 229, 0.3)" 
+            togglDark
+              ? "0 2px 8px rgba(79, 70, 229, 0.3)"
               : "0 2px 8px rgba(37, 99, 235, 0.2)"
           };
         }
@@ -850,8 +863,8 @@ const BookReader = () => {
           };
           transform: scaleY(1.05);
           box-shadow: ${
-            togglDark 
-              ? "0 4px 15px rgba(124, 58, 237, 0.4)" 
+            togglDark
+              ? "0 4px 15px rgba(124, 58, 237, 0.4)"
               : "0 4px 15px rgba(29, 78, 216, 0.3)"
           };
         }
@@ -884,7 +897,7 @@ const BookReader = () => {
           border-bottom: 3px solid ${togglDark ? "#4338CA" : "#2563EB"};
           padding-bottom: 0.5em;
           background: ${
-            togglDark 
+            togglDark
               ? "linear-gradient(135deg, #F9FAFB 0%, #E5E7EB 100%)"
               : "linear-gradient(135deg, #111827 0%, #374151 100%)"
           };
@@ -929,15 +942,15 @@ const BookReader = () => {
           margin: ${isMobile ? "1.5em 0" : "2.5em 0"};
           font-style: italic;
           background: ${
-            togglDark 
+            togglDark
               ? "linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%)"
               : "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 197, 253, 0.05) 100%)"
           };
           border-radius: ${isMobile ? "0.5em" : "0.75em"};
           position: relative;
           box-shadow: ${
-            togglDark 
-              ? "0 4px 15px rgba(124, 58, 237, 0.1)" 
+            togglDark
+              ? "0 4px 15px rgba(124, 58, 237, 0.1)"
               : "0 4px 15px rgba(59, 130, 246, 0.1)"
           };
         }
@@ -964,9 +977,7 @@ const BookReader = () => {
         .book-reader-container a:hover {
           border-bottom-color: currentColor;
           background: ${
-            togglDark 
-              ? "rgba(96, 165, 250, 0.1)" 
-              : "rgba(37, 99, 235, 0.05)"
+            togglDark ? "rgba(96, 165, 250, 0.1)" : "rgba(37, 99, 235, 0.05)"
           };
           padding: 0.1em 0.2em;
           border-radius: 0.25em;
@@ -978,8 +989,8 @@ const BookReader = () => {
           height: auto;
           border-radius: ${isMobile ? "0.5em" : "0.75em"};
           box-shadow: ${
-            togglDark 
-              ? "0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)" 
+            togglDark
+              ? "0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)"
               : "0 10px 30px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.1)"
           };
           margin: ${isMobile ? "1.5em 0" : "2.5em 0"};
@@ -989,8 +1000,8 @@ const BookReader = () => {
         .book-reader-container img:hover {
           transform: scale(1.02);
           box-shadow: ${
-            togglDark 
-              ? "0 15px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.2)" 
+            togglDark
+              ? "0 15px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.2)"
               : "0 15px 40px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.15)"
           };
         }
@@ -1020,7 +1031,7 @@ const BookReader = () => {
         .book-reader-container code {
           color: ${togglDark ? "#A78BFA" : "#7C2D12"};
           background: ${
-            togglDark 
+            togglDark
               ? "linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%)"
               : "linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)"
           };
@@ -1028,10 +1039,12 @@ const BookReader = () => {
           border-radius: 0.375em;
           font-size: 0.875em;
           font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-          border: 1px solid ${togglDark ? "rgba(124, 58, 237, 0.2)" : "rgba(251, 191, 36, 0.2)"};
+          border: 1px solid ${
+            togglDark ? "rgba(124, 58, 237, 0.2)" : "rgba(251, 191, 36, 0.2)"
+          };
           box-shadow: ${
-            togglDark 
-              ? "0 2px 4px rgba(124, 58, 237, 0.1)" 
+            togglDark
+              ? "0 2px 4px rgba(124, 58, 237, 0.1)"
               : "0 2px 4px rgba(251, 191, 36, 0.1)"
           };
         }
@@ -1044,8 +1057,8 @@ const BookReader = () => {
           margin: ${isMobile ? "1.5em 0" : "2em 0"};
           border: 1px solid ${togglDark ? "#334155" : "#E2E8F0"};
           box-shadow: ${
-            togglDark 
-              ? "inset 0 2px 4px rgba(0, 0, 0, 0.3)" 
+            togglDark
+              ? "inset 0 2px 4px rgba(0, 0, 0, 0.3)"
               : "inset 0 2px 4px rgba(0, 0, 0, 0.05)"
           };
         }
@@ -1067,7 +1080,9 @@ const BookReader = () => {
 
         /* Better text selection */
         .book-reader-container ::selection {
-          background: ${togglDark ? "rgba(124, 58, 237, 0.3)" : "rgba(59, 130, 246, 0.2)"};
+          background: ${
+            togglDark ? "rgba(124, 58, 237, 0.3)" : "rgba(59, 130, 246, 0.2)"
+          };
           color: ${togglDark ? "#F9FAFB" : "#1F2937"};
         }
 

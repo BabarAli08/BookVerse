@@ -48,18 +48,18 @@ const Hero = () => {
         }
       `}</style>
 
-      {/* Top Half */}
-      <div className="w-full h-[35vh] bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-900 relative flex items-center justify-center overflow-hidden">
-        {/* Moving Books Animation */}
+ 
+      <div className="w-full sm:h-[50vh] md:h-[60vh] pt-2  bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-900 relative flex items-center justify-center overflow-hidden">
+       
         <div className="absolute inset-0 pointer-events-none">
-          {/* Books moving left to right */}
+        
           {[...Array(3)].map((_, i) => (
             <div
               key={`book-lr-${i}`}
               className="absolute animate-slide"
               style={{
                 top: `${20 + i * 25}%`,
-                left: "-200px", // Start completely off-screen
+                left: "-200px", 
                 animationDelay: `${i * 4}s`,
               }}
             >
@@ -71,14 +71,13 @@ const Hero = () => {
             </div>
           ))}
 
-          {/* Books moving right to left */}
           {[...Array(2)].map((_, i) => (
             <div
               key={`book-rl-${i}`}
               className="absolute animate-slide-reverse"
               style={{
                 top: `${40 + i * 30}%`,
-                right: "-200px", // Start completely off-screen on the right
+                right: "-200px", 
                 animationDelay: `${i * 6 + 2}s`,
               }}
             >
@@ -91,13 +90,12 @@ const Hero = () => {
           ))}
         </div>
 
-        {/* Text Section */}
         <div className="z-10 text-center px-4 max-w-3xl flex items-center justify-center flex-col flex-wrap">
             <Crown className="text-yellow-400 mb-[20px]" size={50}/>
-          <h1 className="text-5xl md:text-5xl font-bold  text-white mb-[20px] drop-shadow-lg">
+          <h1 className="text-5xl md:text-5xl sm:text-md font-bold  text-white mb-[20px] drop-shadow-lg">
             Unlock Your Reading Potential
           </h1>
-          <p className="text-gray-300 text-lg md:text-xl mb-6 drop-shadow-md">
+          <p className="text-gray-300 text-lg sm:text-md md:text-xl mb-6 drop-shadow-md">
             Choose the perfect plan to enhance your reading journey with premium
             features, unlimited access, and exclusive content.
           </p>
