@@ -91,7 +91,7 @@ const BookCard = ({ book }: { book: book }) => {
   return (
     <div className="w-[15rem] bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex-shrink-0 group">
       <div className="relative h-48 bg-gray-200">
-        {/* Free Badge */}
+        
         <div className="absolute top-3 left-3 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">
           Free
         </div>
@@ -113,7 +113,6 @@ const BookCard = ({ book }: { book: book }) => {
           )}
         </button>
 
-        {/* Book Image */}
         <div className="w-full h-full flex items-center justify-center">
           {imageUrl ? (
             <img

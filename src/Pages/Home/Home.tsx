@@ -9,7 +9,6 @@ import { toast } from "sonner";
 
 const Home = () => {
   const navigate = useNavigate();
-
   useEffect(() => {
     const getSubscription = async () => {
       const {
@@ -27,7 +26,6 @@ const Home = () => {
           .single();
 
       if (subscriptionError) {
-        toast.warning("Could not find the subscription status");
         return;
       }
 
@@ -39,22 +37,19 @@ const Home = () => {
           .single();
 
       if (user_preferances_error) {
-        toast.warning("Could not find user preferences");
+        
         return;
       }
 
       const currentDate = new Date();
       const nextBillingDate = new Date(subscriptionData.next_billing_date);
 
-      // Check if subscription renewal is due (regardless of auto-renewal setting)
       if (
         currentDate > nextBillingDate &&
         subscriptionData.status === "active"
       ) {
         if (user_preferances.auto_renewal === false) {
-          // AUTO-RENEWAL OFF - Mark as expired
           try {
-            // Add current subscription to history before updating
             const { error: historyError } = await supabase
               .from("subscriptions_history")
               .insert([
@@ -72,7 +67,6 @@ const Home = () => {
               );
             }
 
-            // Update subscription status to expired
             const { error: updateError } = await supabase
               .from("subscriptions")
               .update({
@@ -96,9 +90,7 @@ const Home = () => {
             toast.error("An unexpected error occurred");
           }
         } else if (user_preferances.auto_renewal === true) {
-          // AUTO-RENEWAL ON - Renew the subscription
           try {
-            // Add current subscription to history before renewal
             const { error: historyError } = await supabase
               .from("subscriptions_history")
               .insert([
@@ -116,10 +108,8 @@ const Home = () => {
               );
             }
 
-            // Calculate new billing dates
             const newNextBillingDate = new Date(nextBillingDate);
 
-            // Add time based on plan (assuming monthly for now)
             if (
               subscriptionData.plan.includes("monthly") ||
               subscriptionData.billing_cycle === "monthly"
@@ -133,20 +123,18 @@ const Home = () => {
                 newNextBillingDate.getFullYear() + 1
               );
             } else {
-              // Default to monthly
               newNextBillingDate.setMonth(newNextBillingDate.getMonth() + 1);
             }
 
-            // Update subscription with new billing date
             const { error: renewalError } = await supabase
               .from("subscriptions")
               .update({
                 next_billing_date: newNextBillingDate
                   .toISOString()
-                  .split("T")[0], // Just the date part
+                  .split("T")[0], 
                 last_payment_date: currentDate.toISOString(),
                 updated_at: currentDate.toISOString(),
-                status: "active", // Ensure it stays active
+                status: "active", 
               })
               .eq("user_id", user?.id);
 
@@ -156,14 +144,13 @@ const Home = () => {
               return;
             }
 
-            // Optional: Add to billing history table if you have one
             const { error: billingError } = await supabase
               .from("billing_history")
               .insert([
                 {
-                  user_id: user.id,
+                  user_id: user?.id,
                   plan: subscriptionData.plan,
-                  amount: subscriptionData.price, // or calculate amount
+                  amount: subscriptionData.price, 
                   date: currentDate.toISOString(),
                   type: "auto_renewal",
                   status: "completed",
@@ -183,11 +170,10 @@ const Home = () => {
             console.error("Unexpected error during auto-renewal:", error);
             toast.error("Auto-renewal failed. Please renew manually.");
 
-            // Fallback: Mark as expired if auto-renewal fails
             await supabase
               .from("subscriptions")
               .update({
-                status: "payment_failed", // or "expired"
+                status: "payment_failed", 
                 expired_at: currentDate.toISOString(),
                 updated_at: currentDate.toISOString(),
               })
@@ -198,10 +184,10 @@ const Home = () => {
         currentDate > nextBillingDate &&
         subscriptionData.status === "expired"
       ) {
-        // Already expired, just notify
+        
         toast.info("Your subscription has expired. Please renew to continue.");
       } else if (subscriptionData.status === "active") {
-        // Subscription is still active - check if expiring soon
+        
         const daysUntilExpiry = Math.ceil(
           (nextBillingDate.getTime() - currentDate.getTime()) /
             (1000 * 60 * 60 * 24)

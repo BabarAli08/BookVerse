@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
+import { Mail, Lock, User, MapPin, FileText } from "lucide-react";
 import supabase from "../supabase-client";
 import { login } from "../Store/AuthSlice";
 
@@ -18,19 +19,14 @@ const SignUp = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state change:", event, session?.user?.email);
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          
-          const { data: existingProfile, error: checkError } = await supabase
+        if (event === "SIGNED_IN" && session?.user) {
+          const { data: existingProfile, error } = await supabase
             .from("profiles")
             .select("id")
             .eq("id", session.user.id)
             .single();
 
-          if (checkError) {
-          
-            
+          if (error) {
             await createUserProfile(
               session.user.id,
               session.user.user_metadata?.name || "",
@@ -38,10 +34,7 @@ const SignUp = () => {
               session.user.user_metadata?.bio || "",
               session.user.user_metadata?.location || ""
             );
-          } else {
-            console.log("Profile already exists:", existingProfile);
           }
-          
           dispatch(login(session.user));
         }
       }
@@ -57,79 +50,23 @@ const SignUp = () => {
     bio: string,
     location: string
   ) => {
-    try {
-
-      const { data: testData, error: testError } = await supabase
-        .from("profiles")
-        .select("id")
-        .limit(1);
-      
-      console.log("Test query result:", { testData, testError });
-
-     
-      const { data: existingProfile, error: existError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", userId)
-        .single();
-
-      console.log("Existing profile check:", { existingProfile, existError });
-
-      if (existingProfile) {
-       
-        return existingProfile;
-      }
-
-     
-      const { data, error } = await supabase
-        .from("profiles")
-        .insert([
-          {
-            id: userId,
-            name: name || "",
-            email: email || "",
-            bio: bio || "",
-            location: location || "",
-            website: "",
-            created_at: new Date().toISOString(),
-          },
-        ])
-        .select();
-        
-        
-
-
-
-      if (error) {
-        console.error("Error creating profile:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-          fullError: error
-        });
-        
-  
-      
-        alert(`Profile creation failed: ${error.message}`);
-        return null;
-      } else {
-        console.log("Profile created successfully:", data);
-        alert("Profile created successfully!");
-        return data[0];
-      }
-    } catch (err) {
-      alert(`Unexpected error: ${(err as Error)?.message}`);
-  
-      return null;
-    }
+    await supabase.from("profiles").insert([
+      {
+        id: userId,
+        name,
+        email,
+        bio,
+        location,
+        website: "",
+        created_at: new Date().toISOString(),
+      },
+    ]);
   };
 
   const handleAuth = async () => {
     setLoading(true);
 
     if (!isLogin) {
-      
       const { data, error } = await supabase.auth.signUp({
         email: details.email,
         password: details.password,
@@ -142,166 +79,132 @@ const SignUp = () => {
         },
       });
 
-      if (error) {
-        alert("Sign up error:"+ error.message);
-        if (error.message.includes("User already registered")) {
-          alert("Account already exists. Please sign in instead.");
-          setIsLogin(true);
-        } else {
-          alert(error.message);
-        }
-        setLoading(false);
-        return;
-      }
-
-      console.log("✅ Sign up success:", {
-        user: data.user?.email,
-        session: !!data.session,
-        user_metadata: data.user?.user_metadata
-      });
-
-      if (data?.user) {
-        if (data.session) {
-          await createUserProfile(
-            data.user.id,
-            details.name,
-            details.email,
-            details.bio,
-            details.location
-          );
-          dispatch(login(data.user));
-          alert("Account created successfully!");
-        } else {
-             
-          alert("Sign-up successful! Please check your email to verify your account. Your profile will be created when you confirm your email.");
-        }
+      if (!error && data.user) {
+        dispatch(login(data.user));
       }
     } else {
-
-      const { data, error } = await supabase.auth.signInWithPassword({
+      await supabase.auth.signInWithPassword({
         email: details.email,
         password: details.password,
       });
-
-      if (error) {
-        alert(error.message);
-        setLoading(false);
-        return;
-      }
-
-      console.log("✅ Sign in success:", data.user?.email);
-
-      if (data?.user) {
-        const { data: existingProfile, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", data.user.id)
-          .single();
-
-        if (profileError && profileError.code === 'PGRST116') {
-         
-          await createUserProfile(
-            data.user.id,
-            data.user.user_metadata?.name || "",
-            data.user.email || "",
-            data.user.user_metadata?.bio || "",
-            data.user.user_metadata?.location || ""
-          );
-        } else if (existingProfile) {
-         alert("profile already Exists Try Signing in")
-        }
-
-        dispatch(login(data.user));
-      }
     }
 
     setLoading(false);
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-purple-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center text-purple-700 mb-6">
-          {isLogin ? "Sign In" : "Sign Up"}
-        </h2>
+    <div className="flex justify-center items-center min-h-screen bg-gray-100 px-4">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+ 
+        <div className="py-6 px-8 text-center border-b border-gray-200 bg-gray-50">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {isLogin ? "Welcome Back 👋" : "Create an Account"}
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">
+            {isLogin
+              ? "Sign in to continue"
+              : "Join us and start reading smarter"}
+          </p>
+        </div>
 
-        {!isLogin && (
-          <>
+   
+        <div className="p-8">
+          {!isLogin && (
+            <>
+              <div className="flex items-center border border-gray-300 bg-gray-50 rounded-lg px-3 py-2 mb-4 focus-within:ring-2 focus-within:ring-black">
+                <User className="text-gray-400 mr-2" size={18} />
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={details.name}
+                  onChange={(e) =>
+                    setDetails({ ...details, name: e.target.value })
+                  }
+                  className="w-full outline-none bg-transparent"
+                />
+              </div>
+
+              <div className="flex items-start border border-gray-300 bg-gray-50 rounded-lg px-3 py-2 mb-4 focus-within:ring-2 focus-within:ring-black">
+                <FileText className="text-gray-400 mr-2 mt-1" size={18} />
+                <textarea
+                  placeholder="Bio"
+                  value={details.bio}
+                  onChange={(e) =>
+                    setDetails({ ...details, bio: e.target.value })
+                  }
+                  className="w-full outline-none bg-transparent resize-none"
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex items-center border border-gray-300 bg-gray-50 rounded-lg px-3 py-2 mb-4 focus-within:ring-2 focus-within:ring-black">
+                <MapPin className="text-gray-400 mr-2" size={18} />
+                <input
+                  type="text"
+                  placeholder="Location"
+                  value={details.location}
+                  onChange={(e) =>
+                    setDetails({ ...details, location: e.target.value })
+                  }
+                  className="w-full outline-none bg-transparent"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="flex items-center border border-gray-300 bg-gray-50 rounded-lg px-3 py-2 mb-4 focus-within:ring-2 focus-within:ring-black">
+            <Mail className="text-gray-400 mr-2" size={18} />
             <input
-              type="text"
-              placeholder="Name"
-              value={details.name}
-              onChange={(e) => setDetails({ ...details, name: e.target.value })}
-              className="w-full p-3 mb-4 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+              type="email"
+              placeholder="Email"
+              value={details.email}
+              onChange={(e) =>
+                setDetails({ ...details, email: e.target.value })
+              }
+              className="w-full outline-none bg-transparent"
               required
             />
-            <textarea
-              placeholder="Bio"
-              value={details.bio}
-              onChange={(e) => setDetails({ ...details, bio: e.target.value })}
-              className="w-full p-3 mb-4 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-              rows={3}
-            />
+          </div>
+
+          <div className="flex items-center border border-gray-300 bg-gray-50 rounded-lg px-3 py-2 mb-6 focus-within:ring-2 focus-within:ring-black">
+            <Lock className="text-gray-400 mr-2" size={18} />
             <input
-              type="text"
-              placeholder="Location"
-              value={details.location}
+              type="password"
+              placeholder="Password"
+              value={details.password}
               onChange={(e) =>
-                setDetails({ ...details, location: e.target.value })
+                setDetails({ ...details, password: e.target.value })
               }
-              className="w-full p-3 mb-4 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full outline-none bg-transparent"
+              required
+              minLength={6}
             />
-          </>
-        )}
+          </div>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={details.email}
-          onChange={(e) => setDetails({ ...details, email: e.target.value })}
-          className="w-full p-3 mb-4 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-          required
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={details.password}
-          onChange={(e) => setDetails({ ...details, password: e.target.value })}
-          className="w-full p-3 mb-6 border border-purple-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-          required
-          minLength={6}
-        />
-
-        <button
-          onClick={handleAuth}
-          disabled={
-            loading ||
-            (!isLogin && !details.name) ||
-            !details.email ||
-            !details.password
-          }
-          className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white p-3 rounded transition"
-        >
-          {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
-        </button>
-
-        <p className="text-center text-gray-600 mt-4">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-          <span
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-purple-600 hover:underline cursor-pointer"
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                setIsLogin(!isLogin);
-              }
-            }}
+          <button
+            onClick={handleAuth}
+            disabled={
+              loading ||
+              (!isLogin && !details.name) ||
+              !details.email ||
+              !details.password
+            }
+            className="w-full bg-black text-white font-semibold py-3 rounded-lg transition hover:bg-gray-800 disabled:bg-gray-400"
           >
-            {isLogin ? "Sign Up" : "Sign In"}
-          </span>
-        </p>
+            {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
+          </button>
+
+        
+          <p className="text-center text-gray-600 mt-6 text-sm">
+            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+            <span
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-black font-semibold hover:underline cursor-pointer"
+            >
+              {isLogin ? "Sign Up" : "Sign In"}
+            </span>
+          </p>
+        </div>
       </div>
     </div>
   );

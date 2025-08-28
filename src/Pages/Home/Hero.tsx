@@ -1,15 +1,33 @@
-import React from 'react';
-import TransparentButton from '../../Component/TransparentButton';
-import WhiteButton from '../../Component/WhiteButton';
-import { useNavigate } from 'react-router';
-
+import { motion } from "framer-motion";
+import TransparentButton from "../../Component/TransparentButton";
+import WhiteButton from "../../Component/WhiteButton";
+import { useNavigate } from "react-router";
 
 const Hero = () => {
-  const navigate=useNavigate()
+  const navigate = useNavigate();
 
-    return (
-        <>
-        <style>{`
+  const text =
+    "Your gateway to infinite stories. Read, discover, and immerse yourself in worlds beyond imagination.";
+
+  const sentence = {
+    hidden: { opacity: 1 },
+    visible: {
+      opacity: 1,
+      transition: {
+        delay: 0.3,
+        staggerChildren: 0.03,
+      },
+    },
+  };
+
+  const letter = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  return (
+    <>
+      <style>{`
         @keyframes slideAcross {
           0% {
             transform: translateX(-200px) translateY(0px) rotate(-15deg);
@@ -52,19 +70,16 @@ const Hero = () => {
           animation: slideAcrossReverse 15s linear infinite;
         }
       `}</style>
-      
-      {/* Top Half */}
+
       <div className="w-full h-[50vh] bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 relative flex items-center justify-center overflow-hidden">
-        {/* Moving Books Animation */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Books moving left to right */}
           {[...Array(3)].map((_, i) => (
             <div
               key={`book-lr-${i}`}
               className="absolute animate-slide"
               style={{
                 top: `${20 + i * 25}%`,
-                left: '-200px', // Start completely off-screen
+                left: "-200px",
                 animationDelay: `${i * 4}s`,
               }}
             >
@@ -75,15 +90,14 @@ const Hero = () => {
               </div>
             </div>
           ))}
-          
-          {/* Books moving right to left */}
+
           {[...Array(2)].map((_, i) => (
             <div
               key={`book-rl-${i}`}
               className="absolute animate-slide-reverse"
               style={{
                 top: `${40 + i * 30}%`,
-                right: '-200px', // Start completely off-screen on the right
+                right: "-200px",
                 animationDelay: `${i * 6 + 2}s`,
               }}
             >
@@ -96,19 +110,36 @@ const Hero = () => {
           ))}
         </div>
 
-        {/* Text Section */}
         <div className="z-10 text-center px-4 max-w-2xl">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">BookVerse</h1>
-          <p className="text-gray-300 text-lg md:text-xl mb-6 drop-shadow-md">
-            Your gateway to infinite stories. Read, discover, and immerse yourself in worlds beyond imagination.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <WhiteButton title="Explore Books" onClick={() =>navigate("/books") } />
-            <TransparentButton title="Get Premium" onClick={() => navigate("/premium")} />
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">
+            BookVerse
+          </h1>
+          <motion.p
+            variants={sentence}
+            initial="hidden"
+            animate="visible"
+            className="text-gray-300 text-lg md:text-xl mb-6 drop-shadow-md min-h-[4rem] sm:min-h-[3rem]"
+          >
+            {text.split("").map((char, index) => (
+              <motion.span key={index} variants={letter}>
+                {char === " " ? "\u00A0" : char}
+              </motion.span>
+            ))}
+          </motion.p>
+
+          <div className="flex items-center flex-col sm:flex-row gap-4 justify-center">
+            <WhiteButton
+              title="Explore Books"
+              onClick={() => navigate("/books")}
+            />
+            <TransparentButton
+              title="Get Premium"
+              onClick={() => navigate("/premium")}
+            />
           </div>
         </div>
       </div>
-        </>
-    )
-}
-export default Hero
+    </>
+  );
+};
+export default Hero;

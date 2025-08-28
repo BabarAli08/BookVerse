@@ -114,12 +114,11 @@ const FilterComponent = () => {
             />
           </div>
 
-          {/* Filter Section */}
           <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-            {/* Tier Filter */}
+            
             <div className="flex items-center gap-2">
               <Filter size={18} className="text-gray-500" />
-              <div className="min-w-[120px]">
+              <div className="min-w-[120px]  ">
                 <DropdownSelect
                   options={tiers}
                   selected={selectedTier}
@@ -129,7 +128,6 @@ const FilterComponent = () => {
               </div>
             </div>
 
-            {/* Category Filter */}
             <div className="min-w-[140px]">
               <DropdownSelect
                 options={categories}
@@ -139,7 +137,7 @@ const FilterComponent = () => {
               />
             </div>
 
-            {/* Sort Filter */}
+          
             <div className="min-w-[160px]">
               <DropdownSelect
                 options={sortOptions}
@@ -151,7 +149,6 @@ const FilterComponent = () => {
           </div>
         </div>
 
-        {/* Active Filters Display */}
         <div className="mt-4 flex flex-wrap gap-2">
           {selectedTier !== "All" && (
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">

@@ -14,6 +14,7 @@ interface offer {
   description: string;
   logo: LucideIcon;
 }
+
 const Offers = [
   {
     title: "Vast Library",
@@ -49,20 +50,22 @@ const Offers = [
 
 const WhyChooseUs = () => {
   return (
-    <div className="flex flex-col items-center mt-8 w-full h-auto px-6 py-10">
-      <div className="flex flex-col items-center text-center gap-4 max-w-2xl">
-        <h1 className="text-3xl md:text-4xl font-bold">
+    <div className="flex flex-col items-center mt-8 w-full h-auto px-4 sm:px-6 py-10">
+      {/* Heading Section */}
+      <div className="flex flex-col items-center text-center gap-3 sm:gap-4 max-w-2xl">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-snug">
           Why Choose BookVerse Premium?
         </h1>
-        <p className="text-gray-600 text-base md:text-lg">
+        <p className="text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed px-2">
           Unlock the full potential of your reading experience with our premium
           features
         </p>
       </div>
 
+    
       <div
         className="grid w-full max-w-6xl mt-10 gap-6 
-             grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 
+             grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 
              justify-items-center"
       >
         {Offers.map((offer: offer, i: number) => (

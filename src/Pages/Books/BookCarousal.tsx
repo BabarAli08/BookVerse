@@ -1,4 +1,4 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { BookOpen, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -9,16 +9,12 @@ import { LoaderCard3 } from "../../Component/Loading CardComponent";
 import type { book } from "../../Data/Interfaces";
 import {
   setFreeBooks,
-  nextFreeBatch,
-  prevFreeBatch,
   resetFreeBooks,
   setFreePage,
   fetchMore as fetchMoreFree,
 } from "../../Store/FreeBookSlice";
 import {
   setPremiumBooks,
-  nextPremiumBatch,
-  prevPremiumBatch,
   resetPremiumBooks,
   setInitialPage,
   fetchMore as fetchMorePremium,
@@ -35,6 +31,9 @@ const BookCarousel = ({
   isPremium?: boolean;
 }) => {
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [showLeftButton, setShowLeftButton] = useState<boolean>(false);
+  const [showRightButton, setShowRightButton] = useState<boolean>(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -42,9 +41,7 @@ const BookCarousel = ({
     };
 
     handleResize();
-
     window.addEventListener("resize", handleResize);
-
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -55,7 +52,7 @@ const BookCarousel = ({
   const premiumBooks = useSelector((state: RootState) => state.premiumBooks);
 
   const booksState = isPremium ? premiumBooks : freeBooks;
-  const booksPerView = isPremium ? 4 : 5;
+  const booksPerView = isMobile ? 2 : (isPremium ? 4 : 5);
 
   const hasActiveFilters =
     filters.search.length > 0 || filters.category !== "All Tiers";
@@ -99,26 +96,17 @@ const BookCarousel = ({
     if (!data || data.length === 0) return;
 
     const currentBooksLength = booksState.allBooks.length;
-
     const isInitialLoad = currentBooksLength === 0;
 
     if (isInitialLoad) {
-      console.log(
-        "Initial load - Setting books:",
-        isPremium ? "premium" : "free"
-      );
-
+      console.log("Initial load - Setting books:", isPremium ? "premium" : "free");
       if (isPremium) {
         dispatch(setPremiumBooks(data));
       } else {
         dispatch(setFreeBooks(data));
       }
     } else {
-      console.log(
-        "Fetching more books (append):",
-        isPremium ? "premium" : "free"
-      );
-
+      console.log("Fetching more books (append):", isPremium ? "premium" : "free");
       if (isPremium) {
         dispatch(fetchMorePremium(data));
       } else {
@@ -127,50 +115,62 @@ const BookCarousel = ({
     }
   }, [data, isPremium, dispatch]);
 
-  const nextSlide = () => {
-    const totalLoaded = booksState.allBooks.length;
-    const currentIndex = booksState.currentIndex;
-    const nextIndex = currentIndex + booksPerView;
+  // Check scroll position and update button visibility
+  const checkScrollPosition = () => {
+    if (!scrollContainerRef.current) return;
 
-    console.log("Next slide clicked:", {
-      totalLoaded,
-      currentIndex,
-      nextIndex,
-      booksPerView,
-      loading,
-      willNeedMoreData: nextIndex >= totalLoaded,
-    });
+    const container = scrollContainerRef.current;
+    const scrollLeft = container.scrollLeft;
+    const maxScrollLeft = container.scrollWidth - container.clientWidth;
 
-    if (isPremium) {
-      dispatch(nextPremiumBatch());
-    } else {
-      dispatch(nextFreeBatch());
+    setShowLeftButton(scrollLeft > 0);
+    // Always show right button - either for scrolling or loading more data
+    setShowRightButton(true);
+  };
+
+  // Update button visibility when books change
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      setTimeout(checkScrollPosition, 100); // Small delay to ensure DOM is updated
     }
+  }, [booksState.allBooks]);
 
-    if (nextIndex >= totalLoaded) {
-      console.log("Need to fetch more data, incrementing page...");
-      const newPage = booksState.page + 1;
-      if (isPremium) {
-        dispatch(setInitialPage(newPage));
+  const scroll = (direction: 'left' | 'right') => {
+    if (!scrollContainerRef.current) return;
+
+    const container = scrollContainerRef.current;
+    const scrollAmount = isMobile ? 200 : 300;
+    const currentScroll = container.scrollLeft;
+    const maxScroll = container.scrollWidth - container.clientWidth;
+
+    if (direction === 'left') {
+      container.scrollTo({
+        left: Math.max(0, currentScroll - scrollAmount),
+        behavior: 'smooth'
+      });
+    } else {
+      // Check if we're at the end of current content
+      const isAtEnd = currentScroll >= maxScroll - 10;
+      
+      if (isAtEnd && !loading) {
+        // Load more books
+        const newPage = booksState.page + 1;
+        if (isPremium) {
+          dispatch(setInitialPage(newPage));
+        } else {
+          dispatch(setFreePage(newPage));
+        }
       } else {
-        dispatch(setFreePage(newPage));
+        // Normal scroll
+        container.scrollTo({
+          left: Math.min(maxScroll, currentScroll + scrollAmount),
+          behavior: 'smooth'
+        });
       }
     }
   };
 
-  const prevSlide = () => {
-    if (isPremium) {
-      dispatch(prevPremiumBatch());
-    } else {
-      dispatch(prevFreeBatch());
-    }
-  };
-
-  const { displayedBooks, allBooks, currentIndex } = booksState;
-
-  const isNextDisabled = loading && allBooks.length === 0;
-  const isPrevDisabled =
-    (loading && allBooks.length === 0) || currentIndex === 0;
+  const { allBooks } = booksState;
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 py-8">
@@ -195,85 +195,97 @@ const BookCarousel = ({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={prevSlide}
-            disabled={isPrevDisabled}
-            className="p-2 rounded-full border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => scroll('left')}
+            disabled={!showLeftButton}
+            className={`p-2 rounded-full border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity ${
+              showLeftButton ? 'opacity-100' : 'opacity-0'
+            }`}
           >
             <ChevronLeft size={20} />
           </button>
           <button
-            onClick={nextSlide}
-            disabled={isNextDisabled}
-            className="p-2 rounded-full border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => scroll('right')}
+            disabled={loading}
+            className={`p-2 rounded-full border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity opacity-100`}
           >
             <ChevronRight size={20} />
           </button>
         </div>
       </div>
-      {!isMobile && (
-        <div className="flex gap-6 overflow-hidden">
+
+      <div className="relative">
+        <div
+          ref={scrollContainerRef}
+          onScroll={checkScrollPosition}
+          className={`
+            flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth
+            ${isMobile ? 'gap-4' : 'gap-6'}
+          `}
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitScrollbar: 'none'
+          }}
+        >
           {loading && allBooks.length === 0 ? (
             Array(booksPerView)
               .fill(0)
-              .map((_, i) => <LoaderCard3 key={i} />)
+              .map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-48 max-w-xs">
+                  <div className="w-full [&>*]:!w-full">
+                    <LoaderCard3 />
+                  </div>
+                </div>
+              ))
           ) : error ? (
-            <h1 className="bg-red-400 text-xl text-white p-4 rounded-md">
-              No {isPremium ? "Premium" : "Free"} Books Available for this tier
-            </h1>
+            <div className="flex-shrink-0 w-full">
+              <h1 className="bg-red-400 text-xl text-white p-4 rounded-md">
+                No {isPremium ? "Premium" : "Free"} Books Available for this tier
+              </h1>
+            </div>
           ) : (
             <>
-              {displayedBooks.map((book: book) =>
-                isPremium ? (
-                  <PremiumBook key={book.id} book={book} />
-                ) : (
-                  <BookCard key={book.id} book={book} />
-                )
-              )}
+              {allBooks.map((book: book) => (
+                <div key={book.id} className="flex-shrink-0">
+                  {isPremium ? (
+                    <PremiumBook book={book} />
+                  ) : (
+                    <BookCard book={book} />
+                  )}
+                </div>
+              ))}
 
               {loading &&
-                Array(booksPerView)
+                Array(3)
                   .fill(0)
-                  .map((_, i) => <LoaderCard3 key={`loader-${i}`} />)}
+                  .map((_, i) => (
+                    <div key={`loader-${i}`} className="flex-shrink-0 w-48 h-64">
+                      <LoaderCard3 />
+                    </div>
+                  ))}
             </>
           )}
         </div>
-      )}
-      {isMobile&&(
-        <div className="grid grid-cols-2 gap-6 overflow-hidden">
-          {loading && allBooks.length === 0 ? (
-            Array(booksPerView)
-              .fill(0)
-              .map((_, i) => <LoaderCard3 key={i} />)
-          ) : error ? (
-            <h1 className="bg-red-400 text-xl text-white p-4 rounded-md">
-              No {isPremium ? "Premium" : "Free"} Books Available for this tier
-            </h1>
-          ) : (
-            <>
-              {displayedBooks.map((book: book) =>
-                isPremium ? (
-                  <PremiumBook key={book.id} book={book} />
-                ) : (
-                  <BookCard key={book.id} book={book} />
-                )
-              )}
-
-              {loading &&
-                Array(booksPerView)
-                  .fill(0)
-                  .map((_, i) => <LoaderCard3 key={`loader-${i}`} />)}
-            </>
-          )}
-        </div>
-      )}
+      </div>
 
       {import.meta.env.MODE === "development" && (
         <div className="mt-4 text-xs text-gray-500">
-          Page: {booksState.page} | Total: {allBooks.length} | Current:{" "}
-          {currentIndex} | Filters: {hasActiveFilters ? "Active" : "None"} |
-          Loading: {loading ? "Yes" : "No"} | Displayed: {displayedBooks.length}
+          Page: {booksState.page} | Total: {allBooks.length} | 
+          Filters: {hasActiveFilters ? "Active" : "None"} |
+          Loading: {loading ? "Yes" : "No"} | 
+          Left Button: {showLeftButton ? "Show" : "Hide"}
         </div>
       )}
+
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 };

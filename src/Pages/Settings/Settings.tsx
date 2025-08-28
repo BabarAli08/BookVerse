@@ -35,43 +35,35 @@ export default function Settings() {
             </p>
           </div>
 
-          <div className="flex rounded-lg overflow-hidden shadow-sm bg-white">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2.5 px-4 text-sm font-medium transition-colors 
-                ${
-                  activeTab === tab
-                    ? "bg-white border-b-2 border-purple-600 text-gray-900"
-                    : "bg-gray-50 text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="w-full overflow-x-auto scrollbar-hide">
+            <div className="flex whitespace-nowrap">
+              {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-2.5 px-4 text-sm font-medium transition-colors 
+          ${
+            activeTab === tab
+              ? "bg-white border-b-2 border-purple-600 text-gray-900"
+              : "bg-gray-50 text-gray-600 hover:text-gray-900"
+          }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="mt-6 bg-white rounded-xl shadow-md p-6">
             {activeTab === "Profile" && (
               <Profile setLoading={() => setLoading} />
             )}
-            {activeTab==="Notifications" &&(
-              <Notifications/>
-            )}
+            {activeTab === "Notifications" && <Notifications />}
 
-            {activeTab==="Privacy"&&(
-              <Privacy/>
-            )}
-            {activeTab === "Reading" && (
-              <ReadingPreferences/>
-            )}
+            {activeTab === "Privacy" && <Privacy />}
+            {activeTab === "Reading" && <ReadingPreferences />}
 
-            {activeTab==="Billing" &&(
-              <Billing/>
-            )}
-
-            
+            {activeTab === "Billing" && <Billing />}
           </div>
         </div>
       </div>

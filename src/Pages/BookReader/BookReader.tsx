@@ -55,7 +55,7 @@ function throttle<T extends (...args: any[]) => void>(
 const BookReader = () => {
   const [selectedText, setSelectedText] = useState<string>("");
   const [scrollProgress, setScrollProgress] = useState<number>(0);
-  const [setSelectedPosition] = useState({ x: 0, y: 0 });
+  const [selectedPosition,setSelectedPosition] = useState({ x: 0, y: 0 });
   const [showOptions, setShowOptions] = useState<boolean>(false);
 
   const [bookContent, setBookContent] = useState<string>("");

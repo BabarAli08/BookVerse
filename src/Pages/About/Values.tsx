@@ -50,15 +50,15 @@ const Offers = [
 const Values = () => {
   return (
     <>
-      <div className="flex flex-col items-center mt-2 justify-baseline w-full h-[83vh]">
-        <div className="flex flex-col items-center text-center gap-5 justify-center w-[35vw] h-[18vh]">
+      <div className="flex flex-col items-center mt-2 justify-baseline w-full h-auto">
+        <div className="flex flex-col items-center text-center gap-5 justify-center w-[35vw] h-auto mb-5">
           <h1 className="text-4xl font-bold">Why Choose BookVerse Premium?</h1>
           <p className="text-gray-600 text-xl">
             Unlock the full potential of your reading experience with our
             premium features
           </p>
         </div>
-        <div className="grid w-[80%] h-[60vh] place-items-center  grid-cols-3">
+        <div className="grid w-[80%] h-auto gap-5 place-items-center md:grid-cols-2 sm:grid-cols-1 lg:grid-cols-3">
           {Offers.map((offer: offer, i: number) => (
             <FeatureCard key={i} {...offer} />
           ))}

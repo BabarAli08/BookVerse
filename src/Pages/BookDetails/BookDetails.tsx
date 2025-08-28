@@ -26,52 +26,54 @@ const BookDetails = () => {
   const [wishlisted, setWishlisted] = useState<boolean>(false);
   const [readingProgress, setReadingProgress] = useState<number>(0);
   const [wishlistLoading, setWishlistLoading] = useState<boolean>(false);
-  const [bookLoading,setBookLoading]=useState<boolean>(false)
+  const [bookLoading, setBookLoading] = useState<boolean>(false);
 
   const { id } = useParams();
   const navigate = useNavigate();
-  const [boughtPremium,setBoughtPremium]=useState<boolean>(false)
-  const {premiumBookClicked}=useSelector((state:RootState)=>state.read)
+  const [boughtPremium, setBoughtPremium] = useState<boolean>(false);
+  const { premiumBookClicked } = useSelector((state: RootState) => state.read);
 
   const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
-  useEffect(()=>{
-    const getSubscriptionStatus=async()=>{
-      if(!premiumBookClicked) return 
+  useEffect(() => {
+    const getSubscriptionStatus = async () => {
+      if (!premiumBookClicked) return;
 
-      try{
-        setCredentialsLoading(true)
+      try {
+        setCredentialsLoading(true);
 
-        const {data:{user},error:userError}=await supabase.auth.getUser()
-  
-        if(userError){
-          toast.error("could not find the user subscription Kindly login")
-          navigate("/signup")
-          return
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          toast.error("could not find the user subscription Kindly login");
+          navigate("/signup");
+          return;
         }
-        const {data,error}=await supabase.from("subscriptions").select("*").eq("user_id",user?.id).single()
-        if(error){
-          setBoughtPremium(false)
-          return 
+        const { data, error } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", user?.id)
+          .single();
+        if (error) {
+          setBoughtPremium(false);
+          return;
         }
-        setBoughtPremium(data.status==="active" && data.plan_type!=="free")
-      }catch(err){
-        toast.error("error getting the user subscripion status")
-        setBoughtPremium(false)
+        setBoughtPremium(data.status === "active" && data.plan_type !== "free");
+      } catch (err) {
+        toast.error("error getting the user subscripion status");
+        setBoughtPremium(false);
 
-        navigate("/signup")
-        return
+        navigate("/signup");
+        return;
+      } finally {
+        setCredentialsLoading(false);
       }
-      finally{
-        setCredentialsLoading(false)
-      }
+    };
+    getSubscriptionStatus();
+  }, []);
 
-
-    }
-    getSubscriptionStatus()
-  },[])
-
-
-  
   useEffect(() => {
     const fetchWishlist = async () => {
       setWishlistLoading(true);
@@ -110,8 +112,6 @@ const BookDetails = () => {
     fetchWishlist();
   }, [id, navigate]);
 
-
-
   useEffect(() => {
     if (book?.id) {
       const storedProgress = localStorage.getItem(
@@ -124,92 +124,94 @@ const BookDetails = () => {
   }, [book?.id]);
 
   const handleReadFree = async () => {
-    if(!boughtPremium) {
-      toast.warning("buy premium to read this book")
-      navigate('/premium')
-      return 
-    }
-  try {
-    setBookLoading(true);
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      alert("User not found. Kindly login");
-      navigate("/login");
+    if (!boughtPremium) {
+      toast.warning("buy premium to read this book");
+      navigate("/premium");
       return;
     }
+    try {
+      setBookLoading(true);
 
-    await trackUserActivity(user.id);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    const { data: completedBooks, error: fetchError } = await supabase
-      .from("completed_books")
-      .select("book_id")
-      .eq("user_id", user.id)
-      .eq("book_id", id);
+      if (userError || !user) {
+        alert("User not found. Kindly login");
+        navigate("/login");
+        return;
+      }
 
-    if (fetchError) {
-      alert(fetchError.message);
-      return;
-    }
+      await trackUserActivity(user.id);
 
-    const isCompleted = completedBooks?.some(
-      (book) => Number(book.book_id) === Number(id)
-    );
-
-    if (isCompleted) {
-      await supabase
-        .from("currently_reading")
-        .delete()
+      const { data: completedBooks, error: fetchError } = await supabase
+        .from("completed_books")
+        .select("book_id")
         .eq("user_id", user.id)
         .eq("book_id", id);
 
+      if (fetchError) {
+        alert(fetchError.message);
+        return;
+      }
+
+      const isCompleted = completedBooks?.some(
+        (book) => Number(book.book_id) === Number(id)
+      );
+
+      if (isCompleted) {
+        await supabase
+          .from("currently_reading")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("book_id", id);
+
+        navigate(`/books/${id}/read`);
+        return;
+      }
+
+      const { data: currentlyReading } = await supabase
+        .from("currently_reading")
+        .select("book_id")
+        .eq("user_id", user.id)
+        .eq("book_id", id);
+
+      if (currentlyReading && currentlyReading.length > 0) {
+        navigate(`/books/${id}/read`);
+        return;
+      }
+
+      const supabaseBook = {
+        book_id: book?.id,
+        user_id: user?.id,
+        title: book?.title,
+        description: book?.summaries?.[0] || null,
+        cover: imageUrl,
+        published_at: book?.authors?.[0].death_year,
+        authors: book?.authors?.map((author) => author.name).join(", "),
+        tier: premiumBookClicked ? "premium" : "free",
+      };
+
+      const { error: insertError } = await supabase
+        .from("currently_reading")
+        .insert([supabaseBook]);
+
+      if (insertError) {
+        alert("Could not add book: " + insertError.message);
+        return;
+      }
+
       navigate(`/books/${id}/read`);
-      return;
+    } catch (err) {
+      console.error("Error in handleReadFree:", err);
+      alert("Error adding the book: " + (err as Error)?.message);
+    } finally {
+      setBookLoading(false);
     }
+  };
 
-    const { data: currentlyReading } = await supabase
-      .from("currently_reading")
-      .select("book_id")
-      .eq("user_id", user.id)
-      .eq("book_id", id);
-
-    if (currentlyReading && currentlyReading.length > 0) {
-      navigate(`/books/${id}/read`);
-      return;
-    }
-
-    const supabaseBook = {
-      book_id: book?.id,
-      user_id: user?.id,
-      title: book?.title,
-      description: book?.summaries?.[0] || null,
-      cover: imageUrl,
-      published_at: book?.authors?.[0].death_year,
-      authors: book?.authors?.map((author) => author.name).join(", "),
-      tier: premiumBookClicked ? "premium" : "free",
-    };
-
-    const { error: insertError } = await supabase
-      .from("currently_reading")
-      .insert([supabaseBook]);
-
-    if (insertError) {
-      alert("Could not add book: " + insertError.message);
-      return;
-    }
-
-    navigate(`/books/${id}/read`);
-  } catch (err) {
-    console.error("Error in handleReadFree:", err);
-    alert("Error adding the book: " + (err as Error)?.message);
-  } finally {
-   
-    setBookLoading(false);
-  }
-};
-
-  const pages=Math.floor(Math.random()*500+100)
+  const pages = Math.floor(Math.random() * 500 + 100);
   const trackUserActivity = async (userId: string) => {
     try {
       const today = new Date().toISOString().split("T")[0];
@@ -352,7 +354,8 @@ const BookDetails = () => {
           description: book?.summaries?.[0],
           published_at: book?.authors?.[0].death_year,
           tier: premiumBookClicked ? "premium" : "free",
-          authors: book?.authors?.map((author) => author.name).join(", ") || null,
+          authors:
+            book?.authors?.map((author) => author.name).join(", ") || null,
         };
 
         const { error } = await supabase
@@ -368,7 +371,6 @@ const BookDetails = () => {
     }
   };
 
-  // Early returns after all hooks
   if (loading) return <BookDetailsLoader />;
   if (error) return <h1>{error}</h1>;
 
@@ -384,63 +386,66 @@ const BookDetails = () => {
   const rating = (Math.random() * 2 + 3).toFixed(1);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex gap-8">
-          <div className="w-[400px] space-y-6">
+    <div className="min-h-screen flex flex-col bg-gray-50 p-4 sm:p-6">
+      <div className="max-w-6xl mx-auto w-full">
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+          {/* Left Sidebar (Book Cover & Actions) */}
+          <div className="w-full md:w-[400px] space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="relative p-6 bg-gray-100">
-                <div className="relative aspect-[3/4] max-w-[280px] mx-auto bg-gray-200 rounded-lg flex items-center justify-center">
-                  <div className="w-full h-full text-gray-400">
-                    <img
-                      className="w-[100%] h-[100%] object-cover"
-                      src={imageUrl}
-                      alt={book?.title}
-                    />
-                  </div>
-
-                  <div className={`absolute top-3 left-3 ${premiumBookClicked ? "bg-purple-600 " : 'bg-green-500'} text-white px-3 py-1 rounded-md text-sm font-medium`}>
+              <div className="relative p-4 sm:p-6 bg-gray-100">
+                <div className="relative aspect-[3/4] w-full max-w-[280px] mx-auto bg-gray-200 rounded-lg flex items-center justify-center">
+                  <img
+                    className="w-full h-full object-cover rounded-lg"
+                    src={imageUrl}
+                    alt={book?.title}
+                  />
+                  <div
+                    className={`absolute top-3 left-3 ${
+                      premiumBookClicked ? "bg-purple-600" : "bg-green-500"
+                    } text-white px-3 py-1 rounded-md text-xs sm:text-sm font-medium`}
+                  >
                     {boughtPremium ? "Premium book" : "Free"}
                   </div>
                 </div>
               </div>
 
-              <div className="px-6 py-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
+              {/* Rating */}
+              <div className="px-4 sm:px-6 py-3 border-b border-gray-100">
+                <div className="flex items-center gap-2 text-sm">
                   <Star size={16} className="text-yellow-400 fill-yellow-400" />
                   <span className="font-semibold text-gray-900">{rating}</span>
-                  <span className="text-gray-500 text-sm">(1 reviews)</span>
+                  <span className="text-gray-500">(1 reviews)</span>
                 </div>
               </div>
 
-              <div className="p-6 space-y-3">
-                {bookLoading?
-                
-                <BookDetailsLoadingButton
-                  title="Getting your book Ready"
-                  isBlack={true}
-                  
-                />
-                :
-                <BookDetailsButton
-                  logo={BookOpen}
-                  isBlack={true}
-                  title={premiumBookClicked ? "Read Premium" : "Read Free"}
-                  onClick={handleReadFree}
-                />
-                }
+              {/* Buttons */}
+              <div className="p-4 sm:p-6 space-y-3">
+                {bookLoading ? (
+                  <BookDetailsLoadingButton
+                    title="Getting your book Ready"
+                    isBlack={true}
+                  />
+                ) : (
+                  <BookDetailsButton
+                    logo={BookOpen}
+                    isBlack={true}
+                    title={premiumBookClicked ? "Read Premium" : "Read Free"}
+                    onClick={handleReadFree}
+                  />
+                )}
 
-                <button className="w-full flex items-center justify-center gap-3 h-12 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200">
+                <button className="w-full flex items-center justify-center gap-2 sm:gap-3 h-12 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200 text-sm sm:text-base">
                   <Download size={18} />
                   <a href={pdf === "" ? epub : pdf} className="font-medium">
                     Download
                   </a>
                 </button>
 
+                {/* Wishlist */}
                 <button
                   onClick={handleAddWishlist}
-                  className="w-full flex items-center justify-center gap-3 h-12 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200"
-                  disabled={wishlistLoading} 
+                  className="w-full flex items-center justify-center gap-2 sm:gap-3 h-12 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200 text-sm sm:text-base"
+                  disabled={wishlistLoading}
                 >
                   {wishlistLoading ? (
                     <>
@@ -448,16 +453,16 @@ const BookDetails = () => {
                         className="animate-spin text-gray-500"
                         size={18}
                       />
-                      <span className="font-medium">
-                        Checking wishlist status...
-                      </span>
+                      <span className="font-medium">Checking...</span>
                     </>
                   ) : (
                     <>
                       <Heart
                         size={18}
-                        className={`text-gray-400 hover:text-black ${
-                          wishlisted ? "fill-red-500 text-red-500" : ""
+                        className={`${
+                          wishlisted
+                            ? "fill-red-500 text-red-500"
+                            : "text-gray-400"
                         }`}
                       />
                       <span className="font-medium">
@@ -467,18 +472,20 @@ const BookDetails = () => {
                   )}
                 </button>
 
+                {/* Share */}
                 <button
                   onClick={handleBookCopy}
-                  className="w-full flex items-center justify-center gap-3 h-12 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200"
+                  className="w-full flex items-center justify-center gap-2 sm:gap-3 h-12 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors duration-200 border border-gray-200 text-sm sm:text-base"
                 >
                   <Share2 size={18} />
                   <span className="font-medium">Share Book</span>
                 </button>
               </div>
 
-              <div className="px-6 pb-6">
+              {/* Progress */}
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs sm:text-sm">
                     <span className="text-gray-600">Reading Progress</span>
                     <span className="text-gray-900 font-medium">
                       {readingProgress}%
@@ -495,119 +502,92 @@ const BookDetails = () => {
             </div>
           </div>
 
+          {/* Right Section */}
           <div className="flex-1 space-y-6">
+            {/* Title + Summary */}
             <div className="space-y-3">
-              <h1 className="text-4xl font-bold text-gray-900">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
                 {book?.title}
               </h1>
-              <p className="text-lg text-gray-600">
+              <p className="text-base sm:text-lg text-gray-600">
                 by{" "}
                 <span className="text-gray-900 font-medium">
                   {book?.authors?.map((author) => author.name).join(", ")}
                 </span>
               </p>
-              <p className="text-gray-600 leading-relaxed max-w-3xl">
+              <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
                 {book?.summaries?.[0]}
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            {/* Book Info */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
                 Book Information
               </h2>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 text-sm sm:text-base">
+                {/* Left column */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <FileText size={16} className="text-gray-400" />
-                    <div>
-                      <span className="text-gray-500 text-sm">Pages:</span>
-                      <span className="ml-2 font-medium text-gray-900">
-                        {pages}
-                      </span>
-                    </div>
+                    <span className="text-gray-500">Pages:</span>
+                    <span className="ml-1 sm:ml-2 font-medium text-gray-900">
+                      {pages}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <Clock size={16} className="text-gray-400" />
-                    <div>
-                      <span className="text-gray-500 text-sm">
-                        Reading Time:
-                      </span>
-                      <span className="ml-2 font-medium text-gray-900">
-                        5h 45m
-                      </span>
-                    </div>
+                    <span className="text-gray-500">Reading Time:</span>
+                    <span className="ml-1 sm:ml-2 font-medium text-gray-900">
+                      5h 45m
+                    </span>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
+                {/* Right column */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <Calendar size={16} className="text-gray-400" />
-                    <div>
-                      <span className="text-gray-500 text-sm">Published:</span>
-                      <span className="ml-2 font-medium text-gray-900">
-                        {book?.authors?.[0].death_year}
-                      </span>
-                    </div>
+                    <span className="text-gray-500">Published:</span>
+                    <span className="ml-1 sm:ml-2 font-medium text-gray-900">
+                      {book?.authors?.[0].death_year}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <User size={16} className="text-gray-400" />
-                    <div>
-                      <span className="text-gray-500 text-sm">Publisher:</span>
-                      <span className="ml-2 font-medium text-gray-900">
-                        {book?.authors?.[0]?.name}
-                      </span>
-                    </div>
+                    <span className="text-gray-500">Publisher:</span>
+                    <span className="ml-1 sm:ml-2 font-medium text-gray-900">
+                      {book?.authors?.[0]?.name}
+                    </span>
                   </div>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-gray-100">
-                <span className="text-gray-500 text-sm">
-                  Available Formats:
-                </span>
-                <div className="flex gap-2 mt-2">
-                  <a
-                    href={pdf}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-medium "
-                  >
-                    PDF {pdf === "" ? "unavailable" : ""}
-                  </a>
-                  <a
-                    href={epub}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-medium"
-                  >
-                    EPUB {epub === "" ? "unavailable" : ""}
-                  </a>
                 </div>
               </div>
             </div>
 
-       
+            {/* Tabs */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
-            
-              <div className="flex border-b border-gray-200">
-                <button className="px-6 py-4 text-blue-600 border-b-2 border-blue-600 font-medium">
+              <div className="flex overflow-x-auto no-scrollbar border-b border-gray-200 text-sm sm:text-base">
+                <button className="px-4 sm:px-6 py-3 sm:py-4 text-blue-600 border-b-2 border-blue-600 font-medium whitespace-nowrap">
                   Summary
                 </button>
-                <button className="px-6 py-4 text-gray-500 hover:text-gray-700 font-medium">
+                <button className="px-4 sm:px-6 py-3 sm:py-4 text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap">
                   Chapters
                 </button>
-                <button className="px-6 py-4 text-gray-500 hover:text-gray-700 font-medium">
+                <button className="px-4 sm:px-6 py-3 sm:py-4 text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap">
                   Reviews
                 </button>
-                <button className="px-6 py-4 text-gray-500 hover:text-gray-700 font-medium">
+                <button className="px-4 sm:px-6 py-3 sm:py-4 text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap">
                   Similar Books
                 </button>
               </div>
 
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              <div className="p-4 sm:p-6">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">
                   Book Summary
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
                   {book?.summaries?.[0]}
                 </p>
               </div>
