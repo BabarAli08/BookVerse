@@ -142,7 +142,7 @@ export default function Billing() {
         .from("user_preferences")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       const { error } = await supabase.from("user_preferences").upsert({
         user_id: user.id,
@@ -183,7 +183,7 @@ export default function Billing() {
         .from("user_preferences")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       const { error } = await supabase.from("user_preferences").upsert({
         user_id: user.id,
@@ -225,11 +225,13 @@ export default function Billing() {
           return;
         }
 
+        // Use .maybeSingle() instead of .single() to avoid 406 errors when no preferences row exists
+        // .single() adds Accept: application/vnd.pgrst.object+json header which causes 406 when no rows found
         const { data: preferences, error: preferencesError } = await supabase
           .from("user_preferences")
           .select("auto_renewal,billing_notifications")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         console.log("user preferences row from useEffect", preferences);
 
@@ -289,11 +291,13 @@ export default function Billing() {
         }
 
         if (user) {
-          const { data, error: currentPlanError } = await supabase
-            .from("subscriptions")
-            .select("*")
-            .eq("user_id", user.id)
-            .single();
+        // Use .maybeSingle() instead of .single() to avoid 406 errors when no subscription exists
+        // This allows graceful handling of users without active subscriptions
+        const { data, error: currentPlanError } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
           if (currentPlanError && currentPlanError.code !== "PGRST116") {
             toast.error("Error fetching current plan");
@@ -325,11 +329,11 @@ export default function Billing() {
             setAutoRenewal(data.auto_renewal !== false);
           }
 
-          const { data: preferences } = await supabase
-            .from("user_preferences")
-            .select("billing_notifications")
-            .eq("user_id", user.id)
-            .single();
+        const { data: preferences } = await supabase
+          .from("user_preferences")
+          .select("billing_notifications")
+          .eq("user_id", user.id)
+          .maybeSingle();
 
           if (preferences) {
             setBillingNotifications(
@@ -399,7 +403,7 @@ export default function Billing() {
           .from("subscriptions")
           .select("*")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
       if (subscriptionError) {
         toast.error("Error fetching subscription details");
@@ -467,113 +471,6 @@ export default function Billing() {
     }
   };
 
-  useEffect(() => {
-    const getCurrentPlan = async () => {
-      try {
-        setIsLoading(true);
-
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError) {
-          toast.error("Error getting user information");
-          return;
-        }
-
-        if (user) {
-          const { data, error: currentPlanError } = await supabase
-            .from("subscriptions")
-            .select("*")
-            .eq("user_id", user.id)
-            .single();
-
-          if (currentPlanError) {
-            if (currentPlanError.code === "PGRST116") {
-              setCurrentPlan({
-                name: "Free",
-                price: "$0.00",
-                nextBilling: "No billing",
-                status: "free",
-                isYearly: false,
-              });
-            } else {
-              toast.error("Error fetching current plan");
-              console.error("Current plan error:", currentPlanError);
-            }
-          }
-
-          if (data) {
-            setCurrentPlan({
-              name: data.plan_type,
-              price: `$${data.amount}`,
-              nextBilling:
-                data.status === "cancelled"
-                  ? "Cancelled"
-                  : new Date(data.next_billing_date).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      }
-                    ),
-              status: data.status,
-              isYearly: data.billing_cycle === "yearly",
-            });
-            const hasPremium = checkPremiumStatus(data.plan_type, data.status);
-            dispatch(setBoughtPremium(hasPremium));
-
-            if (data.status === "active") {
-              setPaymentMethod({
-                type: "visa",
-                lastFour: data.card_number.slice(-4),
-                expires: data.expiry_date,
-              });
-            }
-          } else {
-            dispatch(setBoughtPremium(false));
-          }
-
-          const { data: previousPlans, error: previousPlansError } =
-            await supabase
-              .from("subscription_history")
-              .select("*")
-              .eq("user_id", user.id)
-              .order("created_at", { ascending: false });
-
-          if (previousPlansError) {
-            toast.error("Error fetching previous plans");
-            console.error("Previous plans error:", previousPlansError);
-          }
-
-          if (previousPlans && previousPlans.length > 0) {
-            setBillingHistory(
-              (previousPlans as planState[]).map((plan: planState) => ({
-                id: plan.id,
-                plan: plan.plan_type,
-                date: new Date(plan.created_at).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                }),
-                amount: `$${plan.amount}`,
-              }))
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Unexpected error:", error);
-        toast.error("An unexpected error occurred");
-      } finally {
-        setIsLoading(false);
-        setShowCancelSubscriptionModal(false);
-      }
-    };
-
-    getCurrentPlan();
-  }, [dispatch]);
 
  
   if (isLoading) {
@@ -604,7 +501,7 @@ export default function Billing() {
         .from("subscriptions")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (currentPlanError) {
         toast.error("Error fetching current plan");
@@ -694,7 +591,7 @@ export default function Billing() {
         .from("subscriptions")
         .select("*")
         .eq("user_id", user?.id)
-        .single();
+        .maybeSingle();
 
       if (currentPlanError) {
         toast.error("Error fetching current plan");

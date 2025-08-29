@@ -7,6 +7,7 @@ import JoinSection from "./JoinSection";
 const Home = () => {
   const navigate = useNavigate();
   
+  
   return (
     <div className="w-full min-h-screen flex flex-col">
       <Hero />

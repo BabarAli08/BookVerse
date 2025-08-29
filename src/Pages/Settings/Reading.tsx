@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { BookOpen, ChevronDown, Save, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import supabase from "../../supabase-client";
 import { toast } from "sonner";
 import LoadingSkeleton from "./LoadingSkeleton";
+import {
+  updateReadingTheme,
+  updateBackgroundPattern,
+  updateTypographySettings,
+  updateAutoBookmark,
+  updateOfflineDownloads,
+} from "../../Store/UserSettingsSlice";
 
 interface ThemeOption {
   id: string;
@@ -27,73 +34,66 @@ interface SelectFieldProps<T> {
   onChange: (value: T) => void;
 }
 
+interface RootState {
+  userSettings: {
+    reading: {
+      appearanceSettings: {
+        readingTheme: {
+          id: string;
+          name: string;
+          bg: string;
+          text: string;
+        };
+        backgroundPattern: {
+          id: string;
+          name: string;
+          pattern: string;
+          preview: string;
+        };
+      };
+      typographySettings: {
+        fontSize: string;
+        fontFamily: string;
+        lineSpacing: string;
+      };
+      readingFeatures: {
+        autoBookmark: boolean;
+        offlineDownloads: boolean;
+      };
+    };
+  };
+}
+
 export default function ReadingPreferences() {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [preferancesLoading, setPreferancesLoading] = useState<boolean>(false);
-  const [preferences, setPreferences] = useState({
-    readingTheme: {
-      id: "light",
-      name: "Light",
-      bg: "bg-white",
-      text: "text-gray-900",
-    },
-    background: {
-      id: "none",
-      name: "None",
-      pattern: "",
-      preview: "bg-transparent",
-    },
-    fontFamily: "Serif",
-    fontSize: "Medium",
-    lineSpacing: "Normal",
-    autoBookmark: true,
-    offlineDownloads: true,
-  });
-
   const dispatch = useDispatch();
-
   const [isSaving, setIsSaving] = useState(false);
 
+  // Get data from Redux store
+  const readingSettings = useSelector((state: RootState) => state.userSettings.reading);
+  
+  // Local state that mirrors Redux state for form handling
+  const [preferences, setPreferences] = useState({
+    readingTheme: readingSettings.appearanceSettings.readingTheme,
+    background: readingSettings.appearanceSettings.backgroundPattern,
+    fontFamily: readingSettings.typographySettings.fontFamily,
+    fontSize: readingSettings.typographySettings.fontSize,
+    lineSpacing: readingSettings.typographySettings.lineSpacing,
+    autoBookmark: readingSettings.readingFeatures.autoBookmark,
+    offlineDownloads: readingSettings.readingFeatures.offlineDownloads,
+  });
+
+  // Update local state when Redux state changes
   useEffect(() => {
-    setPreferancesLoading(true);
-    const handlePreferances = async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-      if (userError || !user) return;
-
-      const { data: userSettings, error: settingsError } = await supabase
-        .from("reading_preferances")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (settingsError) {
-        toast.warning("could not loading your preferances");
-        return;
-      }
-      if (!userSettings) return;
-
-      const supabaseSettings = {
-        readingTheme:
-          themeOptions.find((theme) => theme.id === userSettings.theme) ||
-          themeOptions[0],
-        background:
-          backgroundOptions.find(
-            (background) => background.id === userSettings.background
-          ) || backgroundOptions[0],
-        fontFamily: userSettings.font_family || "Serif",
-        fontSize: userSettings.font_size || "Medium",
-        lineSpacing: userSettings.line_spacing || "Normal",
-        autoBookmark: userSettings.auto_bookmark || false,
-        offlineDownloads: userSettings.offline_downloads || false,
-      };
-      setPreferences(supabaseSettings);
-      setPreferancesLoading(false);
-    };
-    handlePreferances();
-  }, []);
+    setPreferences({
+      readingTheme: readingSettings.appearanceSettings.readingTheme,
+      background: readingSettings.appearanceSettings.backgroundPattern,
+      fontFamily: readingSettings.typographySettings.fontFamily,
+      fontSize: readingSettings.typographySettings.fontSize,
+      lineSpacing: readingSettings.typographySettings.lineSpacing,
+      autoBookmark: readingSettings.readingFeatures.autoBookmark,
+      offlineDownloads: readingSettings.readingFeatures.offlineDownloads,
+    });
+  }, [readingSettings]);
 
   const backgroundOptions: BackgroundOption[] = [
     { id: "none", name: "None", pattern: "", preview: "bg-transparent" },
@@ -246,18 +246,22 @@ export default function ReadingPreferences() {
   const handleSelectChange = (key: string, value: string) => {
     if (key === "readingTheme") {
       const selectedTheme = themeOptions.find((theme) => theme.id === value);
-      setPreferences((prev) => ({
-        ...prev,
-        [key]: selectedTheme || prev.readingTheme,
-      }));
+      if (selectedTheme) {
+        setPreferences((prev) => ({
+          ...prev,
+          [key]: selectedTheme,
+        }));
+      }
     } else if (key === "background") {
       const selectedBackground = backgroundOptions.find(
         (bg) => bg.id === value
       );
-      setPreferences((prev) => ({
-        ...prev,
-        [key]: selectedBackground || prev.background,
-      }));
+      if (selectedBackground) {
+        setPreferences((prev) => ({
+          ...prev,
+          [key]: selectedBackground,
+        }));
+      }
     } else {
       setPreferences((prev) => ({
         ...prev,
@@ -331,7 +335,7 @@ export default function ReadingPreferences() {
       </label>
       <div className="relative">
         <motion.select
-          value={value?.id}
+          value={value?.id || ""}
           onChange={(e) =>
             onChange(
               options.find((opt) => opt.id === e.target.value) || options[0]
@@ -376,7 +380,7 @@ export default function ReadingPreferences() {
       </label>
       <div className="relative">
         <motion.select
-          value={value?.id}
+          value={value?.id || ""}
           onChange={(e) =>
             onChange(
               options.find((opt) => opt.id === e.target.value) || options[0]
@@ -406,7 +410,6 @@ export default function ReadingPreferences() {
 
   const handleSaveSettings = async () => {
     setIsSaving(true);
-    setLoading(true);
     try {
       const {
         data: { user },
@@ -414,9 +417,7 @@ export default function ReadingPreferences() {
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
-        alert("kindly login to save preferances");
-        setIsSaving(false);
-        setLoading(false);
+        toast.error("Please login to save preferences");
         return;
       }
 
@@ -439,20 +440,27 @@ export default function ReadingPreferences() {
 
       if (error) {
         console.error("Save error:", error);
-        toast.warning(`Error saving your data: ${error.message}`);
-        setIsSaving(false);
-        setLoading(false);
+        toast.error(`Error saving preferences: ${error.message}`);
         return;
       }
 
-      toast.success("Data saved successfully!");
+      // Update Redux store after successful save
+      dispatch(updateReadingTheme(preferences.readingTheme));
+      dispatch(updateBackgroundPattern(preferences.background));
+      dispatch(updateTypographySettings({
+        fontSize: preferences.fontSize,
+        fontFamily: preferences.fontFamily,
+        lineSpacing: preferences.lineSpacing,
+      }));
+      dispatch(updateAutoBookmark(preferences.autoBookmark));
+      dispatch(updateOfflineDownloads(preferences.offlineDownloads));
+
+      toast.success("Preferences saved successfully!");
     } catch (err) {
       console.error("Unexpected error:", err);
-      toast.warning("An unexpected error occurred");
-      setLoading(false);
+      toast.error("An unexpected error occurred");
     } finally {
       setIsSaving(false);
-      setLoading(false);
     }
   };
 
@@ -482,12 +490,13 @@ export default function ReadingPreferences() {
     },
   };
 
-
+  // Check if we have valid data (not just default empty values)
+  const hasValidData = preferences.readingTheme.id !== "" || preferences.background.id !== "";
 
   return (
     <AnimatePresence>
-      {preferancesLoading ? (
-       <LoadingSkeleton/>
+      {!hasValidData ? (
+        <LoadingSkeleton />
       ) : (
         <motion.div
           className="space-y-8 max-w-4xl mx-auto"
@@ -495,7 +504,6 @@ export default function ReadingPreferences() {
           initial="hidden"
           animate="visible"
         >
-        
           <motion.div
             className="flex items-center gap-4 pb-2"
             variants={sectionVariants}
@@ -554,7 +562,6 @@ export default function ReadingPreferences() {
             </div>
           </motion.div>
 
-        
           <motion.div
             className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm"
             variants={sectionVariants}
@@ -675,7 +682,7 @@ export default function ReadingPreferences() {
             <div
               className={`p-6 rounded-lg border-2 border-gray-200 ${getThemeClasses()}`}
               style={{
-                 backgroundImage: preferences.background.pattern || "none",
+                backgroundImage: preferences.background.pattern || "none",
                 backgroundSize:
                   preferences.background.id === "graph-paper"
                     ? "20px 20px"
@@ -698,7 +705,7 @@ export default function ReadingPreferences() {
                     : preferences.background.id === "dots"
                     ? "10px 10px"
                     : preferences.background.id === "diagonal-stripes"
-                    ? "30px 30px"
+                    ? "30px 30"
                     : preferences.background.id === "rice-paper"
                     ? "16px 16px"
                     : "auto",
