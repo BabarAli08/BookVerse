@@ -3,6 +3,9 @@ import supabase from "../../supabase-client";
 import { toast } from "sonner";
 import { Check, Loader2, Save } from "lucide-react";
 import { motion } from "framer-motion";
+import { useDispatch, useSelector } from "react-redux";
+import { updateProfile as updateProfileInStore } from "../../Store/UserSettingsSlice";
+import type { RootState } from "../../Store/store";
 interface profileState {
   setLoading: (loading: boolean) => void;
 }
@@ -14,6 +17,29 @@ const Profile = ({ setLoading }: profileState) => {
     website: "",
     bio: "",
   });
+
+  const dispatch=useDispatch()
+
+  const {profile}=useSelector((state:RootState)=>state.userSettings)
+ useEffect(() => {
+  if (profile) {
+    setUser(profile);
+  }
+  
+}, [profile]);
+
+
+  useEffect(()=>{
+    const getUserId=async()=>{
+      const {data:{user},error}=await supabase.auth.getUser()
+      if(user){
+        setUserId(user.id)
+      }
+      
+    }
+    getUserId()
+  })
+
   const [updating, setUpdating] = useState(false);
   const [userId, setUserId] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -27,116 +53,11 @@ const Profile = ({ setLoading }: profileState) => {
     }),
   };
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
+  
 
-        const {
-          data: { user: authUser },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError) {
-          alert("Auth error:" + authError.message);
-          return;
-        }
-
-        if (!authUser) {
-          console.log(" No authenticated user found");
-          return;
-        }
-
-        console.log(" Auth user found:", {
-          id: authUser.id,
-          email: authUser.email,
-          user_metadata: authUser.user_metadata,
-        });
-
-        setUserId(authUser.id);
-
-        console.log(" Fetching profile from database...");
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", authUser.id)
-          .single();
-
-        if (profileError) {
-          console.error(" Profile fetch error:", {
-            message: profileError.message,
-            code: profileError.code,
-            details: profileError.details,
-          });
-
-          if (profileError.code === "PGRST116") {
-            const newProfile = {
-              id: authUser.id,
-              name: authUser.user_metadata?.name || "",
-              email: authUser.email || "",
-              website: authUser.user_metadata?.website || "",
-              location: authUser.user_metadata?.location || "",
-              bio: authUser.user_metadata?.bio || "",
-              created_at: new Date().toISOString(),
-            };
-
-            const { data: createData, error: createError } = await supabase
-              .from("profiles")
-              .insert([newProfile])
-              .select()
-              .single();
-
-            if (createError) {
-              alert("Could not create profile: " + createError.message);
-
-              setUser({
-                name: authUser.user_metadata?.name || "",
-                email: authUser.email || "",
-                website: authUser.user_metadata?.website || "",
-                location: authUser.user_metadata?.location || "",
-                bio: authUser.user_metadata?.bio || "",
-              });
-            } else {
-              setUser({
-                name: createData.name || "",
-                email: createData.email || authUser.email || "",
-                website: createData.website || "",
-                location: createData.location || "",
-                bio: createData.bio || "",
-              });
-            }
-          } else {
-            alert("Profile fetch error: " + profileError?.message);
-
-            setUser({
-              name: authUser.user_metadata?.name || "",
-              email: authUser.email || "",
-              website: authUser.user_metadata?.website || "",
-              location: authUser.user_metadata?.location || "",
-              bio: authUser.user_metadata?.bio || "",
-            });
-          }
-        } else {
-          setUser({
-            name: profile.name || "",
-            email: profile.email || authUser.email || "",
-            website: profile.website || "",
-            location: profile.location || "",
-            bio: profile.bio || "",
-          });
-        }
-      } catch (err) {
-        console.error(" Unexpected error:", err);
-        alert("Unexpected error fetching user:" + err);
-      } finally {
-        setLoading(false);
-      } 
-    };
-
-    fetchUser();
-  }, []);
 
   const updateProfile = async () => {
+    dispatch(updateProfileInStore(user));
     try {
       setUpdating(true);
       setSaveSuccess(false);

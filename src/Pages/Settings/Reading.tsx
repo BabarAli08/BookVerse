@@ -482,26 +482,12 @@ export default function ReadingPreferences() {
     },
   };
 
-  if(preferancesLoading){
-    return <LoadingSkeleton/>
-  }
+
 
   return (
     <AnimatePresence>
       {preferancesLoading ? (
-        <motion.div
-          className="flex items-center justify-center py-12"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          >
-            <Settings size={32} className="text-gray-400" />
-          </motion.div>
-        </motion.div>
+       <LoadingSkeleton/>
       ) : (
         <motion.div
           className="space-y-8 max-w-4xl mx-auto"
