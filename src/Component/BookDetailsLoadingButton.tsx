@@ -22,7 +22,6 @@ const BookDetailsLoadingButton = ({ title = "Loading...", isBlack = false }: Loa
         opacity-90
       `}
     >
-      {/* Spinning Loader */}
       <Loader2 
         size={22} 
         className={`
@@ -31,7 +30,7 @@ const BookDetailsLoadingButton = ({ title = "Loading...", isBlack = false }: Loa
         `} 
       />
 
-      {/* Title */}
+     
       <span
         className={`
           font-semibold text-sm tracking-wide

@@ -20,6 +20,32 @@ const Hero = () => {
     },
   };
 
+  const buttonsVariant={
+    hidden:{
+      opacity:0,
+      y:20
+    },
+    visible:{
+      opacity:1,
+      y:0,
+      transition:{
+        delay:0.3,
+        staggerChildren:0.03,
+      },
+    }
+  }
+
+  const buttonVar={
+    hidden:{
+      opacity:0,
+      y:20
+    },
+    visible:{
+      opacity:1,
+      y:0,
+    }
+  }
+
   const letter = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
@@ -111,9 +137,18 @@ const Hero = () => {
         </div>
 
         <div className="z-10 text-center px-4 max-w-2xl">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.8,
+              delay: 0.5,
+              ease: [0, 0.71, 0.2, 1.01],
+            }}
+            className="text-5xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg"
+          >
             BookVerse
-          </h1>
+          </motion.h1>
           <motion.p
             variants={sentence}
             initial="hidden"
@@ -127,7 +162,7 @@ const Hero = () => {
             ))}
           </motion.p>
 
-          <div className="flex items-center flex-col sm:flex-row gap-4 justify-center">
+          <motion.div variants={buttonsVariant} initial="hidden" animate="visible" className="flex items-center flex-col sm:flex-row gap-4 justify-center">
             <WhiteButton
               title="Explore Books"
               onClick={() => navigate("/books")}
@@ -136,7 +171,7 @@ const Hero = () => {
               title="Get Premium"
               onClick={() => navigate("/premium")}
             />
-          </div>
+          </motion.div>
         </div>
       </div>
     </>
