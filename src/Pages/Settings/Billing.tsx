@@ -4,7 +4,8 @@ import supabase from "../../supabase-client";
 import { toast } from "sonner";
 import { setBoughtPremium } from "../../Store/PremiumBookSlice";
 import { useDispatch } from "react-redux";
-
+import { motion, AnimatePresence, stagger } from "framer-motion";
+import LoadingSkeleton from "./LoadingSkeleton";
 interface planState {
   id: string;
   user_id: string;
@@ -51,6 +52,50 @@ export default function Billing() {
     boolean | null
   >(null);
 
+  const allPlans = [
+    {
+      id: "free",
+      title: "Free Plan",
+      desc: "Basic features, limited access",
+      price: "$0/month",
+      border: "border-gray-200",
+      accent: "text-blue-600",
+    },
+    {
+      id: "premium",
+      title: "Premium Plan",
+      desc: "50,000+ books, ad-free, offline downloads",
+      price: "$9.99/month",
+      border: "border-purple-200 bg-purple-50",
+      accent: "text-purple-600",
+      badge:
+        currentPlan.name === "premium" && currentPlan.status === "active"
+          ? "Current"
+          : "Favorite",
+      badgeColor:
+        currentPlan.name === "premium" && currentPlan.status === "active"
+          ? "bg-purple-600"
+          : "bg-green-600",
+    },
+    {
+      id: "ultimate",
+      title: "Ultimate Plan",
+      desc: "Everything + unlimited audiobooks, family sharing",
+      price: "$19.99/month",
+      border: "border-yellow-300 bg-yellow-50",
+      accent: "text-yellow-600",
+      badge:
+        currentPlan.name === "ultimate" && currentPlan.status === "active"
+          ? "Current"
+          : "Popular",
+      badgeColor:
+        currentPlan.name === "ultimate" && currentPlan.status === "active"
+          ? "bg-purple-600"
+          : "bg-yellow-600",
+      extra: "Save with yearly billing",
+    },
+  ];
+
   const [paymentMethod, setPaymentMethod] = useState({
     type: "visa",
     lastFour: "4242",
@@ -65,7 +110,7 @@ export default function Billing() {
     cardHolderName: "",
   });
 
-  const [showUpdatePaymentMethodModal, setShowUpdatePaymentModal] =
+  const [showUpdatePaymentMethodModal, setShowUpdatePaymentMethodModal] =
     useState<boolean>(false);
 
   const [selectedPlan, setSelectedPlan] = useState<string>(currentPlan.name);
@@ -530,25 +575,7 @@ export default function Billing() {
     getCurrentPlan();
   }, [dispatch]);
 
-  const LoadingSkeleton = () => (
-    <div className="space-y-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-6 h-6 bg-gray-200 rounded animate-pulse"></div>
-        <div className="w-16 h-6 bg-gray-200 rounded animate-pulse"></div>
-      </div>
-
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-white border border-gray-200 rounded-lg p-6">
-          <div className="animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
+ 
   if (isLoading) {
     return <LoadingSkeleton />;
   }
@@ -615,7 +642,7 @@ export default function Billing() {
         ).toISOString(),
       };
 
-      const plan=checkPremiumStatus(selectedPlan, "active");
+      const plan = checkPremiumStatus(selectedPlan, "active");
       dispatch(setBoughtPremium(plan));
 
       const { error: updateError } = await supabase
@@ -701,527 +728,502 @@ export default function Billing() {
     }
   };
 
-  console.log("history of billing length:", billingHistory.length);
+  const backdropVariants: any = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.2 } },
+    exit: { opacity: 0, transition: { duration: 0.2 } },
+  };
+
+  const modalVariants: any = {
+    hidden: { opacity: 0, scale: 0.9, y: 30 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { type: "spring", damping: 20, stiffness: 200 },
+    },
+    exit: { opacity: 0, scale: 0.9, y: 30 },
+  };
+
+  const childrenStagger: any = {
+    hidden: { opacity: 0, y: 10 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: { delay: i * 0.1, duration: 0.3, ease: "easeOut" },
+    }),
+  };
+
+  const containerVariants: any = {
+    hidden: { opacity: 0, y: 30 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 70,
+        damping: 15,
+        staggerChildren: 0.15,
+      },
+    },
+  };
+
+  const itemVariants: any = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 },
+  };
+
   return (
     <div className="space-y-8 flex w-full flex-col">
       {showCancelSubscriptionModal && (
-        <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
-            <div className="p-6">
-              <div className="text-center mb-6">
-                <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                  <Crown className="w-6 h-6 text-red-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Cancel Subscription
-                </h2>
-                <p className="text-gray-600">
-                  You'll lose access to these features:
-                </p>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <div className="space-y-3">
-                  {currentPlan.name === "free" &&
-                    [
-                      "Access to 1,000+ free books",
-                      "Basic reading features",
-                      "Mobile app access",
-                      "Community discussions",
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-green-600 text-xs">✓</span>
-                        </div>
-                        <p className="text-sm text-gray-700">{item}</p>
-                      </div>
-                    ))}
-
-                  {currentPlan.name === "pro" &&
-                    [
-                      "Everything in Free",
-                      "Unlimited book library access",
-                      "Offline reading",
-                      "Priority support",
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-green-600 text-xs">✓</span>
-                        </div>
-                        <p className="text-sm text-gray-700">{item}</p>
-                      </div>
-                    ))}
-
-                  {currentPlan.name === "ultimate" &&
-                    [
-                      "Everything in Pro",
-                      "Exclusive early access to new books",
-                      "Audiobook support",
-                      "Family sharing (up to 5 members)",
-                      "Premium community features",
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-green-600 text-xs">✓</span>
-                        </div>
-                        <p className="text-sm text-gray-700">{item}</p>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> Your subscription will remain active
-                  until {currentPlan.nextBilling}. After that, you'll be moved
-                  to the free plan.
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  onClick={() => setShowCancelSubscriptionModal(false)}
-                  disabled={isCanceling}
-                >
-                  Keep Subscription
-                </button>
-                <button
-                  className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  onClick={handleCancelSubscription}
-                  disabled={isCanceling}
-                >
-                  {isCanceling ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Canceling...
-                    </>
-                  ) : (
-                    "Cancel Subscription"
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {changePlanModal && (
-        <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl transform transition-all">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">
-                Change Your Plan
-              </h2>
-              <button
-                onClick={() => setChangePlanModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-6 space-y-3">
-              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer">
-                <div
-                  onClick={() => setSelectedPlan("free")}
-                  className="flex items-center space-x-3"
-                >
-                  <input
-                    type="radio"
-                    name="plan"
-                    value="free"
-                    checked={selectedPlan === "free"}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Free Plan</h3>
-                    <p className="text-sm text-gray-500">
-                      Basic features, limited access
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="font-semibold text-gray-900">$0/month</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border-2 border-purple-200 bg-purple-50 rounded-lg hover:border-purple-300 transition-colors cursor-pointer relative">
-                <div
-                  onClick={() => setSelectedPlan("premium")}
-                  className="flex items-center space-x-3"
-                >
-                  <input
-                    type="radio"
-                    name="plan"
-                    value="premium"
-                    checked={selectedPlan === "premium"}
-                    className="w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500"
-                  />
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold text-gray-900">
-                        Premium Plan
-                      </h3>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          currentPlan.name === "premium" &&
-                          currentPlan.status === "active"
-                            ? "bg-purple-600"
-                            : "bg-green-600"
-                        } text-white`}
-                      >
-                        {currentPlan.name === "premium" &&
-                        currentPlan.status === "active"
-                          ? "Current"
-                          : "Favorite"}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      50,000+ books, ad-free, offline downloads
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="font-semibold text-gray-900">
-                    $9.99/month
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border border-yellow-300 bg-yellow-50 rounded-lg hover:border-yellow-400 transition-colors cursor-pointer relative">
-                <div
-                  onClick={() => setSelectedPlan("ultimate")}
-                  className="flex items-center space-x-3"
-                >
-                  <input
-                    type="radio"
-                    name="plan"
-                    value="ultimate"
-                    checked={selectedPlan === "ultimate"}
-                    className="w-4 h-4 text-yellow-600 border-gray-300 focus:ring-yellow-500"
-                  />
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold text-gray-900">
-                        Ultimate Plan
-                      </h3>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          currentPlan.name === "ultimate" &&
-                          currentPlan.status === "active"
-                            ? "bg-purple-600"
-                            : "bg-yellow-600"
-                        } text-white`}
-                      >
-                        {currentPlan.name === "ultimate" &&
-                        currentPlan.status === "active"
-                          ? "Current"
-                          : "Popular"}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 max-w-xs">
-                      <span className=" text-gray-600 px-1 rounded text-xs">
-                        Everything + unlimited audiobooks, family sharing
-                      </span>
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="font-semibold text-gray-900">
-                    $19.99/month
-                  </span>
-                  <p className="text-xs text-gray-500">
-                    Save with yearly billing
+        <AnimatePresence>
+          <motion.div
+            key="cancel-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div
+              key="cancel-modal"
+              initial={{ opacity: 0, scale: 0.9, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 40 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4"
+            >
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4"
+                  >
+                    <Crown className="w-6 h-6 text-red-600" />
+                  </motion.div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Cancel Subscription
+                  </h2>
+                  <p className="text-gray-600">
+                    You'll lose access to these features:
                   </p>
                 </div>
-              </div>
-            </div>
 
-            <div className="flex space-x-3 p-6 bg-gray-50 rounded-b-xl">
-              <button
-                onClick={() => setChangePlanModal(false)}
-                className="flex-1 px-4 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+                <motion.div
+                  initial="hidden"
+                  animate="show"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    show: {
+                      opacity: 1,
+                      transition: { staggerChildren: 0.15 },
+                    },
+                  }}
+                  className="bg-gray-50 rounded-lg p-4 mb-6"
+                >
+                  {[
+                    "Access to 1,000+ free books",
+                    "Basic reading features",
+                    "Mobile app access",
+                    "Community discussions",
+                  ].map((item, i) => (
+                    <motion.div
+                      key={i}
+                      variants={{
+                        hidden: { opacity: 0, y: 10 },
+                        show: { opacity: 1, y: 0 },
+                      }}
+                      className="flex items-center gap-3"
+                    >
+                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 text-xs">✓</span>
+                      </div>
+                      <p className="text-sm text-gray-700">{item}</p>
+                    </motion.div>
+                  ))}
+                </motion.div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowCancelSubscriptionModal(false)}
+                    className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    disabled={isCanceling}
+                  >
+                    Keep Subscription
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleCancelSubscription}
+                    disabled={isCanceling}
+                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center"
+                  >
+                    {isCanceling ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Canceling...
+                      </>
+                    ) : (
+                      "Cancel Subscription"
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
+      )}
+      {changePlanModal && (
+        <AnimatePresence>
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              key="modal"
+              initial={{ opacity: 0, scale: 0.9, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 40 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Change Your Plan
+                </h2>
+                <motion.button
+                  whileHover={{ rotate: 90, scale: 1.1 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                  onClick={() => setChangePlanModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </motion.button>
+              </div>
+
+              <motion.div
+                initial="hidden"
+                animate="show"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: { opacity: 1, transition: { staggerChildren: 0.15 } },
+                }}
+                className="p-6 space-y-3"
               >
-                Cancel
-              </button>
-              <button
-                onClick={handlePlanChange}
-                disabled={isUpdatingPlan}
-                className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                {selectedPlan === currentPlan.name &&
-                currentPlan.status === "active"
-                  ? "Keep Current Plan"
-                  : "Change Plan"}
-              </button>
-            </div>
-          </div>
-        </div>
+                {allPlans.map((plan, i) => (
+                  <motion.div
+                    key={plan.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      show: { opacity: 1, y: 0 },
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${plan.border}`}
+                    onClick={() => setSelectedPlan(plan.id)}
+                  >
+                  
+                    <div className="flex items-center space-x-3">
+                      <motion.input
+                        type="radio"
+                        name="plan"
+                        value={plan.id}
+                        checked={selectedPlan === plan.id}
+                        readOnly
+                        className={`w-4 h-4 ${plan.accent} border-gray-300 focus:ring-2`}
+                        whileTap={{ scale: 1.3 }}
+                      />
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {plan.title}
+                          </h3>
+                          {plan.badge && (
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium text-white ${plan.badgeColor}`}
+                            >
+                              {plan.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">{plan.desc}</p>
+                      </div>
+                    </div>
+
+                    
+                    <div className="text-right">
+                      <span className="font-semibold text-gray-900">
+                        {plan.price}
+                      </span>
+                      {plan.extra && (
+                        <p className="text-xs text-gray-500">{plan.extra}</p>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+
+              <div className="flex space-x-3 p-6 bg-gray-50 rounded-b-xl">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setChangePlanModal(false)}
+                  className="flex-1 px-4 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancel
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handlePlanChange}
+                  disabled={isUpdatingPlan}
+                  className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium transition-colors disabled:opacity-70"
+                >
+                  {selectedPlan === currentPlan.name &&
+                  currentPlan.status === "active"
+                    ? "Keep Current Plan"
+                    : "Change Plan"}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
       )}
 
       {showUpdatePaymentMethodModal && (
-        <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl transform transition-all">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex items-center space-x-2">
-                <CreditCard className="w-5 h-5 text-gray-700" />
-                <h2 className="text-xl font-bold text-gray-900">
-                  Update Payment Method
-                </h2>
-              </div>
-              <button
-                onClick={() => setShowUpdatePaymentModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+        <AnimatePresence>
+          <motion.div
+            variants={backdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="flex items-center space-x-2"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
+                  <CreditCard className="w-5 h-5 text-gray-700" />
+                  <motion.h2
+                    initial={{ x: -40, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.4 }}
+                    className="text-xl font-bold text-gray-900"
+                  >
+                    Update Payment Method
+                  </motion.h2>
+                </motion.div>
 
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Card Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="1234 5678 9012 3456"
-                  value={updatedPaymentMethod.lastFour}
-                  onChange={(e) => {
-                    let value = e.target.value.replace(/\D/g, "");
-                    if (value.length > 16) {
-                      value = value.slice(0, 16);
-                    }
-                    value = value.replace(/(.{4})/g, "$1 ").trim();
-                    setUpdatedPaymentMethod({
-                      ...updatedPaymentMethod,
-                      lastFour: value,
-                    });
-                  }}
-                  className={`w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                    updatedPaymentMethod.lastFour.replace(/\s/g, "").length >
-                      0 &&
-                    updatedPaymentMethod.lastFour.replace(/\s/g, "").length < 16
-                      ? "border-red-300 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  }`}
-                  maxLength={19}
-                />
-                {updatedPaymentMethod.lastFour.replace(/\s/g, "").length > 0 &&
-                  updatedPaymentMethod.lastFour.replace(/\s/g, "").length <
-                    16 && (
-                    <p className="mt-1 text-sm text-red-600">
-                      Card number must be 16 digits
-                    </p>
-                  )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Expiry Date
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="MM/YY"
-                    value={updatedPaymentMethod.expires}
-                    onChange={(e) => {
-                      let value = e.target.value.replace(/\D/g, "");
-                      if (value.length > 4) {
-                        value = value.slice(0, 4);
-                      }
-                      if (value.length >= 2) {
-                        value = value.slice(0, 2) + "/" + value.slice(2);
-                      }
-                      setUpdatedPaymentMethod({
-                        ...updatedPaymentMethod,
-                        expires: value,
-                      });
-                    }}
-                    className={`w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                      updatedPaymentMethod.expires.length > 0 &&
-                      updatedPaymentMethod.expires.length < 5
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-blue-500"
-                    }`}
-                    maxLength={5}
-                  />
-                  {updatedPaymentMethod.expires.length > 0 &&
-                    updatedPaymentMethod.expires.length < 5 && (
-                      <p className="mt-1 text-sm text-red-600">
-                        Enter valid expiry date (MM/YY)
-                      </p>
-                    )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    CVC
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="123"
-                    value={updatedPaymentMethod.cvc}
-                    onChange={(e) => {
-                      const value = e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 3);
-                      setUpdatedPaymentMethod({
-                        ...updatedPaymentMethod,
-                        cvc: value,
-                      });
-                    }}
-                    className={`w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
-                      updatedPaymentMethod.cvc.length > 0 &&
-                      updatedPaymentMethod.cvc.length < 3
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-blue-500"
-                    }`}
-                    maxLength={3}
-                  />
-                  {updatedPaymentMethod.cvc.length > 0 &&
-                    updatedPaymentMethod.cvc.length < 3 && (
-                      <p className="mt-1 text-sm text-red-600">
-                        CVC must be 3 digits
-                      </p>
-                    )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cardholder Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="babar ali"
-                  value={updatedPaymentMethod.cardHolderName}
-                  onChange={(e) =>
-                    setUpdatedPaymentMethod({
-                      ...updatedPaymentMethod,
-                      cardHolderName: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-start space-x-2">
+                <motion.button
+                  whileHover={{ rotate: 90, scale: 1.1 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                  onClick={() => setShowUpdatePaymentMethodModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
                   <svg
-                    className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
                     <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clipRule="evenodd"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
                     />
                   </svg>
-                  <p className="text-sm text-blue-700">
-                    Your payment information is encrypted and secure
-                  </p>
-                </div>
+                </motion.button>
               </div>
-            </div>
 
-            <div className="flex space-x-3 p-6 bg-gray-50 rounded-b-xl">
-              <button
-                onClick={() => setShowUpdatePaymentModal(false)}
-                className="flex-1 px-4 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
-                disabled={isUpdatingPayment}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdatePaymentMethod}
-                disabled={
-                  isUpdatingPayment ||
-                  updatedPaymentMethod.lastFour.replace(/\s/g, "").length !==
-                    16 ||
-                  updatedPaymentMethod.expires.length !== 5 ||
-                  updatedPaymentMethod.cvc.length !== 3 ||
-                  updatedPaymentMethod.cardHolderName.trim() === ""
-                }
-                className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {isUpdatingPayment ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update Payment Method"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+              <div className="p-6 space-y-4">
+                {[
+                  {
+                    id: "card",
+                    label: "Card Number",
+                    placeholder: "1234 5678 9012 3456",
+                  },
+                  { id: "expiry", label: "Expiry Date", placeholder: "MM/YY" },
+                  { id: "cvc", label: "CVC", placeholder: "123" },
+                  {
+                    id: "name",
+                    label: "Cardholder Name",
+                    placeholder: "John Doe",
+                  },
+                ].map((field, i) => (
+                  <motion.div
+                    key={field.id}
+                    custom={i}
+                    variants={childrenStagger}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-2"
+                  >
+                    <label className="block text-sm font-medium text-gray-700">
+                      {field.label}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={field.placeholder}
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </motion.div>
+                ))}
+
+                <motion.div
+                  custom={4}
+                  variants={childrenStagger}
+                  initial="hidden"
+                  animate="visible"
+                  className="bg-blue-50 border border-blue-200 rounded-lg p-3"
+                >
+                  <div className="flex items-start space-x-2">
+                    <svg
+                      className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <p className="text-sm text-blue-700">
+                      Your payment information is encrypted and secure
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
+
+              <div className="flex space-x-3 p-6 bg-gray-50 rounded-b-xl">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowUpdatePaymentMethodModal(false)}
+                  className="flex-1 px-4 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleUpdatePaymentMethod}
+                  disabled={isUpdatingPayment}
+                  className="flex-1 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium flex items-center justify-center disabled:opacity-50"
+                >
+                  {isUpdatingPayment ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Payment Method"
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
       )}
-
-      <div className="flex items-center gap-3 mb-6">
+      <motion.div
+        className="flex items-center gap-3 mb-6"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <CreditCard className="text-gray-700" size={24} />
         <h2 className="text-xl font-semibold text-gray-800">Billing</h2>
-      </div>
+      </motion.div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
+      <motion.div
+        className="bg-white border border-gray-200 rounded-lg p-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div
+          className="flex items-center gap-3 mb-4"
+          variants={itemVariants}
+        >
           <Crown className="text-gray-700" size={20} />
           <h3 className="text-lg font-semibold text-gray-900">Current Plan</h3>
-        </div>
+        </motion.div>
 
-        <div className="flex items-center justify-between mb-4">
+        <motion.div
+          className="flex items-center justify-between mb-4"
+          variants={itemVariants}
+        >
           <div>
             <div className="flex items-center gap-3">
               <h4 className="text-xl font-bold text-gray-900">
                 {currentPlan.name}
               </h4>
-              <span
+
+              <motion.span
+                key={currentPlan.status}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
                 className={`${
                   currentPlan.status === "active"
                     ? "bg-green-100 text-green-800"
                     : "bg-red-300 text-red-600"
-                }  text-xs font-medium px-2.5 py-0.5 rounded-full`}
+                } text-xs font-medium px-2.5 py-0.5 rounded-full`}
               >
                 {currentPlan.status}
-              </span>
+              </motion.span>
             </div>
             <p className="text-gray-600 mt-1">
               {currentPlan.price.slice(0, 7)}/
               {currentPlan.isYearly ? "Yearly" : "Monthly"}
             </p>
-            <p className="text-sm text-gray-500 mt-2">
+            <motion.p
+              className="text-sm text-gray-500 mt-2"
+              variants={itemVariants}
+            >
               Next billing date: {currentPlan.nextBilling}
-            </p>
+            </motion.p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
+        <motion.div
+          className="flex flex-col sm:flex-row gap-3"
+          variants={itemVariants}
+        >
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setChangePlanModal(true)}
             disabled={isUpdatingPlan}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
@@ -1234,11 +1236,14 @@ export default function Billing() {
             ) : (
               "Change Plan"
             )}
-          </button>
-          <button
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
               if (currentPlan.status === "canceled") {
-                toast.warning("plan Already Canceled");
+                toast.warning("Plan Already Canceled");
                 return;
               } else {
                 setShowCancelSubscriptionModal(true);
@@ -1255,23 +1260,40 @@ export default function Billing() {
             ) : (
               "Cancel Subscription"
             )}
-          </button>
-        </div>
-      </div>
+          </motion.button>
+        </motion.div>
+      </motion.div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
+      <motion.div
+        className="bg-white border border-gray-200 rounded-lg p-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.div
+          className="flex items-center gap-3 mb-4"
+          variants={itemVariants}
+        >
           <CreditCard className="text-gray-700" size={20} />
           <h3 className="text-lg font-semibold text-gray-900">
             Payment Method
           </h3>
-        </div>
+        </motion.div>
 
-        <div className="flex items-center justify-between mb-4">
+        <motion.div
+          className="flex items-center justify-between mb-4"
+          variants={itemVariants}
+        >
           <div className="flex items-center gap-4">
-            <div className="w-10 h-6 bg-blue-600 rounded flex items-center justify-center">
+            <motion.div
+              className="w-10 h-6 bg-blue-600 rounded flex items-center justify-center"
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+            >
               <span className="text-white text-xs font-bold">VISA</span>
-            </div>
+            </motion.div>
+
             <div>
               <p className="font-medium text-gray-900">
                 •••• •••• •••• {paymentMethod.lastFour}
@@ -1281,9 +1303,12 @@ export default function Billing() {
               </p>
             </div>
           </div>
-          <button
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             disabled={isUpdatingPayment}
-            onClick={() => setShowUpdatePaymentModal(true)}
+            onClick={() => setShowUpdatePaymentMethodModal(true)}
             className="text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
             {isUpdatingPayment ? (
@@ -1294,133 +1319,196 @@ export default function Billing() {
             ) : (
               "Update"
             )}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
-        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          variants={itemVariants}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+        >
           <Plus size={16} />
           Add Payment Method
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <motion.div
+        className="bg-white border border-gray-200 rounded-lg p-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.h3
+          className="text-lg font-semibold text-gray-900 mb-4"
+          variants={itemVariants}
+        >
           Billing History
-        </h3>
+        </motion.h3>
 
-        <div className="space-y-4">
-          <div
-            className={`border border-gray-100 rounded-lg ${
-              billingHistory.length > 3 ? "max-h-48 overflow-y-auto" : ""
-            }`}
-          >
-            <div className="space-y-0">
-              {billingHistory.map((invoice, index) => (
-                <div
-                  key={invoice.id}
-                  className={`flex items-center justify-between py-3 px-4 ${
-                    index !== billingHistory.length - 1
-                      ? "border-b border-gray-100"
-                      : ""
-                  } hover:bg-gray-50 transition-colors`}
-                >
-                  <div>
-                    <p className="font-medium text-gray-900 capitalize">
-                      {invoice.plan} Plan
-                    </p>
-                    <p className="text-sm text-gray-500">{invoice.date}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="font-semibold text-gray-900">
-                      {invoice.amount}
-                    </span>
-                    <button className="text-sm text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1">
-                      <Download size={14} />
-                      Download
-                    </button>
-                  </div>
-                </div>
-              ))}
+        <motion.div className="space-y-4" variants={itemVariants}>
+          {billingHistory.length > 0 ? (
+            <div
+              className={`border border-gray-100 rounded-lg ${
+                billingHistory.length > 3 ? "max-h-48 overflow-y-auto" : ""
+              }`}
+            >
+              <div className="space-y-0">
+                {billingHistory.map((invoice, index) => (
+                  <motion.div
+                    key={invoice.id}
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.01, backgroundColor: "#f9fafb" }}
+                    transition={{ type: "spring", stiffness: 150, damping: 15 }}
+                    className={`flex items-center justify-between py-3 px-4 cursor-default ${
+                      index !== billingHistory.length - 1
+                        ? "border-b border-gray-100"
+                        : ""
+                    }`}
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900 capitalize">
+                        {invoice.plan} Plan
+                      </p>
+                      <p className="text-sm text-gray-500">{invoice.date}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="font-semibold text-gray-900">
+                        {invoice.amount}
+                      </span>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="text-sm text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
+                      >
+                        <Download size={14} />
+                        Download
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
-
-        {billingHistory.length === 0 && (
-          <div className="text-center py-8">
-            <CreditCard className="mx-auto text-gray-300 mb-4" size={48} />
-            <p className="text-gray-500">No billing history available</p>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">
+          ) : (
+            <motion.div
+              className="text-center py-8"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <CreditCard className="mx-auto text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500">No billing history available</p>
+            </motion.div>
+          )}
+        </motion.div>
+      </motion.div>
+      <motion.div
+        className="bg-white border border-gray-200 rounded-lg p-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.h3
+          className="text-lg font-semibold text-gray-900 mb-6"
+          variants={itemVariants}
+        >
           Subscription Management
-        </h3>
+        </motion.h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-4 border border-gray-200 rounded-lg">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          variants={containerVariants}
+        >
+         
+          <motion.div
+            className="p-4 border border-gray-200 rounded-lg"
+            variants={itemVariants}
+          >
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-medium text-gray-900">Auto-Renewal</h4>
-              <button
+              <motion.button
                 onClick={toggleAutoRenewal}
+                whileTap={{ scale: 0.9 }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                   autoRenewal ? "bg-gray-800" : "bg-gray-200"
                 }`}
               >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                <motion.span
+                  layout
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white ${
                     autoRenewal ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
-              </button>
+              </motion.button>
             </div>
             <p className="text-sm text-gray-600">
               {autoRenewal
                 ? `Your subscription will automatically renew on ${currentPlan.nextBilling}`
                 : "Your subscription will not automatically renew"}
             </p>
-          </div>
+          </motion.div>
 
-          <div className="p-4 border border-gray-200 rounded-lg">
+       
+          <motion.div
+            className="p-4 border border-gray-200 rounded-lg"
+            variants={itemVariants}
+          >
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-medium text-gray-900">
                 Billing Notifications
               </h4>
-              <button
+              <motion.button
                 onClick={toggleBillingNotifications}
+                whileTap={{ scale: 0.9 }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                   billingNotifications ? "bg-gray-800" : "bg-gray-200"
                 }`}
               >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                <motion.span
+                  layout
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white ${
                     billingNotifications ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
-              </button>
+              </motion.button>
             </div>
             <p className="text-sm text-gray-600">
               {billingNotifications
                 ? "Get notified 3 days before your next billing date"
                 : "You will not receive billing notifications"}
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+      
+        <motion.div
+          className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg"
+          variants={itemVariants}
+        >
           <h4 className="font-medium text-yellow-800 mb-2">Need Help?</h4>
           <p className="text-sm text-yellow-700 mb-3">
             Having issues with billing or need to make changes? Our support team
             is here to help.
           </p>
-          <button className="px-4 py-2 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors text-sm font-medium">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="px-4 py-2 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors text-sm font-medium"
+          >
             Contact Support
-          </button>
-        </div>
-      </div>
+          </motion.button>
+        </motion.div>
+      </motion.div>
 
-      <div className="bg-blue-50 rounded-lg p-4">
+     
+      <motion.div
+        className="bg-blue-50 rounded-lg p-4 mt-4"
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ type: "spring", stiffness: 80 }}
+      >
         <div className="flex items-start">
           <CreditCard className="text-blue-500 mt-0.5" size={16} />
           <div className="ml-3">
@@ -1434,7 +1522,7 @@ export default function Billing() {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

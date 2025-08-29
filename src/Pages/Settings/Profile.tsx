@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import supabase from "../../supabase-client";
 import { toast } from "sonner";
 import { Check, Loader2, Save } from "lucide-react";
-
-interface profileState{
-    setLoading:(loading:boolean)=>void
+import { motion } from "framer-motion";
+interface profileState {
+  setLoading: (loading: boolean) => void;
 }
-const Profile = ({setLoading}:profileState) => {
+const Profile = ({ setLoading }: profileState) => {
   const [user, setUser] = useState({
     name: "",
     email: "",
@@ -17,11 +17,20 @@ const Profile = ({setLoading}:profileState) => {
   const [updating, setUpdating] = useState(false);
   const [userId, setUserId] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
- 
+
+  const formItemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: { delay: i * 0.15 },
+    }),
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        setLoading(true); 
+        setLoading(true);
 
         const {
           data: { user: authUser },
@@ -121,7 +130,7 @@ const Profile = ({setLoading}:profileState) => {
         alert("Unexpected error fetching user:" + err);
       } finally {
         setLoading(false);
-      } // Pass false to setLoading
+      } 
     };
 
     fetchUser();
@@ -204,161 +213,161 @@ const Profile = ({setLoading}:profileState) => {
     }
   };
 
-  return  <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-6">
-                Profile Information
-              </h2>
+  const fields=[ { label: "Full Name", key: "name", type: "text", placeholder: "Enter your full name", }, { label: "Email Address", key: "email", type: "email", placeholder: "Enter your email", }, { label: "Location", key: "location", type: "text", placeholder: "Enter your location", }, { label: "Website", key: "website", type: "url", placeholder: "Enter your website", }, ]
+  
+  return (
+    <motion.div
+      className="p-6 bg-white border border-gray-200 rounded-lg"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 80, damping: 20 }}
+    >
+      <h2 className="text-lg font-semibold text-gray-800 mb-6">
+        Profile Information
+      </h2>
 
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-xl">
-                  {user.name ? user.name.charAt(0).toUpperCase() : "U"}
-                </div>
-                <div className="flex flex-col">
-                  <button 
-                    disabled={updating}
-                    className={`px-3 py-1.5 border border-gray-200 rounded-md text-sm text-gray-700 transition-colors ${
-                      updating 
-                        ? 'bg-gray-100 cursor-not-allowed' 
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    Change Avatar
-                  </button>
-                  <span className="text-xs text-gray-500 mt-1">
-                    JPG, PNG up to 5MB
-                  </span>
-                </div>
-              </div>
+     
+      <motion.div
+        className="flex items-center gap-4 mb-6"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        <div
+          className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl ${
+            updating
+              ? "bg-gray-200 text-gray-400"
+              : "bg-purple-100 text-purple-700"
+          }`}
+        >
+          {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+        </div>
+        <div className="flex flex-col">
+          <motion.button
+            disabled={updating}
+            whileHover={!updating ? { scale: 1.05 } : {}}
+            whileTap={!updating ? { scale: 0.95 } : {}}
+            className={`px-3 py-1.5 border border-gray-200 rounded-md text-sm transition-colors ${
+              updating
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            Change Avatar
+          </motion.button>
+          <span className="text-xs text-gray-500 mt-1">JPG, PNG up to 5MB</span>
+        </div>
+      </motion.div>
 
-              <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={user.name}
-                    onChange={(e) =>
-                      setUser((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    placeholder="Enter your full name"
-                    disabled={updating}
-                    className={`w-full border border-gray-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
-                      updating ? 'bg-gray-100 cursor-not-allowed' : ''
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={user.email}
-                    onChange={(e) =>
-                      setUser((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                    placeholder="Enter your email"
-                    disabled={updating}
-                    className={`w-full border border-gray-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
-                      updating ? 'bg-gray-100 cursor-not-allowed' : ''
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={user.location}
-                    onChange={(e) =>
-                      setUser((prev) => ({ ...prev, location: e.target.value }))
-                    }
-                    placeholder="Enter your location"
-                    disabled={updating}
-                    className={`w-full border border-gray-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
-                      updating ? 'bg-gray-100 cursor-not-allowed' : ''
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Website
-                  </label>
-                  <input
-                    type="url"
-                    value={user.website}
-                    onChange={(e) =>
-                      setUser((prev) => ({ ...prev, website: e.target.value }))
-                    }
-                    placeholder="Enter your website"
-                    disabled={updating}
-                    className={`w-full border border-gray-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
-                      updating ? 'bg-gray-100 cursor-not-allowed' : ''
-                    }`}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Bio
-                  </label>
-                  <textarea
-                    value={user.bio}
-                    onChange={(e) =>
-                      setUser((prev) => ({ ...prev, bio: e.target.value }))
-                    }
-                    placeholder="Tell us about yourself"
-                    disabled={updating}
-                    className={`w-full border border-gray-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
-                      updating ? 'bg-gray-100 cursor-not-allowed' : ''
-                    }`}
-                    rows={3}
-                  />
-                </div>
-              </form>
+    
+      <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {fields.map(({ key, label, type, placeholder }, i) => (
+          <motion.div
+            key={key}
+            custom={i}
+            variants={formItemVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              {label}
+            </label>
+            <input
+              type={type}
+              value={user[key as keyof typeof user] || ""}
+              onChange={(e) =>
+                setUser((prev) => ({ ...prev, [key]: e.target.value }))
+              }
+              placeholder={placeholder}
+              disabled={updating}
+              className={`w-full border border-gray-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                updating ? "bg-gray-100 cursor-not-allowed" : ""
+              }`}
+            />
+          </motion.div>
+        ))}
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={updateProfile}
-                  disabled={updating}
-                  className={`px-5 py-2 rounded-md transition-all duration-200 flex items-center gap-2 font-medium ${
-                    updating
-                      ? 'bg-gray-400 text-white cursor-not-allowed'
-                      : saveSuccess 
-                      ? 'bg-green-500 text-white'
-                      : 'bg-black text-white hover:bg-gray-800'
-                  }`}
-                >
-                  {updating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : saveSuccess ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Saved!
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Save Changes
-                    </>
-                  )}
-                </button>
-                <button 
-                  disabled={updating}
-                  className={`px-5 py-2 border border-gray-200 rounded-md transition-colors ${
-                    updating 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'hover:bg-gray-100'
-                  }`}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+     
+        <motion.div
+          className="md:col-span-2"
+          custom={fields.length}
+          variants={formItemVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            Bio
+          </label>
+          <textarea
+            value={user.bio}
+            onChange={(e) =>
+              setUser((prev) => ({ ...prev, bio: e.target.value }))
+            }
+            placeholder="Tell us about yourself"
+            disabled={updating}
+            rows={3}
+            className={`w-full border border-gray-200 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+              updating ? "bg-gray-100 cursor-not-allowed" : ""
+            }`}
+          />
+        </motion.div>
+      </form>
+
+      
+      <div className="flex gap-3 mt-6">
+        <motion.button
+          onClick={() => updateProfile()}
+          disabled={updating}
+          whileHover={!updating ? { scale: 1.05 } : {}}
+          whileTap={!updating ? { scale: 0.95 } : {}}
+          className={`px-5 py-2 rounded-md transition-all duration-200 flex items-center gap-2 font-medium ${
+            updating
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : saveSuccess
+              ? "bg-green-500 text-white"
+              : "bg-black text-white hover:bg-gray-800"
+          }`}
+        >
+          {updating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Saving...
+            </>
+          ) : saveSuccess ? (
+            <>
+              <Check className="w-4 h-4" />
+              Saved!
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              Save Changes
+            </>
+          )}
+        </motion.button>
+        <motion.button
+          type="button"
+          onClick={() => setUser({
+            name: "",
+            email: "",
+            location: "",
+            website: "",
+            bio: "",
+          })}
+          disabled={updating}
+          whileHover={!updating ? { scale: 1.05 } : {}}
+          whileTap={!updating ? { scale: 0.95 } : {}}
+          className={`px-5 py-2 border border-gray-200 rounded-md transition-colors ${
+            updating
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "hover:bg-gray-100"
+          }`}
+        >
+          Cancel
+        </motion.button>
+      </div>
+    </motion.div>
+  );
 };
 
 export default Profile;
