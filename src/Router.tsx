@@ -576,18 +576,14 @@ const AppRouter = () => {
         return;
       }
 
-      const todaysDate = new Date();
 
       const subscription = {
         id: subscriptionData.plan_type,
         name: subscriptionData.plan_type,
-        price: `$${subscriptionData.amount}`,
+        price: `${subscriptionData.amount}`,
         nextBillingDate: subscriptionData.next_billing_date || "N/A",
-        status:
-          subscriptionData.next_billing_date > todaysDate
-            ? "active"
-            : "expired",
-        billingCycle: subscriptionData.billing_cycle || "monthly",
+        status: subscriptionData.status,
+        billingCycle: subscriptionData.billing_cycle || "N/A",
       };
       const paymentMethod = {
         type: "visa",

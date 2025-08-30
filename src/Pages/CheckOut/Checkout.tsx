@@ -274,9 +274,9 @@ const Checkout = () => {
 
       dispatch(setBoughtPremium(true));
       navigate("/success");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Unexpected error:", error);
-      alert("An unexpected error occurred. Please try again. " + error.message);
+      alert("An unexpected error occurred. Please try again. " + error?.message);
     } finally {
       setLoading(false);
     }

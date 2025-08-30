@@ -179,7 +179,7 @@ const userSettingsSlice = createSlice({
       state.reading.billing.paymentMethod = action.payload;
     },
     updateBillingHistory: (state, action) => {
-      state.reading.billing.billingHistory = [state.reading.billing.billingHistory,action.payload];
+      state.reading.billing.billingHistory = [...state.reading.billing.billingHistory,...action.payload];
     },
     updateAutoRenewal: (state, action) => {
       state.reading.billing.subscriptionManagement.autoRenewal = action.payload;

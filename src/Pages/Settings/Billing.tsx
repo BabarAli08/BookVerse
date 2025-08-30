@@ -38,7 +38,7 @@ interface planState {
 }
 
 export default function Billing() {
-  const [isLoading, setIsLoading] = useState(false); // No need to load data since it comes from Redux
+  
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
@@ -296,13 +296,11 @@ export default function Billing() {
         return;
       }
 
-      // Update Redux state
       dispatch(updateCurrentPlan({
         ...reading.billing.currentPlan,
         status: "canceled"
       }));
 
-      // Add to billing history in Redux
       const newHistoryItem = {
         name: reading.billing.currentPlan.name,
         endDate: new Date().toLocaleDateString("en-US", {
@@ -328,9 +326,7 @@ export default function Billing() {
     }
   };
 
-  if (isLoading) {
-    return <LoadingSkeleton />;
-  }
+
 
   const handlePlanChange = async () => {
     if (currentPlan.name === selectedPlan) {
@@ -424,7 +420,6 @@ export default function Billing() {
         status: "active"
       }));
 
-      // Add the previous plan to billing history in Redux if it wasn't free
       if (reading.billing.currentPlan.name !== "free") {
         const previousPlanHistoryItem = {
           name: reading.billing.currentPlan.name,
@@ -440,7 +435,6 @@ export default function Billing() {
         dispatch(updateBillingHistory(updatedHistory));
       }
 
-      // Add the new plan purchase to billing history in Redux if it's not free
       if (selectedPlan !== "free") {
         const newPlanHistoryItem = {
           name: selectedPlan,
