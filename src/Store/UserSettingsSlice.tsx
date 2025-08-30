@@ -184,31 +184,15 @@ const userSettingsSlice = createSlice({
       state.reading.billing.paymentMethod = action.payload;
     },
     updateBillingHistory: (state, action) => {
-      // Fixed: Properly handle billing history updates
       if (Array.isArray(action.payload)) {
-        // Filter out null/undefined entries and ensure all required fields exist
-        const validHistory = action.payload.filter(
-          (item) => 
-            item && 
-            typeof item === 'object' &&
-            item.name && 
-            item.date && 
-            item.price
-        );
-        state.reading.billing.billingHistory = validHistory;
-      } else if (action.payload && typeof action.payload === 'object') {
-        
+        state.reading.billing.billingHistory = action.payload;
+      } else if (action.payload && typeof action.payload === "object") {
         const newItem = action.payload;
-        if (newItem.name && newItem.endDate && newItem.price) { 
-     
-          const existingValidHistory = state.reading.billing.billingHistory.filter(
-            (item) => item && item.name && item.endDate && item.price
-          );
-          state.reading.billing.billingHistory = [
-            newItem,
-            ...existingValidHistory,
-          ];
-        }
+
+        state.reading.billing.billingHistory = [
+          newItem,
+          ...state.reading.billing.billingHistory,
+        ];
       }
     },
     updateAutoRenewal: (state, action) => {
@@ -218,11 +202,12 @@ const userSettingsSlice = createSlice({
       state.reading.billing.subscriptionManagement.billingNotifications =
         action.payload;
     },
-  
+
     cleanBillingHistory: (state) => {
-      state.reading.billing.billingHistory = state.reading.billing.billingHistory.filter(
-        (item) => item && item.name && item.endDate && item.price
-      );
+      state.reading.billing.billingHistory =
+        state.reading.billing.billingHistory.filter(
+          (item) => item && item.name && item.endDate && item.price
+        );
     },
     resetUserSettings: () => {
       return initialState;

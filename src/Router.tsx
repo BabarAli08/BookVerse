@@ -507,8 +507,6 @@ const AppRouter = () => {
       }
     };
 
-    // Fixed billing history fetching section from AppRouter.tsx
-
     const getUserBillingHistory = async () => {
       if (!user) return;
 
@@ -518,7 +516,7 @@ const AppRouter = () => {
             .from("subscription_history")
             .select("*")
             .eq("user_id", user.id)
-            .order("created_at", { ascending: false }); // Order by most recent first
+            .order("created_at", { ascending: false });
 
         if (billingHistoryError) {
           console.warn(
@@ -527,38 +525,16 @@ const AppRouter = () => {
           );
           return;
         }
-
+          console.log("billing history" + billingHistory)
         if (billingHistory && billingHistory.length > 0) {
-          // Fixed: Properly validate and map billing history data
-          const validBillings = billingHistory
-            .filter(
-              (historyItem) =>
-                historyItem &&
-                historyItem.plan_type &&
-                (historyItem.end_date || historyItem.created_at) &&
-                historyItem.amount !== null &&
-                historyItem.amount !== undefined
-            )
-            .map((historyItem) => ({
-              plan: historyItem.plan_type,
-              date: historyItem.end_date
-                ? new Date(historyItem.end_date).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })
-                : new Date(historyItem.created_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  }),
-              amount: `${Number(historyItem.amount).toFixed(2)}`,
-            }));
-
-          // Only dispatch if we have valid billing data
-          if (validBillings.length > 0) {
-            dispatch(updateBillingHistory(validBillings));
-          }
+          const history = billingHistory.map((item) => ({
+           
+            name: item.plan,
+            price: item.amount,
+            endDate: item.end_date,
+            
+          }));
+          dispatch(updateBillingHistory(history));
         }
       } catch (error) {
         console.error("Error fetching billing history:", error);
@@ -587,7 +563,6 @@ const AppRouter = () => {
         }
 
         if (subscriptionManagement) {
-         
           dispatch(
             updateAutoRenewal(subscriptionManagement.auto_renewal ?? true)
           );
