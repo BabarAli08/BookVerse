@@ -93,12 +93,12 @@ const Profile = ({ setLoading }: profileState) => {
           .single();
 
         if (createError) {
-          console.error("❌ Profile creation error:", createError);
+          console.error(" Profile creation error:", createError);
           alert("Error creating profile: " + createError.message);
           return;
         }
 
-        console.log("✅ Profile created during update:", createData);
+        console.log("Profile created during update:", createData);
         toast.success("Profile created successfully!");
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
@@ -118,16 +118,16 @@ const Profile = ({ setLoading }: profileState) => {
         .select();
 
       if (error) {
-        console.error("❌ Update error:", error);
+        console.error("Update error:", error);
         alert("There was an error updating the profile: " + error.message);
       } else {
-        console.log("✅ Profile updated successfully:", data);
+        console.log(" Profile updated successfully:", data);
         toast.success("Profile updated successfully!");
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
       }
     } catch (err) {
-      console.error("💥 Unexpected update error:", err);
+      console.error(" Unexpected update error:", err);
       alert("Unexpected error updating profile: " + (err as Error)?.message);
     } finally {
       setUpdating(false);

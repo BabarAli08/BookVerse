@@ -5,7 +5,11 @@ import type { RootState } from "../../Store/store";
 import supabase from "../../supabase-client";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { updateCurrentPlan, updateBillingHistory, updatePaymentMethod } from "../../Store/UserSettingsSlice";
+import {
+  updateCurrentPlan,
+  updateBillingHistory,
+  updatePaymentMethod,
+} from "../../Store/UserSettingsSlice";
 import { setBoughtPremium } from "../../Store/PremiumBookSlice";
 
 const Checkout = () => {
@@ -26,7 +30,7 @@ const Checkout = () => {
 
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [loading, setLoading] = useState(false);
-  
+
   const navigate = useNavigate();
   const { plan } = useSelector((state: RootState) => state.payment);
   const { reading } = useSelector((state: RootState) => state.userSettings);
@@ -127,10 +131,10 @@ const Checkout = () => {
     });
   };
 
-  const dispatch=useDispatch()
+  const dispatch = useDispatch();
 
   const handlePurchase = async () => {
-     if (!validateForm()) return;
+    if (!validateForm()) return;
 
     setLoading(true);
     console.log("proceeding with payment...");
@@ -146,42 +150,24 @@ const Checkout = () => {
         return;
       }
 
+      // Get existing subscription if any
       const { data: existingSub, error: checkError } = await supabase
         .from("subscriptions")
-        .select("*") 
+        .select("*")
         .eq("user_id", user.id)
         .single();
 
+      console.log("existing subscription", existingSub);
+
+      // If there's an error other than "no rows found", handle it
       if (checkError && checkError.code !== "PGRST116") {
         console.error("Error checking existing subscription:", checkError);
         alert("Error checking subscription status");
         return;
       }
 
-      const subscriptionData = {
-        user_id: user.id,
-        plan_type: plan?.name || "premium",
-        billing_cycle: plan?.yearly ? "yearly" : "monthly",
-        status: "active",
-        card_number: `****${formData.cardNumber.slice(-4)}`,
-        card_holder_name: formData.cardholderName,
-        expiry_date: formData.expiryDate,
-        cvc: formData.cvc,
-        email: formData.email,
-        country: formData.country,
-        address_line_1: formData.address_line_1,
-        address_line_2: formData.address_line_2,
-        city: formData.city,
-        next_billing_date: getNextBillingDate(plan?.yearly || false),
-        state: formData.state,
-        postal_code: formData.zip,
-        amount: parseFloat(plan?.price?.replace("$", "") || "9.99"), 
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
+      // If there's an existing subscription, archive it to history
       if (existingSub) {
-        
         const historyResult = await supabase
           .from("subscription_history")
           .insert([
@@ -204,63 +190,93 @@ const Checkout = () => {
           alert("Error processing subscription history");
           return;
         }
-
-        const updateResult = await supabase
-          .from("subscriptions")
-          .update(subscriptionData)
-          .eq("user_id", user.id);
-
-        if (updateResult.error) {
-          console.error("Database error:", updateResult.error);
-          alert(
-            "There was a problem processing payment: " +
-              updateResult.error.message
-          );
-          return;
-        }
-      } else {
- 
-        const insertResult = await supabase
-          .from("subscriptions")
-          .insert([subscriptionData]);
-
-        if (insertResult.error) {
-          console.error("Database error:", insertResult.error);
-          alert(
-            "There was a problem processing payment: " +
-              insertResult.error.message
-          );
-          return;
-        }
       }
 
-      toast.success("Payment successful!");
-      dispatch(updateCurrentPlan({
-        name: plan?.name || "premium",
-        price: plan?.price || "9.99",
-        nextBillingDate: getNextBillingDate(plan?.yearly || false),
+      // Prepare subscription data
+      const subscriptionData = {
+        user_id: user.id,
+        plan_type: plan?.name || "premium",
+        billing_cycle: plan?.yearly ? "yearly" : "monthly",
         status: "active",
-        billingCycle: plan?.yearly ? "yearly" : "monthly",
-        isYearly: plan?.yearly || false,
-        }));
-      dispatch(updateBillingHistory({
-        name: existingSub?.plan_type || plan?.name || "premium",
-        price: existingSub?.amount || plan?.price || "9.99",
-        endDate:existingSub.end_date || new Date().toISOString(),
-       
-      }))
-      dispatch(updatePaymentMethod({
-        type: "visa",
-        cardNumber: formData.cardNumber,
-        cardHolderName: formData.cardholderName,
-        expiryDate: formData.expiryDate,
+        card_number: `****${formData.cardNumber.slice(-4)}`,
+        card_holder_name: formData.cardholderName,
+        expiry_date: formData.expiryDate,
         cvc: formData.cvc,
-        
-      }));
+        email: formData.email,
+        country: formData.country,
+        address_line_1: formData.address_line_1,
+        address_line_2: formData.address_line_2,
+        city: formData.city,
+        next_billing_date: getNextBillingDate(plan?.yearly || false),
+        state: formData.state,
+        postal_code: formData.zip,
+        amount: parseFloat(plan?.price?.replace("$", "") || "9.99"),
+        created_at: existingSub
+          ? existingSub.created_at
+          : new Date().toISOString(), // Keep original created_at if updating
+        updated_at: new Date().toISOString(),
+      };
+
+      // Use upsert to either insert or update
+      const { data: subscriptionResult, error: subscriptionError } =
+        await supabase
+          .from("subscriptions")
+          .upsert(subscriptionData, {
+            onConflict: "user_id", // Assuming user_id is unique
+            ignoreDuplicates: false, // This ensures updates happen
+          })
+          .select();
+
+      if (subscriptionError) {
+        console.error("Database error:", subscriptionError);
+        alert(
+          "There was a problem processing payment: " + subscriptionError.message
+        );
+        return;
+      }
+
+      console.log("Subscription upsert result:", subscriptionResult);
+
+      toast.success("Payment successful!");
+
+      // Update Redux store
+      dispatch(
+        updateCurrentPlan({
+          name: plan?.name || "premium",
+          price: plan?.price || "9.99",
+          nextBillingDate: getNextBillingDate(plan?.yearly || false),
+          status: "active",
+          billingCycle: plan?.yearly ? "yearly" : "monthly",
+          isYearly: plan?.yearly || false,
+        })
+      );
+
+      // Fix billing history dispatch - handle case when no existing subscription
+      dispatch(
+        updateBillingHistory({
+          name: existingSub?.plan_type || plan?.name || "premium",
+          price: existingSub?.amount?.toString() || plan?.price || "9.99",
+          endDate: existingSub
+            ? new Date().toISOString()
+            : new Date().toISOString(),
+        })
+      );
+
+      dispatch(
+        updatePaymentMethod({
+          type: "visa",
+          cardNumber: formData.cardNumber,
+          cardHolderName: formData.cardholderName,
+          expiryDate: formData.expiryDate,
+          cvc: formData.cvc,
+        })
+      );
+
+      dispatch(setBoughtPremium(true));
       navigate("/success");
     } catch (error) {
       console.error("Unexpected error:", error);
-      alert("An unexpected error occurred. Please try again."+ error.message);
+      alert("An unexpected error occurred. Please try again. " + error.message);
     } finally {
       setLoading(false);
     }

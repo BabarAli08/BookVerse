@@ -324,7 +324,7 @@ const AppRouter = () => {
       if (readingPreferancesError) return;
 
       if (readingPreferances) {
-        // Define the complete option arrays (same as in ReadingPreferences component)
+       
         const themeOptions = [
           { id: "light", name: "Light", bg: "bg-white", text: "text-gray-900" },
           {

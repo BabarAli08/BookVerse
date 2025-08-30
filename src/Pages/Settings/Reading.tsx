@@ -444,7 +444,6 @@ export default function ReadingPreferences() {
         return;
       }
 
-      // Update Redux store after successful save
       dispatch(updateReadingTheme(preferences.readingTheme));
       dispatch(updateBackgroundPattern(preferences.background));
       dispatch(updateTypographySettings({

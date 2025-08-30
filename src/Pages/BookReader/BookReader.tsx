@@ -73,14 +73,21 @@ const BookReader = () => {
   const {
     togglDark,
     toggleSidebar,
-    lineHeight,
-    fontFamily,
-    fontSize,
-    theme,
     letterSpacing,
-    background,
     isFocused,
   } = useSelector((state: RootState) => state.bookReading);
+
+  // Get reading preferences from UserSettingsSlice for consistency
+  const {
+    readingTheme: theme,
+    backgroundPattern: background,
+  } = useSelector((state: RootState) => state.userSettings.reading.appearanceSettings);
+  
+  const {
+    fontSize,
+    fontFamily,
+    lineSpacing: lineHeight,
+  } = useSelector((state: RootState) => state.userSettings.reading.typographySettings);
 
   useEffect(() => {
     const checkMobile = () => {

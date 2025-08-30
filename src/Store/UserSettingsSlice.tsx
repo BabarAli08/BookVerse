@@ -164,7 +164,7 @@ const userSettingsSlice = createSlice({
       state.reading.appearanceSettings.backgroundPattern = action.payload;
     },
     updateTypographySettings: (state, action) => {
-      state.reading.typographySettings.fontSize = action.payload;
+      state.reading.typographySettings = { ...state.reading.typographySettings, ...action.payload };
     },
     updateAutoBookmark: (state, action) => {
       state.reading.readingFeatures.autoBookmark = action.payload;
