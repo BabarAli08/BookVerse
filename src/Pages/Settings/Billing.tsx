@@ -67,9 +67,9 @@ export default function Billing() {
 
   const billingHistory =
     reading?.billing?.billingHistory?.map((item) => ({
-      plan: item.name,
-      date: item.endDate,
-      amount: item.price,
+      plan: item.name || "",
+      date: item.endDate || "N/A",
+      amount: item.price || "N/A",
     })) || [];
 
   const autoRenewal =
@@ -360,21 +360,22 @@ export default function Billing() {
         return;
       }
 
-      const { id, ...planDataWithoutId } = currentPlanData;
+      if (currentPlanData) {
+        const { id, ...planDataWithoutId } = currentPlanData;
+        const previousPlan = {
+          ...planDataWithoutId,
+          status: "canceled",
+          end_date: new Date().toISOString(),
+        };
 
-      const previousPlan = {
-        ...planDataWithoutId,
-        status: "canceled",
-        end_date: new Date().toISOString(),
-      };
+        const { error } = await supabase
+          .from("subscription_history")
+          .insert([previousPlan]);
 
-      const { error } = await supabase
-        .from("subscription_history")
-        .insert([previousPlan]);
-
-      if (error) {
-        toast.error(`Error saving previous plan: ${error.message}`);
-        return;
+        if (error) {
+          toast.error(`Error saving previous plan: ${error.message}`);
+          return;
+        }
       }
 
       const planPrice =
@@ -390,9 +391,6 @@ export default function Billing() {
           new Date().setMonth(new Date().getMonth() + 1)
         ).toISOString(),
       };
-
-      const plan = checkPremiumStatus(selectedPlan, "active");
-      dispatch(setBoughtPremium(plan));
 
       const { error: updateError } = await supabase
         .from("subscriptions")
@@ -418,24 +416,10 @@ export default function Billing() {
           name: selectedPlan,
           price: planPrice,
           billingCycle: "monthly",
-          nextBillingDate: nextBillingDate,
+          nextBillingDate,
           status: "active",
         })
       );
-
-      if (reading.billing.currentPlan.name !== "free") {
-        const previousPlanHistoryItem = {
-          name: reading.billing.currentPlan.name,
-          endDate: new Date().toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          }),
-          price: `$${reading.billing.currentPlan.price}`,
-        };
-
-        dispatch(updateBillingHistory(previousPlanHistoryItem));
-      }
 
       if (selectedPlan !== "free") {
         const newPlanHistoryItem = {
@@ -444,10 +428,16 @@ export default function Billing() {
           price: `$${planPrice}`,
         };
 
-        const currentHistory = reading.billing.billingHistory;
-        const updatedHistoryWithNew = [newPlanHistoryItem, ...currentHistory];
+        const updatedHistoryWithNew = [
+          newPlanHistoryItem,
+          ...(reading.billing.billingHistory || []),
+        ];
+
         dispatch(updateBillingHistory(updatedHistoryWithNew));
       }
+
+      const plan = checkPremiumStatus(selectedPlan, "active");
+      dispatch(setBoughtPremium(plan));
 
       toast.success("Plan changed successfully");
       setChangePlanModal(false);
@@ -514,7 +504,6 @@ export default function Billing() {
       toast.success("Payment method updated successfully");
       setShowUpdatePaymentMethodModal(false);
 
-   
       setUpdatedPaymentMethod({
         cardNumber: "",
         expires: "",
@@ -580,7 +569,7 @@ export default function Billing() {
       label: "Card Number",
       placeholder: "1234 5678 9012 3456",
       value: updatedPaymentMethod.cardNumber,
-      onChange: (value:string) =>
+      onChange: (value: string) =>
         setUpdatedPaymentMethod((prev) => ({ ...prev, cardNumber: value })),
     },
     {
@@ -596,7 +585,7 @@ export default function Billing() {
       label: "CVC",
       placeholder: "123",
       value: updatedPaymentMethod.cvc,
-      onChange: (value:string) =>
+      onChange: (value: string) =>
         setUpdatedPaymentMethod((prev) => ({ ...prev, cvc: value })),
     },
     {
@@ -604,7 +593,7 @@ export default function Billing() {
       label: "Cardholder Name",
       placeholder: "John Doe",
       value: updatedPaymentMethod.cardHolderName,
-      onChange: (value:string) =>
+      onChange: (value: string) =>
         setUpdatedPaymentMethod((prev) => ({ ...prev, cardHolderName: value })),
     },
   ];
@@ -765,7 +754,7 @@ export default function Billing() {
                 }}
                 className="p-6 space-y-3"
               >
-                {allPlans.map((plan, i) => (
+                {allPlans.map((plan, i:number) => (
                   <motion.div
                     key={plan.id}
                     variants={{

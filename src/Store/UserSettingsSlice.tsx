@@ -5,6 +5,7 @@ interface billingState {
   endDate: string;
   price: string;
 }
+
 interface initial {
   profile: {
     name: string;
@@ -74,6 +75,7 @@ interface initial {
     };
   };
 }
+
 const initialState: initial = {
   profile: {
     name: "",
@@ -136,7 +138,6 @@ const initialState: initial = {
         cardHolderName: "",
       },
       billingHistory: [],
-
       subscriptionManagement: {
         autoRenewal: true,
         billingNotifications: false,
@@ -144,6 +145,7 @@ const initialState: initial = {
     },
   },
 };
+
 const userSettingsSlice = createSlice({
   name: "userSettings",
   initialState,
@@ -182,13 +184,31 @@ const userSettingsSlice = createSlice({
       state.reading.billing.paymentMethod = action.payload;
     },
     updateBillingHistory: (state, action) => {
+      // Fixed: Properly handle billing history updates
       if (Array.isArray(action.payload)) {
-        state.reading.billing.billingHistory = action.payload;
-      } else {
-        state.reading.billing.billingHistory = [
-          action.payload,
-          ...state.reading.billing.billingHistory,
-        ];
+        // Filter out null/undefined entries and ensure all required fields exist
+        const validHistory = action.payload.filter(
+          (item) => 
+            item && 
+            typeof item === 'object' &&
+            item.name && 
+            item.date && 
+            item.price
+        );
+        state.reading.billing.billingHistory = validHistory;
+      } else if (action.payload && typeof action.payload === 'object') {
+        
+        const newItem = action.payload;
+        if (newItem.name && newItem.endDate && newItem.price) { 
+     
+          const existingValidHistory = state.reading.billing.billingHistory.filter(
+            (item) => item && item.name && item.endDate && item.price
+          );
+          state.reading.billing.billingHistory = [
+            newItem,
+            ...existingValidHistory,
+          ];
+        }
       }
     },
     updateAutoRenewal: (state, action) => {
@@ -197,6 +217,12 @@ const userSettingsSlice = createSlice({
     updateBillingNotifications: (state, action) => {
       state.reading.billing.subscriptionManagement.billingNotifications =
         action.payload;
+    },
+  
+    cleanBillingHistory: (state) => {
+      state.reading.billing.billingHistory = state.reading.billing.billingHistory.filter(
+        (item) => item && item.name && item.endDate && item.price
+      );
     },
     resetUserSettings: () => {
       return initialState;
@@ -219,6 +245,7 @@ export const {
   updateBillingHistory,
   updateAutoRenewal,
   updateBillingNotifications,
+  cleanBillingHistory,
 } = userSettingsSlice.actions;
 
 export default userSettingsSlice.reducer;

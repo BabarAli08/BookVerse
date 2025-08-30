@@ -23,6 +23,7 @@ import {
   updateAutoRenewal,
   updateBackgroundPattern,
   updateBillingHistory,
+  updateBillingNotifications,
   updateCurrentPlan,
   updateOfflineDownloads,
   updatePaymentMethod,
@@ -324,7 +325,6 @@ const AppRouter = () => {
       if (readingPreferancesError) return;
 
       if (readingPreferances) {
-       
         const themeOptions = [
           { id: "light", name: "Light", bg: "bg-white", text: "text-gray-900" },
           {
@@ -507,94 +507,159 @@ const AppRouter = () => {
       }
     };
 
+    // Fixed billing history fetching section from AppRouter.tsx
+
     const getUserBillingHistory = async () => {
       if (!user) return;
 
-      const { data: billingHistory, error: billingHistoryError } =
-        await supabase
-          .from("subscription_history")
-          .select("*")
-          .eq("user_id", user?.id);
-      if (billingHistoryError) {
-        console.warn(
-          "Could not find billing history",
-          billingHistoryError.message
-        );
-        return;
-      }
-      if (billingHistory && billingHistory.length > 0) {
-        const billings = billingHistory.map((historyItem: any) => ({
-          name: historyItem.plan_type,
-          endDate: historyItem.end_date,
-          price: `$${historyItem.amount.toFixed(2)}`,
-        }));
-        dispatch(updateBillingHistory(billings));
+      try {
+        const { data: billingHistory, error: billingHistoryError } =
+          await supabase
+            .from("subscription_history")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false }); // Order by most recent first
+
+        if (billingHistoryError) {
+          console.warn(
+            "Could not find billing history",
+            billingHistoryError.message
+          );
+          return;
+        }
+
+        if (billingHistory && billingHistory.length > 0) {
+          // Fixed: Properly validate and map billing history data
+          const validBillings = billingHistory
+            .filter(
+              (historyItem) =>
+                historyItem &&
+                historyItem.plan_type &&
+                (historyItem.end_date || historyItem.created_at) &&
+                historyItem.amount !== null &&
+                historyItem.amount !== undefined
+            )
+            .map((historyItem) => ({
+              plan: historyItem.plan_type,
+              date: historyItem.end_date
+                ? new Date(historyItem.end_date).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : new Date(historyItem.created_at).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  }),
+              amount: `${Number(historyItem.amount).toFixed(2)}`,
+            }));
+
+          // Only dispatch if we have valid billing data
+          if (validBillings.length > 0) {
+            dispatch(updateBillingHistory(validBillings));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching billing history:", error);
       }
     };
 
     const getSubscriptionManagement = async () => {
       if (!user) return;
-      const {
-        data: subscriptionManagement,
-        error: subscriptionManagementError,
-      } = await supabase
-        .from("user_preferences")
-        .select("*")
-        .eq("user_id", user?.id)
-        .maybeSingle();
-      if (subscriptionManagementError) {
-        console.warn(
-          "error getting the subscription management data",
-          subscriptionManagementError.message
-        );
-      }
-      if (subscriptionManagement) {
-        dispatch(updateAutoRenewal(subscriptionManagement.auto_renewal));
-        dispatch(updateBillingHistory(subscriptionManagement.billing_history));
+
+      try {
+        const {
+          data: subscriptionManagement,
+          error: subscriptionManagementError,
+        } = await supabase
+          .from("user_preferences")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (subscriptionManagementError) {
+          console.warn(
+            "error getting the subscription management data",
+            subscriptionManagementError.message
+          );
+          return;
+        }
+
+        if (subscriptionManagement) {
+         
+          dispatch(
+            updateAutoRenewal(subscriptionManagement.auto_renewal ?? true)
+          );
+          dispatch(
+            updateBillingNotifications(
+              subscriptionManagement.billing_notifications ?? false
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching subscription management:", error);
       }
     };
+
     const getCurrentSubscription = async () => {
       if (!user) return;
 
-      const { data: subscriptionData, error: subscriptionError } =
-        await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", user?.id)
-          .maybeSingle();
+      try {
+        const { data: subscriptionData, error: subscriptionError } =
+          await supabase
+            .from("subscriptions")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle();
 
-      if (subscriptionError && subscriptionError.code !== "PGRST116") {
-        console.error(
-          "Error fetching current subscription:",
-          subscriptionError
-        );
-        return;
+        if (subscriptionError && subscriptionError.code !== "PGRST116") {
+          console.error(
+            "Error fetching current subscription:",
+            subscriptionError
+          );
+          return;
+        }
+
+        if (!subscriptionData) {
+          console.log("No current subscription found");
+          return;
+        }
+
+        // Fixed: Ensure proper date formatting
+        const nextBillingDate = subscriptionData.next_billing_date
+          ? new Date(subscriptionData.next_billing_date).toLocaleDateString(
+              "en-US",
+              {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              }
+            )
+          : "N/A";
+
+        const subscription = {
+          id: subscriptionData.plan_type,
+          name: subscriptionData.plan_type,
+          price: Number(subscriptionData.amount) || 0,
+          nextBillingDate: nextBillingDate,
+          status: subscriptionData.status,
+          billingCycle: subscriptionData.billing_cycle || "monthly",
+        };
+
+        const paymentMethod = {
+          type: "visa",
+          expiryDate: subscriptionData.expiry_date || "N/A",
+          cardNumber: subscriptionData.card_number || "N/A",
+          cvc: subscriptionData.cvc ? Number(subscriptionData.cvc) : null,
+          cardHolderName: subscriptionData.card_holder_name || "N/A",
+        };
+
+        dispatch(updatePaymentMethod(paymentMethod));
+        dispatch(updateCurrentPlan(subscription));
+      } catch (error) {
+        console.error("Error in getCurrentSubscription:", error);
       }
-
-      if (!subscriptionData) {
-        console.log("No current subscription found");
-        return;
-      }
-
-
-      const subscription = {
-        id: subscriptionData.plan_type,
-        name: subscriptionData.plan_type,
-        price: `${subscriptionData.amount}`,
-        nextBillingDate: subscriptionData.next_billing_date || "N/A",
-        status: subscriptionData.status,
-        billingCycle: subscriptionData.billing_cycle || "N/A",
-      };
-      const paymentMethod = {
-        type: "visa",
-        expiryDate: subscriptionData.expiry_date || "N/A",
-        cardNumber: subscriptionData.card_number || "N/A",
-        cvc: subscriptionData.cvc || null,
-        cardHolderName: subscriptionData.card_holder_name || "N/A",
-      };
-
-      dispatch(updatePaymentMethod(paymentMethod));
-      dispatch(updateCurrentPlan(subscription));
     };
     getCurrentSubscription();
     getSubscriptionManagement();
