@@ -1,11 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CreditCard, Crown, Plus, Loader2, Download } from "lucide-react";
 import supabase from "../../supabase-client";
 import { toast } from "sonner";
 import { setBoughtPremium } from "../../Store/PremiumBookSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence, stagger } from "framer-motion";
 import LoadingSkeleton from "./LoadingSkeleton";
+import type { RootState } from "../../Store/store";
+import { 
+  updateCurrentPlan, 
+  updatePaymentMethod, 
+  updateBillingHistory, 
+  updateAutoRenewal, 
+  updateBillingNotifications 
+} from "../../Store/UserSettingsSlice";
 interface planState {
   id: string;
   user_id: string;
@@ -30,27 +38,43 @@ interface planState {
 }
 
 export default function Billing() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // No need to load data since it comes from Redux
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
   const [showCancelSubscriptionModal, setShowCancelSubscriptionModal] =
     useState<boolean>(false);
-
-  const [currentPlan, setCurrentPlan] = useState({
-    name: "free",
-    price: "$0.00/month",
-    nextBilling: "lifetime",
-    status: "active",
-    isYearly: false,
-  });
+  
+  const { reading } = useSelector((state: RootState) => state.userSettings);
   const dispatch = useDispatch();
+  
+  const currentPlan = {
+    name: reading?.billing?.currentPlan?.name || "free",
+    price: `$${reading?.billing?.currentPlan?.price || 0}/${reading?.billing?.currentPlan?.billingCycle || "monthly"}`,
+    nextBilling: reading?.billing?.currentPlan?.nextBillingDate || "N/A",
+    status: reading?.billing?.currentPlan?.status || "active",
+    nextBillingDate: reading?.billing?.currentPlan?.nextBillingDate || "N/A",
+    billingCycle: reading?.billing?.currentPlan?.billingCycle || "monthly",
+    isYearly: reading?.billing?.currentPlan?.billingCycle === "yearly"
+  };
+  
+  const paymentMethod = {
+    type: reading?.billing?.paymentMethod?.type || "visa",
+    lastFour: reading?.billing?.paymentMethod?.cardNumber?.slice(-4) || "0000",
+    expires: reading?.billing?.paymentMethod?.expiryDate || "N/A",
+  };
+  
+  const billingHistory = reading?.billing?.billingHistory?.map(item => ({
+    
+    plan: item.name,
+    date: item.endDate,
+    amount: item.price,
+  })) || [];
+  
+  const autoRenewal = reading?.billing?.subscriptionManagement?.autoRenewal ?? true;
+  const billingNotifications = reading?.billing?.subscriptionManagement?.billingNotifications ?? false;
+  
   const [changePlanModal, setChangePlanModal] = useState<boolean>(false);
-
-  const [autoRenewal, setAutoRenewal] = useState<boolean | null>(null);
-  const [billingNotifications, setBillingNotifications] = useState<
-    boolean | null
-  >(null);
 
   const allPlans = [
     {
@@ -96,12 +120,6 @@ export default function Billing() {
     },
   ];
 
-  const [paymentMethod, setPaymentMethod] = useState({
-    type: "visa",
-    lastFour: "4242",
-    expires: "12/25",
-  });
-
   const [updatedPaymentMethod, setUpdatedPaymentMethod] = useState({
     type: "visa",
     lastFour: "",
@@ -114,15 +132,6 @@ export default function Billing() {
     useState<boolean>(false);
 
   const [selectedPlan, setSelectedPlan] = useState<string>(currentPlan.name);
-
-  const [billingHistory, setBillingHistory] = useState<
-    Array<{
-      id: string;
-      plan: string;
-      date: string;
-      amount: string;
-    }>
-  >([]);
 
   const toggleAutoRenewal = async () => {
     try {
@@ -147,7 +156,7 @@ export default function Billing() {
       const { error } = await supabase.from("user_preferences").upsert({
         user_id: user.id,
         auto_renewal: newValue,
-        billing_notifications: existingPrefs?.billing_notifications ?? true, // Keep existing or default
+        billing_notifications: existingPrefs?.billing_notifications ?? true,
         updated_at: new Date().toISOString(),
       });
 
@@ -157,7 +166,7 @@ export default function Billing() {
         return;
       }
 
-      setAutoRenewal(newValue);
+      dispatch(updateAutoRenewal(newValue));
       toast.success(`Auto-renewal ${newValue ? "enabled" : "disabled"}`);
     } catch (error) {
       console.error("Error toggling auto-renewal:", error);
@@ -198,7 +207,7 @@ export default function Billing() {
         return;
       }
 
-      setBillingNotifications(newValue);
+      dispatch(updateBillingNotifications(newValue));
       toast.success(
         `Billing notifications ${newValue ? "enabled" : "disabled"}`
       );
@@ -211,173 +220,6 @@ export default function Billing() {
   const checkPremiumStatus = (planName: string, status: string) => {
     return status === "active" && planName !== "free";
   };
-  useEffect(() => {
-    const getUserPreferences = async () => {
-      try {
-        setIsLoading(true);
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError || !user) {
-          console.error("Error getting user:", userError);
-          return;
-        }
-
-        // Use .maybeSingle() instead of .single() to avoid 406 errors when no preferences row exists
-        // .single() adds Accept: application/vnd.pgrst.object+json header which causes 406 when no rows found
-        const { data: preferences, error: preferencesError } = await supabase
-          .from("user_preferences")
-          .select("auto_renewal,billing_notifications")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        console.log("user preferences row from useEffect", preferences);
-
-        if (preferencesError) {
-          if (preferencesError.code === "PGRST116") {
-            console.log("No preferences found, using defaults");
-            setAutoRenewal(true);
-            setBillingNotifications(true);
-          } else {
-            console.error("Error getting user preferences:", preferencesError);
-            toast.error(
-              "Error loading preferences: " + preferencesError.message
-            );
-          }
-          return;
-        }
-
-        console.log(
-          `Database values - Auto Renewal: ${preferences?.auto_renewal}, Billing: ${preferences?.billing_notifications}`
-        );
-
-        const autoRenewalValue = preferences?.auto_renewal ?? true;
-        const billingValue = preferences?.billing_notifications ?? true;
-
-        console.log(`Setting Auto Renewal to: ${autoRenewalValue}`);
-        console.log(`Setting Billing Notifications to: ${billingValue}`);
-
-        setAutoRenewal(autoRenewalValue);
-        setBillingNotifications(billingValue);
-      } catch (error) {
-        console.error("Unexpected error:", error);
-        toast.error("An unexpected error occurred while loading preferences");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getUserPreferences();
-  }, []);
-
-  console.log("auto renweal ", autoRenewal);
-  console.log("billing notifications ", billingNotifications);
-
-  useEffect(() => {
-    const getCurrentPlan = async () => {
-      try {
-        setIsLoading(true);
-
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError) {
-          toast.error("Error getting user information");
-          return;
-        }
-
-        if (user) {
-        // Use .maybeSingle() instead of .single() to avoid 406 errors when no subscription exists
-        // This allows graceful handling of users without active subscriptions
-        const { data, error: currentPlanError } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-          if (currentPlanError && currentPlanError.code !== "PGRST116") {
-            toast.error("Error fetching current plan");
-            console.error("Current plan error:", currentPlanError);
-          }
-
-          if (data) {
-            setCurrentPlan({
-              name: data.plan_type,
-              price: `$${data.amount}`,
-              nextBilling: new Date(data.next_billing_date).toLocaleDateString(
-                "en-US",
-                {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }
-              ),
-              status: data.status,
-              isYearly: data.billing_cycle === "yearly",
-            });
-
-            setPaymentMethod({
-              type: "visa",
-              lastFour: data.card_number.slice(-4),
-              expires: data.expiry_date,
-            });
-
-            setAutoRenewal(data.auto_renewal !== false);
-          }
-
-        const { data: preferences } = await supabase
-          .from("user_preferences")
-          .select("billing_notifications")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-          if (preferences) {
-            setBillingNotifications(
-              preferences.billing_notifications !== false
-            );
-          }
-
-          const { data: previousPlans, error: previousPlansError } =
-            await supabase
-              .from("subscription_history")
-              .select("*")
-              .eq("user_id", user.id)
-              .order("created_at", { ascending: false });
-
-          if (previousPlansError) {
-            toast.error("Error fetching previous plans");
-            console.error("Previous plans error:", previousPlansError);
-          }
-
-          if (previousPlans && previousPlans.length > 0) {
-            setBillingHistory(
-              (previousPlans as planState[]).map((plan: planState) => ({
-                id: plan.id,
-                plan: plan.plan_type,
-                date: new Date(plan.created_at).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                }),
-                amount: `$${plan.amount}`,
-              }))
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Unexpected error:", error);
-        toast.error("An unexpected error occurred");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getCurrentPlan();
-  }, [isCanceling, isUpdatingPlan, isUpdatingPayment]);
 
   const handleCancelSubscription = async () => {
     if (currentPlan.status === "canceled") {
@@ -454,10 +296,25 @@ export default function Billing() {
         return;
       }
 
-      setCurrentPlan((prev) => ({
-        ...prev,
-        status: "canceled",
+      // Update Redux state
+      dispatch(updateCurrentPlan({
+        ...reading.billing.currentPlan,
+        status: "canceled"
       }));
+
+      // Add to billing history in Redux
+      const newHistoryItem = {
+        name: reading.billing.currentPlan.name,
+        endDate: new Date().toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }),
+        price: `$${reading.billing.currentPlan.price}`,
+      };
+      
+      const updatedHistory = [newHistoryItem, ...reading.billing.billingHistory];
+      dispatch(updateBillingHistory(updatedHistory));
 
       dispatch(setBoughtPremium(false));
 
@@ -471,8 +328,6 @@ export default function Billing() {
     }
   };
 
-
- 
   if (isLoading) {
     return <LoadingSkeleton />;
   }
@@ -552,19 +407,51 @@ export default function Billing() {
         return;
       }
 
-      setCurrentPlan({
-        name: selectedPlan,
-        price: `$${planPrice}/month`,
-        nextBilling: new Date(
-          new Date().setMonth(new Date().getMonth() + 1)
-        ).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        }),
-        status: "active",
-        isYearly: selectedPlan !== "free",
+      const nextBillingDate = new Date(
+        new Date().setMonth(new Date().getMonth() + 1)
+      ).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
+
+      dispatch(updateCurrentPlan({
+        id: reading.billing.currentPlan.id,
+        name: selectedPlan,
+        price: planPrice,
+        billingCycle: "monthly",
+        nextBillingDate: nextBillingDate,
+        status: "active"
+      }));
+
+      // Add the previous plan to billing history in Redux if it wasn't free
+      if (reading.billing.currentPlan.name !== "free") {
+        const previousPlanHistoryItem = {
+          name: reading.billing.currentPlan.name,
+          endDate: new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          }),
+          price: `$${reading.billing.currentPlan.price}`,
+        };
+        
+        const updatedHistory = [previousPlanHistoryItem, ...reading.billing.billingHistory];
+        dispatch(updateBillingHistory(updatedHistory));
+      }
+
+      // Add the new plan purchase to billing history in Redux if it's not free
+      if (selectedPlan !== "free") {
+        const newPlanHistoryItem = {
+          name: selectedPlan,
+          endDate: nextBillingDate,
+          price: `$${planPrice}`,
+        };
+        
+        const currentHistory = reading.billing.billingHistory;
+        const updatedHistoryWithNew = [newPlanHistoryItem, ...currentHistory];
+        dispatch(updateBillingHistory(updatedHistoryWithNew));
+      }
 
       toast.success("Plan changed successfully");
       setChangePlanModal(false);
@@ -621,7 +508,7 @@ export default function Billing() {
     } finally {
       setIsUpdatingPayment(false);
       toast.success("Payment method updated successfully");
-      setShowUpdatePaymentModal(false);
+      setShowUpdatePaymentMethodModal(false);
     }
   };
 
@@ -837,7 +724,6 @@ export default function Billing() {
                     className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${plan.border}`}
                     onClick={() => setSelectedPlan(plan.id)}
                   >
-                  
                     <div className="flex items-center space-x-3">
                       <motion.input
                         type="radio"
@@ -865,7 +751,6 @@ export default function Billing() {
                       </div>
                     </div>
 
-                    
                     <div className="text-right">
                       <span className="font-semibold text-gray-900">
                         {plan.price}
@@ -1102,14 +987,13 @@ export default function Billing() {
               </motion.span>
             </div>
             <p className="text-gray-600 mt-1">
-              {currentPlan.price.slice(0, 7)}/
-              {currentPlan.isYearly ? "Yearly" : "Monthly"}
+              {currentPlan.price}
             </p>
             <motion.p
               className="text-sm text-gray-500 mt-2"
               variants={itemVariants}
             >
-              Next billing date: {currentPlan.nextBilling}
+              Next billing date: {currentPlan.nextBillingDate}
             </motion.p>
           </div>
         </motion.div>
@@ -1253,7 +1137,7 @@ export default function Billing() {
               <div className="space-y-0">
                 {billingHistory.map((invoice, index) => (
                   <motion.div
-                    key={invoice.id}
+                    key={Date.now()+index}
                     variants={itemVariants}
                     whileHover={{ scale: 1.01, backgroundColor: "#f9fafb" }}
                     transition={{ type: "spring", stiffness: 150, damping: 15 }}
@@ -1316,7 +1200,6 @@ export default function Billing() {
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
           variants={containerVariants}
         >
-         
           <motion.div
             className="p-4 border border-gray-200 rounded-lg"
             variants={itemVariants}
@@ -1346,7 +1229,6 @@ export default function Billing() {
             </p>
           </motion.div>
 
-       
           <motion.div
             className="p-4 border border-gray-200 rounded-lg"
             variants={itemVariants}
@@ -1379,7 +1261,6 @@ export default function Billing() {
           </motion.div>
         </motion.div>
 
-      
         <motion.div
           className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg"
           variants={itemVariants}
@@ -1399,7 +1280,6 @@ export default function Billing() {
         </motion.div>
       </motion.div>
 
-     
       <motion.div
         className="bg-blue-50 rounded-lg p-4 mt-4"
         initial={{ opacity: 0, x: 40 }}

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { ArrowLeft, CreditCard, Lock } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
 import supabase from "../../supabase-client";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { updateCurrentPlan, updateBillingHistory, updatePaymentMethod } from "../../Store/UserSettingsSlice";
+import { setBoughtPremium } from "../../Store/PremiumBookSlice";
 
 const Checkout = () => {
   const [formData, setFormData] = useState({
@@ -27,6 +29,7 @@ const Checkout = () => {
   
   const navigate = useNavigate();
   const { plan } = useSelector((state: RootState) => state.payment);
+  const { reading } = useSelector((state: RootState) => state.userSettings);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -124,8 +127,10 @@ const Checkout = () => {
     });
   };
 
+  const dispatch=useDispatch()
+
   const handlePurchase = async () => {
-    if (!validateForm()) return;
+     if (!validateForm()) return;
 
     setLoading(true);
     console.log("proceeding with payment...");
@@ -143,7 +148,7 @@ const Checkout = () => {
 
       const { data: existingSub, error: checkError } = await supabase
         .from("subscriptions")
-        .select("*") // Changed from "id" to "*"
+        .select("*") 
         .eq("user_id", user.id)
         .single();
 
@@ -230,10 +235,32 @@ const Checkout = () => {
       }
 
       toast.success("Payment successful!");
+      dispatch(updateCurrentPlan({
+        name: plan?.name || "premium",
+        price: plan?.price || "9.99",
+        nextBillingDate: getNextBillingDate(plan?.yearly || false),
+        status: "active",
+        billingCycle: plan?.yearly ? "yearly" : "monthly",
+        isYearly: plan?.yearly || false,
+        }));
+      dispatch(updateBillingHistory({
+        name: existingSub?.plan_type || plan?.name || "premium",
+        price: existingSub?.amount || plan?.price || "9.99",
+        endDate:existingSub.end_date || new Date().toISOString(),
+       
+      }))
+      dispatch(updatePaymentMethod({
+        type: "visa",
+        cardNumber: formData.cardNumber,
+        cardHolderName: formData.cardholderName,
+        expiryDate: formData.expiryDate,
+        cvc: formData.cvc,
+        
+      }));
       navigate("/success");
     } catch (error) {
       console.error("Unexpected error:", error);
-      alert("An unexpected error occurred. Please try again.");
+      alert("An unexpected error occurred. Please try again."+ error.message);
     } finally {
       setLoading(false);
     }

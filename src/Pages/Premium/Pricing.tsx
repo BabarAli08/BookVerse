@@ -23,7 +23,7 @@ const Pricing = () => {
   
   const navigate = useNavigate();
   const handlePayment = (plan: cardState) => {
-    console.log("plan Clicked");
+  
     const originalPrice = parseFloat(plan.price.replace("$", ""));
     const taxed_price = originalPrice * 1.08;
 

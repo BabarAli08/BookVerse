@@ -179,10 +179,13 @@ const userSettingsSlice = createSlice({
       state.reading.billing.paymentMethod = action.payload;
     },
     updateBillingHistory: (state, action) => {
-      state.reading.billing.billingHistory = action.payload;
+      state.reading.billing.billingHistory = [state.reading.billing.billingHistory,action.payload];
     },
     updateAutoRenewal: (state, action) => {
       state.reading.billing.subscriptionManagement.autoRenewal = action.payload;
+    },
+    updateBillingNotifications: (state, action) => {
+      state.reading.billing.subscriptionManagement.billingNotifications = action.payload;
     },
     resetUserSettings:(state)=>{
       return initialState
@@ -204,6 +207,7 @@ export const {
   updatePaymentMethod,
   updateBillingHistory,
   updateAutoRenewal,
+  updateBillingNotifications,
 } = userSettingsSlice.actions;
 
 export default userSettingsSlice.reducer;
