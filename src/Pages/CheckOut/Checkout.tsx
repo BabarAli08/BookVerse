@@ -192,7 +192,6 @@ const Checkout = () => {
         }
       }
 
-      // Prepare subscription data
       const subscriptionData = {
         user_id: user.id,
         plan_type: plan?.name || "premium",
@@ -213,17 +212,16 @@ const Checkout = () => {
         amount: parseFloat(plan?.price?.replace("$", "") || "9.99"),
         created_at: existingSub
           ? existingSub.created_at
-          : new Date().toISOString(), // Keep original created_at if updating
+          : new Date().toISOString(), 
         updated_at: new Date().toISOString(),
       };
 
-      // Use upsert to either insert or update
       const { data: subscriptionResult, error: subscriptionError } =
         await supabase
           .from("subscriptions")
           .upsert(subscriptionData, {
-            onConflict: "user_id", // Assuming user_id is unique
-            ignoreDuplicates: false, // This ensures updates happen
+            onConflict: "user_id", 
+            ignoreDuplicates: false, 
           })
           .select();
 
@@ -239,7 +237,6 @@ const Checkout = () => {
 
       toast.success("Payment successful!");
 
-      // Update Redux store
       dispatch(
         updateCurrentPlan({
           name: plan?.name || "premium",
@@ -251,14 +248,18 @@ const Checkout = () => {
         })
       );
 
-      // Fix billing history dispatch - handle case when no existing subscription
       dispatch(
         updateBillingHistory({
           name: existingSub?.plan_type || plan?.name || "premium",
-          price: existingSub?.amount?.toString() || plan?.price || "9.99",
-          endDate: existingSub
-            ? new Date().toISOString()
-            : new Date().toISOString(),
+          price: `$${
+            existingSub?.amount ||
+            parseFloat(plan?.price?.replace("$", "") || "9.99")
+          }`,
+          endDate: new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          }),
         })
       );
 
@@ -276,7 +277,9 @@ const Checkout = () => {
       navigate("/success");
     } catch (error: any) {
       console.error("Unexpected error:", error);
-      alert("An unexpected error occurred. Please try again. " + error?.message);
+      alert(
+        "An unexpected error occurred. Please try again. " + error?.message
+      );
     } finally {
       setLoading(false);
     }

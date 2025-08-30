@@ -136,7 +136,7 @@ const initialState: initial = {
         cardHolderName: "",
       },
       billingHistory: [],
-      
+
       subscriptionManagement: {
         autoRenewal: true,
         billingNotifications: false,
@@ -164,7 +164,10 @@ const userSettingsSlice = createSlice({
       state.reading.appearanceSettings.backgroundPattern = action.payload;
     },
     updateTypographySettings: (state, action) => {
-      state.reading.typographySettings = { ...state.reading.typographySettings, ...action.payload };
+      state.reading.typographySettings = {
+        ...state.reading.typographySettings,
+        ...action.payload,
+      };
     },
     updateAutoBookmark: (state, action) => {
       state.reading.readingFeatures.autoBookmark = action.payload;
@@ -179,17 +182,25 @@ const userSettingsSlice = createSlice({
       state.reading.billing.paymentMethod = action.payload;
     },
     updateBillingHistory: (state, action) => {
-      state.reading.billing.billingHistory = [...state.reading.billing.billingHistory,...action.payload];
+      if (Array.isArray(action.payload)) {
+        state.reading.billing.billingHistory = action.payload;
+      } else {
+        state.reading.billing.billingHistory = [
+          action.payload,
+          ...state.reading.billing.billingHistory,
+        ];
+      }
     },
     updateAutoRenewal: (state, action) => {
       state.reading.billing.subscriptionManagement.autoRenewal = action.payload;
     },
     updateBillingNotifications: (state, action) => {
-      state.reading.billing.subscriptionManagement.billingNotifications = action.payload;
+      state.reading.billing.subscriptionManagement.billingNotifications =
+        action.payload;
     },
-    resetUserSettings:(state)=>{
-      return initialState
-    }
+    resetUserSettings: () => {
+      return initialState;
+    },
   },
 });
 
