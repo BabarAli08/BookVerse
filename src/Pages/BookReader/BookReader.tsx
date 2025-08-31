@@ -458,12 +458,7 @@ const BookReader = () => {
 
   return togglDark ? "#F3F4F6" : "#374151";
 };
-  const getBackgroundColor = () => {
-    if (theme?.bg) {
-      return theme.bg;
-    }
-    return togglDark ? "#1F2937" : "#FFFFFF";
-  };
+  
 
   const containerVariants: any = {
     hidden: { opacity: 0, scale: 0.95 },
