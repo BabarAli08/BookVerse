@@ -33,7 +33,8 @@ interface initial {
         id: string;
         name: string;
         bg: string;
-        text: string;
+        text:string
+        hex:{bg:string,text:string}
       };
       backgroundPattern: {
         id: string;
@@ -104,6 +105,7 @@ const initialState: initial = {
         name: "Light",
         bg: "bg-white",
         text: "text-gray-900",
+        hex:{bg:"#FFFFFF",text:"#111827"},
       },
       backgroundPattern: {
         id: "none",

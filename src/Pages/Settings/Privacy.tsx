@@ -89,7 +89,6 @@ export default function Privacy() {
           );
         }
 
-        // Delete notes
         const { data: deletedNotes, error: notesDeleteError } = await supabase
           .from("annotations")
           .delete()
@@ -101,7 +100,6 @@ export default function Privacy() {
           );
         }
 
-        // Delete completed books
         const {
           data: deletedCompletedBooks,
           error: completedBooksDeleteError,
@@ -116,7 +114,6 @@ export default function Privacy() {
           );
         }
 
-        // Delete currently reading
         const {
           data: deletedCurrentlyReading,
           error: currentlyReadingDeleteError,
@@ -131,7 +128,6 @@ export default function Privacy() {
           );
         }
 
-        // Delete daily activities
         const {
           data: deletedDailyActivities,
           error: dailyActivitiesDeleteError,
@@ -146,7 +142,6 @@ export default function Privacy() {
           );
         }
 
-        // Delete reading preferences
         const {
           data: deletedReadingPreferences,
           error: readingPreferencesDeleteError,
@@ -161,7 +156,6 @@ export default function Privacy() {
           );
         }
 
-        // Delete subscription history
         const {
           data: deletedSubscriptionHistory,
           error: subscriptionHistoryDeleteError,
@@ -176,7 +170,6 @@ export default function Privacy() {
           );
         }
 
-        // Delete user preferences
         const {
           data: deletedUserPreferences,
           error: userPreferencesDeleteError,
@@ -191,7 +184,6 @@ export default function Privacy() {
           );
         }
 
-        // Delete streaks
         const { data: deletedUserStreaks, error: streaksDeleteError } =
           await supabase.from("user_streaks").delete().eq("user_id", user.id);
         if (streaksDeleteError) {
@@ -201,7 +193,6 @@ export default function Privacy() {
           );
         }
 
-        // Reset Redux state
         dispatch(resetUserSettings());
       }
     } catch (err) {
@@ -321,9 +312,9 @@ export default function Privacy() {
 
           <button
             onClick={() => handleToggle("showReadingActivity")}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 ${
               privacySettings.showReadingActivity
-                ? "bg-purple-600"
+                ? "bg-gray-900"
                 : "bg-gray-200"
             }`}
             role="switch"
@@ -351,8 +342,8 @@ export default function Privacy() {
 
           <button
             onClick={() => handleToggle("showLibrary")}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-              privacySettings.showLibrary ? "bg-purple-600" : "bg-gray-200"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 ${
+              privacySettings.showLibrary ? "bg-gray-900" : "bg-gray-200"
             }`}
             role="switch"
             aria-checked={privacySettings.showLibrary}
@@ -377,8 +368,8 @@ export default function Privacy() {
 
           <button
             onClick={() => handleToggle("allowMessages")}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-              privacySettings.allowMessages ? "bg-purple-600" : "bg-gray-200"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 ${
+              privacySettings.allowMessages ? "bg-gray-900" : "bg-gray-200"
             }`}
             role="switch"
             aria-checked={privacySettings.allowMessages}

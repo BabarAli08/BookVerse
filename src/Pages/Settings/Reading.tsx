@@ -69,8 +69,10 @@ export default function ReadingPreferences() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Get data from Redux store
-  const readingSettings = useSelector((state: RootState) => state.userSettings.reading);
-  
+  const readingSettings = useSelector(
+    (state: RootState) => state.userSettings.reading
+  );
+
   // Local state that mirrors Redux state for form handling
   const [preferences, setPreferences] = useState({
     readingTheme: readingSettings.appearanceSettings.readingTheme,
@@ -225,17 +227,48 @@ export default function ReadingPreferences() {
     },
   ];
 
-  const themeOptions: ThemeOption[] = [
-    { id: "light", name: "Light", bg: "bg-white", text: "text-gray-900" },
-    { id: "sepia", name: "Sepia", bg: "bg-amber-50", text: "text-amber-900" },
-    { id: "dark", name: "Dark", bg: "bg-slate-800", text: "text-white" },
-    { id: "forest", name: "Forest", bg: "bg-green-50", text: "text-green-800" },
-    { id: "ocean", name: "Ocean", bg: "bg-blue-50", text: "text-blue-800" },
+  const themeOptions = [
+    {
+      id: "light",
+      name: "Light",
+      bg: "bg-white",
+      text: "text-gray-900",
+      hex: { bg: "#FFFFFF", text: "#111827" }, // gray-900 hex
+    },
+    {
+      id: "sepia",
+      name: "Sepia",
+      bg: "bg-amber-50",
+      text: "text-amber-900",
+      hex: { bg: "#FFFBEB", text: "#78350F" }, // amber-50 & amber-900
+    },
+    {
+      id: "dark",
+      name: "Dark",
+      bg: "bg-slate-800",
+      text: "text-white",
+      hex: { bg: "#1E293B", text: "#FFFFFF" }, 
+    },
+    {
+      id: "forest",
+      name: "Forest",
+      bg: "bg-green-50",
+      text: "text-green-800",
+      hex: { bg: "#ECFDF5", text: "#065F46" }, 
+    },
+    {
+      id: "ocean",
+      name: "Ocean",
+      bg: "bg-blue-50",
+      text: "text-blue-800",
+      hex: { bg: "#EFF6FF", text: "#1E40AF" }, 
+    },
     {
       id: "lavender",
       name: "Lavender",
       bg: "bg-purple-50",
       text: "text-purple-800",
+      hex: { bg: "#FAF5FF", text: "#5B21B6" },
     },
   ];
 
@@ -446,11 +479,13 @@ export default function ReadingPreferences() {
 
       dispatch(updateReadingTheme(preferences.readingTheme));
       dispatch(updateBackgroundPattern(preferences.background));
-      dispatch(updateTypographySettings({
-        fontSize: preferences.fontSize,
-        fontFamily: preferences.fontFamily,
-        lineSpacing: preferences.lineSpacing,
-      }));
+      dispatch(
+        updateTypographySettings({
+          fontSize: preferences.fontSize,
+          fontFamily: preferences.fontFamily,
+          lineSpacing: preferences.lineSpacing,
+        })
+      );
       dispatch(updateAutoBookmark(preferences.autoBookmark));
       dispatch(updateOfflineDownloads(preferences.offlineDownloads));
 
@@ -489,8 +524,8 @@ export default function ReadingPreferences() {
     },
   };
 
-  // Check if we have valid data (not just default empty values)
-  const hasValidData = preferences.readingTheme.id !== "" || preferences.background.id !== "";
+  const hasValidData =
+    preferences.readingTheme.id !== "" || preferences.background.id !== "";
 
   return (
     <AnimatePresence>
@@ -734,7 +769,7 @@ export default function ReadingPreferences() {
                 }}
               >
                 This is how your reading experience will look. Adjust the
-                settings to match your style 
+                settings to match your style
               </p>
             </div>
             <div className="flex justify-start pt-6 border-t border-gray-200">

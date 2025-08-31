@@ -4,6 +4,8 @@ import type { author, book } from "../../Data/Interfaces";
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import supabase from "../../supabase-client";
+import { setPremiumBookClicked } from "../../Store/ReadSlice";
+import { useDispatch } from "react-redux";
 
 const BookCard = ({ book }: { book: book }) => {
   const [fav, setFav] = useState<boolean>(false);
@@ -92,6 +94,7 @@ const BookCard = ({ book }: { book: book }) => {
       }
     }
   };
+  const dispatch = useDispatch();
 
   return (
     <motion.div
@@ -245,9 +248,12 @@ const BookCard = ({ book }: { book: book }) => {
           <span className="text-sm text-gray-500">{pages}p</span>
         </motion.div>
 
-        {/* Read Button */}
+        
         <motion.button
-          onClick={() => navigate(`/books/${book.id}`)}
+          onClick={() =>{
+              dispatch(setPremiumBookClicked(false))
+             navigate(`/books/${book.id}`)
+          }}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 mt-3"
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -265,7 +271,7 @@ const BookCard = ({ book }: { book: book }) => {
         </motion.button>
       </motion.div>
 
-      <style jsx>{`
+      <style>{`
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;

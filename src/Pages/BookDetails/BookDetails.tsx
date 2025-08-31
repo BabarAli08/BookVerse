@@ -635,7 +635,7 @@ const BookDetails = () => {
               </motion.div>
 
               <motion.div variants={itemVariants} className="p-4 sm:p-6 space-y-3">
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="sync">
                   {bookLoading ? (
                     <motion.div
                       key="loading"

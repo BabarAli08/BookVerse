@@ -87,7 +87,6 @@ const AppRouter = () => {
         return;
       }
 
-      // If no subscription data exists, user doesn't have an active subscription
       if (!subscriptionData) {
         console.log("No subscription found for user");
         return;
@@ -326,31 +325,47 @@ const AppRouter = () => {
 
       if (readingPreferances) {
         const themeOptions = [
-          { id: "light", name: "Light", bg: "bg-white", text: "text-gray-900" },
+          {
+            id: "light",
+            name: "Light",
+            bg: "bg-white",
+            text: "text-gray-900",
+            hex: { bg: "#FFFFFF", text: "#111827" }, 
+          },
           {
             id: "sepia",
             name: "Sepia",
             bg: "bg-amber-50",
             text: "text-amber-900",
+            hex: { bg: "#FFFBEB", text: "#78350F" }, 
           },
-          { id: "dark", name: "Dark", bg: "bg-slate-800", text: "text-white" },
+          {
+            id: "dark",
+            name: "Dark",
+            bg: "bg-slate-800",
+            text: "text-white",
+            hex: { bg: "#1E293B", text: "#FFFFFF" }, 
+          },
           {
             id: "forest",
             name: "Forest",
             bg: "bg-green-50",
             text: "text-green-800",
+            hex: { bg: "#ECFDF5", text: "#065F46" }, 
           },
           {
             id: "ocean",
             name: "Ocean",
             bg: "bg-blue-50",
             text: "text-blue-800",
+            hex: { bg: "#EFF6FF", text: "#1E40AF" }, 
           },
           {
             id: "lavender",
             name: "Lavender",
             bg: "bg-purple-50",
             text: "text-purple-800",
+            hex: { bg: "#FAF5FF", text: "#5B21B6" }, 
           },
         ];
 
@@ -525,14 +540,12 @@ const AppRouter = () => {
           );
           return;
         }
-          console.log("billing history" + billingHistory)
+        console.log("billing history" + billingHistory);
         if (billingHistory && billingHistory.length > 0) {
           const history = billingHistory.map((item) => ({
-           
             name: item.plan,
             price: item.amount,
             endDate: item.end_date,
-            
           }));
           dispatch(updateBillingHistory(history));
         }

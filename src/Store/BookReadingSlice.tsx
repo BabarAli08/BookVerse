@@ -15,7 +15,8 @@ interface themeState {
   id: string;
   name: string;
   bg: string;
-  text: string;
+  text:string
+  hex:{bg:string,text:string}
 }
 interface backgroundState{
   id:string
@@ -47,7 +48,8 @@ const initialState: BookState = {
     id: "sepia",
     name: "Sepia",
     bg: "bg-amber-50",
-    text: "text-amber-900",
+    text:"text-amber-900",
+    hex:{bg:"#FFFBEB",text:"#78350F"}
   },
   background: { id: "none", name: "None", pattern: "", preview: "bg-transparent" },
   togglDark: false,
