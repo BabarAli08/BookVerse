@@ -20,8 +20,9 @@ import BookDetailsLoader from "../../Component/BookDetailsLoader";
 import { useEffect, useState } from "react";
 import supabase from "../../supabase-client";
 import BookDetailsLoadingButton from "../../Component/BookDetailsLoadingButton";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
+import { updateCompletedBooks, updateUserStreaks } from "../../Store/UserSettingsSlice";
 
 const containerVariants :any= {
   hidden: { opacity: 0 },
@@ -208,11 +209,16 @@ const BookDetails = () => {
 
   const { id } = useParams();
   const navigate = useNavigate();
-  const [boughtPremium, setBoughtPremium] = useState<boolean>(false);
+  const {wishlistedBook}=useSelector((state:RootState)=>state.userSettings)
+  useEffect(() => {
+    const isWishlisted = wishlistedBook.some((b) => b.bookId === Number(id));
+    setWishlisted(isWishlisted)
+  },[])
   const { premiumBookClicked } = useSelector((state: RootState) => state.read);
 
-  const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
+  const { book, loading, error } = useFetchSingleBook({ id: Number(id) }); 
 
+  const {currentPlan}=useSelector((state:RootState)=>state.userSettings.reading.billing)
   const imageUrl = useMemo(() => 
     book?.formats?.["image/jpeg"] ||
     book?.formats?.["image/png"] ||
@@ -233,86 +239,8 @@ const BookDetails = () => {
     [book?.authors]
   );
 
-  useEffect(() => {
-    const getSubscriptionStatus = async () => {
-      if (!premiumBookClicked) {
-        setCredentialsLoading(false);
-        return;
-      }
+ 
 
-      try {
-        setCredentialsLoading(true);
-
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError) {
-          toast.error("Could not find the user subscription. Please login");
-          navigate("/signup");
-          return;
-        }
-        const { data, error } = await supabase
-          .from("subscriptions")
-          .select("status, plan_type")
-          .eq("user_id", user?.id)
-          .single();
-        if (error) {
-          setBoughtPremium(false);
-          return;
-        }
-        setBoughtPremium(data.status === "active" && data.plan_type !== "free");
-      } catch (err) {
-        toast.error("Error getting the user subscription status");
-        setBoughtPremium(false);
-        navigate("/signup");
-        return;
-      } finally {
-        setCredentialsLoading(false);
-      }
-    };
-    getSubscriptionStatus();
-  }, [premiumBookClicked, navigate]);
-
-  useEffect(() => {
-    const fetchWishlist = async () => {
-      setWishlistLoading(true);
-      try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError || !user) {
-          navigate("/signup");
-          setWishlistLoading(false);
-          return;
-        }
-
-        const { data: books, error } = await supabase
-          .from("books")
-          .select("book_id")
-          .eq("user_id", user.id)
-          .eq("book_id", id)
-          .limit(1);
-
-        if (error) {
-          console.error("Error fetching wishlist:", error);
-          setWishlistLoading(false);
-          return;
-        }
-
-        setWishlisted(books && books.length > 0);
-        setWishlistLoading(false);
-      } catch (err) {
-        console.error("Unexpected error fetching wishlist:", err);
-        setWishlistLoading(false);
-      }
-    };
-
-    fetchWishlist();
-  }, [id, navigate]);
 
   useEffect(() => {
     if (book?.id) {
@@ -380,6 +308,7 @@ const BookDetails = () => {
     }
   };
 
+  const dispatch=useDispatch()
   const updateUserStreak = async (userId: string, today: string) => {
     try {
       const { data: currentStreak } = await supabase
@@ -396,13 +325,14 @@ const BookDetails = () => {
       if (currentStreak) {
         if (currentStreak.last_activity_date === yesterday) {
           newStreak = currentStreak.current_streak + 1;
-          console.log(`Streak continues! Day ${newStreak}`);
+
+          dispatch(updateUserStreaks({currenStreak:newStreak, longestStreak:Number(currentStreak.longest_streak)}))
         } else {
           newStreak = 1;
-          console.log("Starting new streak");
+           dispatch(updateUserStreaks({currenStreak:newStreak, longestStreak:Number(currentStreak.longest_streak)}))
         }
       } else {
-        console.log("Welcome! Starting your first streak");
+         dispatch(updateUserStreaks({currenStreak:0, longestStreak:Number(currentStreak.longest_streak)}))
       }
 
       const longestStreak = Math.max(
@@ -434,13 +364,13 @@ const BookDetails = () => {
   };
 
   const handleReadFree = useCallback(async () => {
-    if (premiumBookClicked && !boughtPremium) {
+    if ( premiumBookClicked && currentPlan.name==="free") {
       toast.warning("Buy premium to read this book");
       navigate("/premium");
       return;
     }
     try {
-      setBookLoading(true);
+        setBookLoading(true);
 
       const {
         data: { user },
@@ -477,6 +407,10 @@ const BookDetails = () => {
           .eq("user_id", user.id)
           .eq("book_id", id);
 
+        const completedBooks=useSelector((state:RootState)=>state.userSettings.completedBooks)
+        const filteredBooks=completedBooks.filter((book:any)=>book.bookId!==Number(id))
+        
+        dispatch(updateCompletedBooks(filteredBooks))
         navigate(`/books/${id}/read`);
         return;
       }
@@ -519,7 +453,7 @@ const BookDetails = () => {
     } finally {
       setBookLoading(false);
     }
-  }, [boughtPremium, premiumBookClicked, navigate, id, book, imageUrl, authors]);
+  }, [currentPlan, premiumBookClicked, navigate, id, book, imageUrl, authors]);
 
   const handleBookCopy = useCallback(() => {
     navigator.clipboard.writeText(window.location.href);
@@ -527,6 +461,7 @@ const BookDetails = () => {
   }, []);
 
   const handleAddWishlist = useCallback(async () => {
+
     const {
       data: { user },
       error: userError,

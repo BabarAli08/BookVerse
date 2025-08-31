@@ -11,102 +11,31 @@ import {
   LogOut,
   ChevronRight,
 } from "lucide-react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../Store/store";
 
 const Profile = () => {
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+ 
   const [booksRead, setBooksRead] = useState<number>(0);
   const [booksCurrentlyReading, setBooksCurrentlyReading] = useState<number>(0);
   const [streaks, setStreaks] = useState<number>(0);
 
-  useEffect(() => {
-    const getStreaks = async () => {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-      if (userError || !user) {
-        alert("Please login to view your streaks");
-        return;
-      }
+  const {profile}=useSelector((state:RootState)=>state.userSettings)
+  const {streaks:supabaseStreaks,completedBooks:supabaseBooksRead,currentlyReading:supabaseBooksCurrentlyReading}=useSelector((state:RootState)=>state.userSettings)
+  
+  useEffect(()=>{
+    setUser(profile)
+    setStreaks(supabaseStreaks.streaks)
+    setBooksRead(supabaseBooksRead.length)
+    setBooksCurrentlyReading(supabaseBooksCurrentlyReading.length)
 
-      const { data, error } = await supabase
-        .from("user_streaks")
-        .select("current_streak")
-        .eq("user_id", user.id);
-
-      if (error) {
-        console.error("Error fetching streaks:", error.message);
-        return;
-      }
-
-      setStreaks(data?.[0]?.current_streak || 0);
-    };
-
-    getStreaks();
-  }, []);
+    
+  },[])
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const getUser = async () => {
-      setLoading(true);
-      const { data, error } = await supabase.auth.getUser();
-      const {data:realUser,error:userError}=await supabase.from("profiles").select().eq("id",data?.user?.id)
-      console.log("got the user ",realUser)
-      if (error || !data.user || userError ||!realUser?.[0]) {
-        alert("Please login to view your profile");
-        navigate("/signup");
-        return;
-      } else {
-        setUser(realUser[0]);
-        await Promise.all([
-          getCurrentlyReading(data.user.id),
-          getCompletedBooks(data.user.id),
-        ]);
-        setLoading(false);
-      }
-    };
-
-    const getCurrentlyReading = async (userId: string) => {
-      try {
-        const { data: currentlyReadingBooks, error } = await supabase
-          .from("currently_reading")
-          .select("*")
-          .eq("user_id", userId);
-
-        if (error) {
-          
-          console.error("Error fetching currently reading books:", error);
-          return;
-        }
-        setBooksCurrentlyReading(currentlyReadingBooks?.length || 0);
-      } catch (err) {
-        console.error("Unexpected error:", err);
-      }
-    };
-
-    const getCompletedBooks = async (userId: string) => {
-      try {
-        const { data: completedBooks, error } = await supabase
-          .from("completed_books")
-          .select("*")
-          .eq("user_id", userId);
-
-        if (error) {
-          console.error("Error fetching completed books:", error);
-          return;
-        }
-        setBooksRead(completedBooks?.length || 0);
-      } catch (err) {
-        console.error("Unexpected error:", err);
-      }
-    };
-
-    getUser();
-  }, [navigate]);
-
+ 
   const handleEditProfile = () => {
-    console.log("Edit profile clicked");
+    navigate("settings");
   };
 
   const handleLogout = async () => {
@@ -118,16 +47,7 @@ const Profile = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-600"></div>
-          <p className="text-slate-600 font-medium">Loading your profile...</p>
-        </div>
-      </div>
-    );
-  }
+ 
 
   return (
     <div className="min-h-screen bg-slate-50">

@@ -16,7 +16,7 @@ interface PremiumBookProps {
 const PremiumBook = ({ book }: PremiumBookProps) => {
   const dispatch = useDispatch();
   const [fav, setFav] = useState(false);
-  const { boughtPremium } = useSelector((state: RootState) => state.premiumBooks);
+  const { currentPlan } = useSelector((state: RootState) => state.userSettings.reading.billing);
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -94,13 +94,13 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
       whileHover={{ scale: 1.04 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
       className={`w-full max-w-xs bg-white rounded-xl border shadow-md overflow-hidden relative flex flex-col group
-        ${boughtPremium ? "border-purple-100 ring-2 ring-purple-300" : "border-gray-300"}
+        ${currentPlan.name!=="free" && currentPlan.status=="active" ? "border-purple-100 ring-2 ring-purple-300" : "border-gray-300"}
       `}
     >
      
       <span
         className={`absolute top-2 left-2 z-10 text-xs font-semibold px-2 py-1 rounded 
-          ${boughtPremium ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md" : "bg-purple-100 text-purple-800"}
+          ${currentPlan.name!=="free" && currentPlan.status=="active" ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md" : "bg-purple-100 text-purple-800"}
         `}
       >
         Premium
@@ -181,16 +181,16 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
           }
         }}
           onClick={() => {
-            if (!boughtPremium) handleClick();
+            if (currentPlan.name==="free" ) handleClick();
             else handlePremiumBookRead();
           }}
           className={`mt-auto w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center space-x-2
-            ${boughtPremium
+            ${currentPlan.name!=="free" && currentPlan.status=="active"
               ? "bg-purple-600 hover:bg-purple-700 text-white"
               : "bg-white border border-gray-300 hover:bg-gray-50 text-gray-800"}
           `}
         >
-          <span>{boughtPremium ? "Read Premium" : "Upgrade to read"}</span>
+          <span>{currentPlan.name!=="free" && currentPlan.status=="active" ? "Read Premium" : "Upgrade to read"}</span>
         </motion.button>
       </div>
     </motion.div>

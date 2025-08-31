@@ -1,7 +1,7 @@
 import { Trash2, Crown, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import supabase from "../supabase-client"; // Assuming supabase client is imported
+import supabase from "../supabase-client"; 
 
 type WishlistBookProps = {
   book: {

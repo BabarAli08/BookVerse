@@ -24,12 +24,16 @@ import {
   updateBackgroundPattern,
   updateBillingHistory,
   updateBillingNotifications,
+  updateCompletedBooks,
   updateCurrentPlan,
+  updateCurrentlyReading,
   updateOfflineDownloads,
   updatePaymentMethod,
   updateProfile,
   updateReadingTheme,
   updateTypographySettings,
+  updateUserStreaks,
+  updateWishlisted,
 } from "./Store/UserSettingsSlice";
 import { useDispatch } from "react-redux";
 
@@ -330,42 +334,42 @@ const AppRouter = () => {
             name: "Light",
             bg: "bg-white",
             text: "text-gray-900",
-            hex: { bg: "#FFFFFF", text: "#111827" }, 
+            hex: { bg: "#FFFFFF", text: "#111827" },
           },
           {
             id: "sepia",
             name: "Sepia",
             bg: "bg-amber-50",
             text: "text-amber-900",
-            hex: { bg: "#FFFBEB", text: "#78350F" }, 
+            hex: { bg: "#FFFBEB", text: "#78350F" },
           },
           {
             id: "dark",
             name: "Dark",
             bg: "bg-slate-800",
             text: "text-white",
-            hex: { bg: "#1E293B", text: "#FFFFFF" }, 
+            hex: { bg: "#1E293B", text: "#FFFFFF" },
           },
           {
             id: "forest",
             name: "Forest",
             bg: "bg-green-50",
             text: "text-green-800",
-            hex: { bg: "#ECFDF5", text: "#065F46" }, 
+            hex: { bg: "#ECFDF5", text: "#065F46" },
           },
           {
             id: "ocean",
             name: "Ocean",
             bg: "bg-blue-50",
             text: "text-blue-800",
-            hex: { bg: "#EFF6FF", text: "#1E40AF" }, 
+            hex: { bg: "#EFF6FF", text: "#1E40AF" },
           },
           {
             id: "lavender",
             name: "Lavender",
             bg: "bg-purple-50",
             text: "text-purple-800",
-            hex: { bg: "#FAF5FF", text: "#5B21B6" }, 
+            hex: { bg: "#FAF5FF", text: "#5B21B6" },
           },
         ];
 
@@ -512,11 +516,11 @@ const AppRouter = () => {
           lineSpacing: readingPreferances.line_spacing || "Normal",
         };
 
-        dispatch(updateTypographySettings(typoPreferances));
-        dispatch(updateReadingTheme(theme));
-        dispatch(updateBackgroundPattern(background));
-        dispatch(updateAutoBookmark(readingPreferances.auto_bookmark || true));
         dispatch(
+          updateTypographySettings(typoPreferances),
+          updateReadingTheme(theme),
+          updateBackgroundPattern(background),
+          updateAutoBookmark(readingPreferances.auto_bookmark || true),
           updateOfflineDownloads(readingPreferances.offline_downloads || true)
         );
       }
@@ -649,6 +653,117 @@ const AppRouter = () => {
         console.error("Error in getCurrentSubscription:", error);
       }
     };
+
+    const getUserStreaks=async()=>{
+      if(!user) return 
+      const {data:streaks,error:streaksError}=await supabase.from("user_streaks").select("*").eq("user_id",user.id).maybeSingle()
+      if(streaksError) {
+        console.log("error getting streaks ",streaksError.message)
+      }
+
+      const filteredStreaks=streaks.map((s:any)=>({
+        currenStreak:s.current_streak,
+        longestStreak:s.longest_streak
+      }))
+
+      dispatch(updateUserStreaks(filteredStreaks))
+
+
+    }
+    const getCurrentlyReading = async () => {
+      if(!user) return 
+      try {
+        const { data: currentlyReadingBooks, error } = await supabase
+          .from("currently_reading")
+          .select("*")
+          .eq("user_id", user?.id);
+
+        if (error) {
+          
+          console.error("Error fetching currently reading books:", error);
+          return;
+        }
+        const filteredCurrentlyReadingBooks = currentlyReadingBooks.map(
+          (book: any) => ({
+            bookId: book.book_id,
+            title: book.title,
+            description: book.description,
+            authors: book.authors,
+            tier: book.tier,
+            cover: book.cover,
+            publishedAt: book.published_at,
+          })
+        );  
+          console.log("currenly reading", filteredCurrentlyReadingBooks)
+        dispatch(updateCurrentlyReading(filteredCurrentlyReadingBooks))
+      } catch (err) {
+        console.error("Unexpected error:", err);
+      }
+    };
+
+    const getCompletedBooks = async () => {
+      if(!user) return 
+      try {
+        const { data: completedBooks, error } = await supabase
+          .from("completed_books")
+          .select("*")
+          .eq("user_id", user?.id);
+
+          console.log(completedBooks)
+        if (error) {
+          console.error("Error fetching completed books:", error);
+          return;
+        }
+        const filteredCompletedReadingBooks = completedBooks.map(
+          (book: any) => ({
+            bookId: book.book_id,
+            title: book.title,
+            description: book.description,
+            authors: book.authors,
+            tier: book.tier,
+            cover: book.cover,
+      
+          })
+        );
+
+        console.log("filteredCompletedReadingBooks", filteredCompletedReadingBooks)
+        dispatch(updateCompletedBooks(filteredCompletedReadingBooks))
+      } catch (err) {
+        console.error("Unexpected error:", err);
+      }
+    };
+    const getWishlistedBooks=async()=>{
+      if(!user) return 
+      try {
+        const { data: wishlistedBooks, error } = await supabase
+          .from("books").select("*").eq("user_id", user?.id);
+
+        if (error) {
+          console.error("Error fetching wishlisted books:", error);
+          return;
+        }
+        const filteredWishlistedBooks = wishlistedBooks.map((book)=>{
+          return {
+            title:book.title,
+            bookId:book.id,
+            description:book.description,
+            authors:book.authors,
+            tier:book.tier,
+            cover:book.cover,
+            publishedAt:book.published_at
+          }
+        })
+
+        dispatch(updateWishlisted(filteredWishlistedBooks))
+    }
+    catch(err:any){
+      console.error("Unexpected error while fetching the wishlisted Books:", err.message);
+    }
+  }
+    getWishlistedBooks()
+    getCompletedBooks()
+    getCurrentlyReading()
+    getUserStreaks()
     getCurrentSubscription();
     getSubscriptionManagement();
     getUserBillingHistory();

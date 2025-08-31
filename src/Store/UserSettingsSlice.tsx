@@ -6,6 +6,26 @@ interface billingState {
   price: string;
 }
 
+interface currentlyReading {
+  bookId: number;
+  title: string;
+  description: string;
+  authors: string;
+  tier: string;
+  cover: string;
+  publishedAt: number;
+}
+
+interface wishlistedBook{
+  title:string
+  bookId:number
+  description:string
+  authors:string
+  tier:string
+  cover:string
+  publishedAt:number
+}
+
 interface initial {
   profile: {
     name: string;
@@ -33,8 +53,8 @@ interface initial {
         id: string;
         name: string;
         bg: string;
-        text:string
-        hex:{bg:string,text:string}
+        text: string;
+        hex: { bg: string; text: string };
       };
       backgroundPattern: {
         id: string;
@@ -75,6 +95,13 @@ interface initial {
       };
     };
   };
+  streaks: {
+    streaks: number;
+    longestStreak: number;
+  };
+  currentlyReading: currentlyReading[];
+  completedBooks: currentlyReading[];
+  wishlistedBook:wishlistedBook[]
 }
 
 const initialState: initial = {
@@ -105,7 +132,7 @@ const initialState: initial = {
         name: "Light",
         bg: "bg-white",
         text: "text-gray-900",
-        hex:{bg:"#FFFFFF",text:"#111827"},
+        hex: { bg: "#FFFFFF", text: "#111827" },
       },
       backgroundPattern: {
         id: "none",
@@ -146,6 +173,13 @@ const initialState: initial = {
       },
     },
   },
+  streaks: {
+    streaks: 0,
+    longestStreak: 0,
+  },
+  currentlyReading: [],
+  completedBooks: [],
+  wishlistedBook:[]
 };
 
 const userSettingsSlice = createSlice({
@@ -184,6 +218,27 @@ const userSettingsSlice = createSlice({
     },
     updatePaymentMethod: (state, action) => {
       state.reading.billing.paymentMethod = action.payload;
+    },
+    updateUserStreaks: (state, action) => {
+      state.streaks = action.payload;
+    },
+    updateCurrentlyReading: (state, action) => {
+      const combined = [...state.currentlyReading, ...action.payload];
+      state.currentlyReading = Array.from(
+        new Map(combined.map((book) => [book.bookId, book])).values()
+      );
+    },
+    updateWishlisted: (state, action) => {
+      const combined = [...state.wishlistedBook, ...action.payload];
+      state.wishlistedBook = Array.from(
+        new Map(combined.map((book) => [book.bookId, book])).values()
+      );
+    },
+    updateCompletedBooks: (state, action) => {
+      const combined = [...state.completedBooks, ...action.payload];
+      state.completedBooks = Array.from(
+        new Map(combined.map((book) => [book.bookId, book])).values()
+      );
     },
     updateBillingHistory: (state, action) => {
       if (Array.isArray(action.payload)) {
@@ -228,7 +283,11 @@ export const {
   updateAutoBookmark,
   updateOfflineDownloads,
   updateCurrentPlan,
+  updateCurrentlyReading,
+  updateUserStreaks,
+  updateCompletedBooks,
   updatePaymentMethod,
+  updateWishlisted,
   updateBillingHistory,
   updateAutoRenewal,
   updateBillingNotifications,

@@ -95,17 +95,7 @@ const BookReader = () => {
     dispatch(setTheme(readingTheme));
     dispatch(setBackground(backgroundPattern));
 
-    console.log("Current reading preferences:", {
-      togglDark: togglDark,
-      toggleSidebar: toggleSidebar,
-      letterSpacing: letterSpacing,
-      isFocused: isFocused,
-      fontSize: fontSize,
-      fontFamily: fontFamily,
-      lineHeight: lineHeight,
-      theme: theme,
-      background: background,
-    });
+    
   }, [
     supabaseFontSize,
     supabaseFontFamily,
