@@ -1186,7 +1186,7 @@ export default function Billing() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="font-semibold text-gray-900">
-                        {invoice.amount}
+                        ${invoice.amount}
                       </span>
                       <motion.button
                         whileHover={{ scale: 1.05 }}

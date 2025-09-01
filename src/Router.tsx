@@ -43,6 +43,14 @@ const AppRouter = () => {
   const [user, setUser] = useState<User | null>(null);
   const dispatch = useDispatch();
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0"); 
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -328,6 +336,7 @@ const AppRouter = () => {
       if (readingPreferancesError) return;
 
       if (readingPreferances) {
+        console.log("user theme preferances ", readingPreferances);
         const themeOptions = [
           {
             id: "light",
@@ -505,10 +514,9 @@ const AppRouter = () => {
         const theme =
           themeOptions.find((t) => t.id === readingPreferances.theme) ||
           themeOptions[0];
-        const background =
-          backgroundOptions.find(
-            (b) => b.id === readingPreferances.background
-          ) || backgroundOptions[0];
+        const background = backgroundOptions.find(
+          (b) => b.id === readingPreferances.background
+        );
 
         const typoPreferances = {
           fontSize: readingPreferances.font_size || "Medium",
@@ -544,12 +552,12 @@ const AppRouter = () => {
           );
           return;
         }
-     
+
         if (billingHistory && billingHistory.length > 0) {
           const history = billingHistory.map((item) => ({
             name: item.plan_type,
             price: item.amount,
-            endDate: item.end_date,
+            endDate: formatDate(item.end_date),
           }));
           dispatch(updateBillingHistory(history));
         }
@@ -668,7 +676,7 @@ const AppRouter = () => {
         return;
       }
 
-      if (!streak) return; 
+      if (!streak) return;
 
       const filteredStreak = {
         currentStreak: streak.current_streak,
