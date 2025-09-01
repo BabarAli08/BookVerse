@@ -16,14 +16,14 @@ interface currentlyReading {
   publishedAt: number;
 }
 
-interface wishlistedBook{
-  title:string
-  bookId:number
-  description:string
-  authors:string
-  tier:string
-  cover:string
-  publishedAt:number
+interface wishlistedBook {
+  title: string;
+  bookId: number;
+  description: string;
+  authors: string;
+  tier: string;
+  cover: string;
+  publishedAt: number;
 }
 
 interface initial {
@@ -101,7 +101,7 @@ interface initial {
   };
   currentlyReading: currentlyReading[];
   completedBooks: currentlyReading[];
-  wishlistedBook:wishlistedBook[]
+  wishlistedBook: wishlistedBook[];
 }
 
 const initialState: initial = {
@@ -179,7 +179,7 @@ const initialState: initial = {
   },
   currentlyReading: [],
   completedBooks: [],
-  wishlistedBook:[]
+  wishlistedBook: [],
 };
 
 const userSettingsSlice = createSlice({
@@ -229,9 +229,18 @@ const userSettingsSlice = createSlice({
       );
     },
     updateWishlisted: (state, action) => {
-      const combined = [...state.wishlistedBook, ...action.payload];
-      state.wishlistedBook = Array.from(
-        new Map(combined.map((book) => [book.bookId, book])).values()
+      if (action.payload.replace) {
+        state.wishlistedBook = action.payload.books;
+      } else {
+        const combined = [...state.wishlistedBook, ...action.payload];
+        state.wishlistedBook = Array.from(
+          new Map(combined.map((book) => [book.bookId, book])).values()
+        );
+      }
+    },
+    removeFromWishlist: (state, action) => {
+      state.wishlistedBook = state.wishlistedBook.filter(
+        (book) => book.bookId !== action.payload
       );
     },
     updateCompletedBooks: (state, action) => {
@@ -252,6 +261,7 @@ const userSettingsSlice = createSlice({
         ];
       }
     },
+
     updateAutoRenewal: (state, action) => {
       state.reading.billing.subscriptionManagement.autoRenewal = action.payload;
     },
@@ -285,6 +295,7 @@ export const {
   updateCurrentPlan,
   updateCurrentlyReading,
   updateUserStreaks,
+  removeFromWishlist,
   updateCompletedBooks,
   updatePaymentMethod,
   updateWishlisted,

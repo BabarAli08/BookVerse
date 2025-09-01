@@ -108,7 +108,6 @@ const BookCard = ({ book }: { book: book }) => {
       }}
       layout
     >
-      {/* Image Section */}
       <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
         {/* Free Badge */}
         <motion.div

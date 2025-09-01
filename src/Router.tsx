@@ -754,6 +754,8 @@ const AppRouter = () => {
           }
         })
 
+        console.log("filteredWishlistedBooks", filteredWishlistedBooks)
+
         dispatch(updateWishlisted(filteredWishlistedBooks))
     }
     catch(err:any){

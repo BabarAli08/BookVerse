@@ -8,6 +8,7 @@ import supabase from "../../supabase-client";
 import { useNavigate } from "react-router";
 import { setPremiumBookClicked } from "../../Store/ReadSlice";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 interface PremiumBookProps {
   book: bookState;
@@ -45,6 +46,10 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
         .single();
 
       if (!error && favBooks) setFav(true);
+      else {
+        toast.warning("could not find book in wishlist")
+        setFav(false);
+      }
     }
     fetchFav();
   }, [book.id]);
@@ -71,7 +76,10 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
         description: book?.summaries?.[0],
       };
 
-      await supabase.from("books").upsert([mappedBook], { onConflict: ["user_id", "book_id"] });
+     const {data,error}= await supabase.from("books").upsert([mappedBook], { onConflict: ["user_id", "book_id"] });
+     if(error){
+      toast.error("could not add book to wishlist")
+     }
     } else {
       await supabase.from("books").delete().eq("book_id", book.id).eq("user_id", user.id);
     }
