@@ -544,10 +544,10 @@ const AppRouter = () => {
           );
           return;
         }
-        console.log("billing history" + billingHistory);
+     
         if (billingHistory && billingHistory.length > 0) {
           const history = billingHistory.map((item) => ({
-            name: item.plan,
+            name: item.plan_type,
             price: item.amount,
             endDate: item.end_date,
           }));

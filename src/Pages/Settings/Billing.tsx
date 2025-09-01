@@ -371,6 +371,7 @@ export default function Billing() {
         const { error } = await supabase
           .from("subscription_history")
           .insert([previousPlan]);
+          
 
         if (error) {
           toast.error(`Error saving previous plan: ${error.message}`);
@@ -410,6 +411,21 @@ export default function Billing() {
         day: "numeric",
       });
 
+      if (selectedPlan !== "free") {
+        const newPlanHistoryItem = {
+          name: currentPlan.name,
+          endDate: currentPlan.nextBilling,
+          price: `${currentPlan.price}`,
+        };
+
+        const updatedHistoryWithNew = [
+          newPlanHistoryItem,
+          ...(reading.billing.billingHistory || []),
+        ];
+
+        dispatch(updateBillingHistory(updatedHistoryWithNew));
+      }
+
       dispatch(
         updateCurrentPlan({
           id: reading.billing.currentPlan.id,
@@ -421,20 +437,7 @@ export default function Billing() {
         })
       );
 
-      if (selectedPlan !== "free") {
-        const newPlanHistoryItem = {
-          name: selectedPlan,
-          endDate: nextBillingDate,
-          price: `$${planPrice}`,
-        };
-
-        const updatedHistoryWithNew = [
-          newPlanHistoryItem,
-          ...(reading.billing.billingHistory || []),
-        ];
-
-        dispatch(updateBillingHistory(updatedHistoryWithNew));
-      }
+      
 
       const plan = checkPremiumStatus(selectedPlan, "active");
       dispatch(setBoughtPremium(plan));

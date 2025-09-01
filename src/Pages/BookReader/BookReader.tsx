@@ -98,6 +98,7 @@ const BookReader = () => {
     
   }, [
     supabaseFontSize,
+    dispatch,
     supabaseFontFamily,
     supabaseLineHeight,
     readingTheme,

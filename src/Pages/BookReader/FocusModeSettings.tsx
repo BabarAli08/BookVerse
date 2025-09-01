@@ -91,7 +91,7 @@ const FocusModeSettings = () => {
     <>
       {/* Minimal Focus Mode Controls - Fixed Position, Top Right */}
       <div 
-        className={`fixed top-4 right-4 z-50 transition-all duration-300 ${
+        className={`fixed top-3 sm:top-4 right-3 sm:right-4 z-50 transition-all duration-300 ${
           isHovered ? 'opacity-100' : 'opacity-60'
         }`}
         onMouseEnter={() => setIsHovered(true)}
@@ -99,29 +99,30 @@ const FocusModeSettings = () => {
       >
         <div className={`${currentTheme?.bg} ${currentTheme?.text} rounded-lg shadow-lg backdrop-blur-sm border border-white/20`}>
           {/* Compact Status Bar */}
-          <div className="px-3 py-2 flex items-center gap-3 text-sm">
-            <div className="flex items-center gap-2">
+          <div className="px-2 sm:px-3 py-2 flex items-center gap-2 sm:gap-3 text-sm">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Eye className="w-3 h-3 opacity-60" />
-              <span className="text-xs opacity-80">Focus Mode</span>
+              <span className="text-xs opacity-80 hidden sm:inline">Focus Mode</span>
+              <span className="text-xs opacity-80 sm:hidden">Focus</span>
             </div>
             <div className="flex items-center gap-1 text-xs opacity-60">
               <Clock className="w-3 h-3" />
               <span>{formatTime(focusTime)}</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 sm:gap-1">
               <button 
                 onClick={() => setFocusSettingsOpen(true)}
-                className="p-1 hover:bg-black/10 rounded-md transition-colors"
+                className="p-1 sm:p-1.5 hover:bg-black/10 rounded-md transition-colors touch-manipulation"
                 title="Focus Settings"
               >
-                <Settings className="w-3 h-3" />
+                <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
               <button 
                 onClick={exitFocusMode}
-                className="p-1 hover:bg-black/10 rounded-md transition-colors"
+                className="p-1 sm:p-1.5 hover:bg-black/10 rounded-md transition-colors touch-manipulation"
                 title="Exit Focus Mode"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </div>
           </div>
@@ -130,46 +131,46 @@ const FocusModeSettings = () => {
 
      
       {focusSettingsOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100] animate-in fade-in duration-200">
-          <div className={`rounded-xl shadow-2xl w-full max-w-sm animate-in slide-in-from-top-4 duration-300 ${
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-[100] animate-in fade-in duration-200">
+          <div className={`rounded-xl shadow-2xl w-full max-w-sm sm:max-w-md animate-in slide-in-from-top-4 duration-300 max-h-[90vh] overflow-y-auto ${
             togglDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
           }`}>
             {/* Header */}
-            <div className={`flex items-center justify-between px-5 py-4 border-b ${
+            <div className={`flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b ${
               togglDark ? 'border-gray-700' : 'border-gray-200'
             }`}>
-              <h2 className={`font-semibold ${togglDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              <h2 className={`font-semibold text-base sm:text-lg ${togglDark ? 'text-gray-100' : 'text-gray-900'}`}>
                 Focus Settings
               </h2>
               <button
                 onClick={() => setFocusSettingsOpen(false)}
-                className={`p-1.5 rounded-lg transition-colors ${
+                className={`p-2 sm:p-1.5 rounded-lg transition-colors touch-manipulation ${
                   togglDark ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5 sm:w-4 sm:h-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-6">
+            <div className="p-4 sm:p-5 space-y-5 sm:space-y-6">
               {/* Reading Theme */}
               <div>
                 <h3 className={`text-sm font-medium mb-3 ${togglDark ? 'text-gray-200' : 'text-gray-900'}`}>
                   Reading Theme
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {themes.map((themeOption) => (
                     <button
                       key={themeOption.id}
                       onClick={() => handleThemeChange(themeOption.id)}
-                      className={`${themeOption.bg} p-3 rounded-lg text-center transition-all duration-200 ${
+                      className={`${themeOption.bg} p-3 sm:p-4 rounded-lg text-center transition-all duration-200 touch-manipulation ${
                         currentTheme?.id === themeOption.id 
                           ? 'ring-2 ring-blue-500 scale-105' 
-                          : 'hover:ring-1 hover:ring-gray-300 hover:scale-102'
+                          : 'hover:ring-1 hover:ring-gray-300 hover:scale-102 active:scale-95'
                       }`}
                     >
                       <div className={`${themeOption.text}`}>
-                        <div className="font-medium text-sm">{themeOption.name}</div>
+                        <div className="font-medium text-xs sm:text-sm">{themeOption.name}</div>
                         <div className="text-xs opacity-70 mt-1">Aa</div>
                       </div>
                     </button>
@@ -189,7 +190,7 @@ const FocusModeSettings = () => {
                     max="32"
                     value={fontSize}
                     onChange={handleFontSizeChange}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                    className="w-full h-3 sm:h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider touch-manipulation"
                   />
                   <div className={`flex justify-between text-xs mt-2 ${
                     togglDark ? 'text-gray-400' : 'text-gray-500'
@@ -216,7 +217,7 @@ const FocusModeSettings = () => {
                     step="0.1"
                     value={lineHeight}
                     onChange={handleLineHeightChange}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                    className="w-full h-3 sm:h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider touch-manipulation"
                   />
                   <div className={`flex justify-between text-xs mt-2 ${
                     togglDark ? 'text-gray-400' : 'text-gray-500'
@@ -236,22 +237,23 @@ const FocusModeSettings = () => {
                   Ambient Sound
                 </h3>
                 <div className="flex items-center justify-between">
-                  <div className={`flex items-center gap-2 text-sm ${
+                  <div className={`flex items-center gap-2 text-xs sm:text-sm ${
                     togglDark ? 'text-gray-300' : 'text-gray-600'
                   }`}>
                     {ambientSound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                    <span>Soft background noise</span>
+                    <span className="hidden sm:inline">Soft background noise</span>
+                    <span className="sm:hidden">Background noise</span>
                   </div>
                   <button
                     onClick={() => setAmbientSound(!ambientSound)}
-                    className={`text-sm font-medium px-3 py-1 rounded-md transition-colors ${
+                    className={`text-xs sm:text-sm font-medium px-3 py-1.5 sm:py-1 rounded-md transition-colors touch-manipulation ${
                       ambientSound
                         ? togglDark 
-                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800' 
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200 active:bg-blue-300'
                         : togglDark 
-                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 active:bg-gray-500' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300'
                     }`}
                   >
                     {ambientSound ? 'On' : 'Off'}
@@ -262,10 +264,10 @@ const FocusModeSettings = () => {
               {/* Apply Button */}
               <button
                 onClick={() => setFocusSettingsOpen(false)}
-                className={`w-full py-3 rounded-lg font-medium text-sm transition-colors ${
+                className={`w-full py-3 sm:py-2.5 rounded-lg font-medium text-sm transition-colors touch-manipulation ${
                   togglDark 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-gray-900 hover:bg-gray-800 text-white'
+                    ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white' 
+                    : 'bg-gray-900 hover:bg-gray-800 active:bg-gray-700 text-white'
                 }`}
               >
                 Apply Settings
@@ -302,14 +304,18 @@ const FocusModeSettings = () => {
           transform: scale(1.02);
         }
 
+        .touch-manipulation {
+          touch-action: manipulation;
+        }
+
         .slider {
           background: ${togglDark ? '#374151' : '#E5E7EB'};
         }
 
         .slider::-webkit-slider-thumb {
           appearance: none;
-          height: 18px;
-          width: 18px;
+          height: 20px;
+          width: 20px;
           border-radius: 50%;
           background: #3B82F6;
           cursor: pointer;
@@ -323,10 +329,14 @@ const FocusModeSettings = () => {
           transform: scale(1.1);
           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
+
+        .slider::-webkit-slider-thumb:active {
+          transform: scale(1.2);
+        }
         
         .slider::-moz-range-thumb {
-          height: 18px;
-          width: 18px;
+          height: 20px;
+          width: 20px;
           border-radius: 50%;
           background: #3B82F6;
           cursor: pointer;
@@ -338,6 +348,30 @@ const FocusModeSettings = () => {
         .slider::-moz-range-thumb:hover {
           background: #2563EB;
           transform: scale(1.1);
+        }
+
+        .slider::-moz-range-thumb:active {
+          transform: scale(1.2);
+        }
+
+        /* Mobile-specific styles */
+        @media (max-width: 640px) {
+          .slider::-webkit-slider-thumb {
+            height: 24px;
+            width: 24px;
+          }
+          
+          .slider::-moz-range-thumb {
+            height: 24px;
+            width: 24px;
+          }
+        }
+
+        /* Prevent zoom on input focus on iOS */
+        @media (max-width: 768px) {
+          input[type="range"] {
+            font-size: 16px;
+          }
         }
       `}</style>
     </>

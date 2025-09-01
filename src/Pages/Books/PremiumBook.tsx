@@ -60,7 +60,15 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
       return;
     }
     if (!fav) {
-      dispatch(updateWishlisted([book]));
+       const filteredBook={
+        title:book.title,
+        bookId:book.id,
+        description:book.summaries?.[0],
+        authors:allAuthors,
+        cover:book.formats?.["image/jpeg"],
+        publishedAt:book?.authors?.[0]?.death_year,
+      }
+      dispatch(updateWishlisted([filteredBook]));
       setFav(true);
     } else {
       dispatch(removeFromWishlist(book.id));

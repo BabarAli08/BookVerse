@@ -18,8 +18,7 @@ const Header = () => {
     dispatch(setIsFocused(!isFocused));
   };
 
-
-  const headerVariants:any = {
+  const headerVariants: any = {
     initial: { y: -100, opacity: 0 },
     animate: { 
       y: 0, 
@@ -33,7 +32,7 @@ const Header = () => {
     }
   };
 
-  const buttonVariants:any = {
+  const buttonVariants: any = {
     initial: { scale: 0, opacity: 0 },
     animate: { 
       scale: 1, 
@@ -51,7 +50,7 @@ const Header = () => {
     tap: { scale: 0.95 }
   };
 
-  const titleVariants:any = {
+  const titleVariants: any = {
     initial: { opacity: 0, y: 20 },
     animate: { 
       opacity: 1, 
@@ -64,11 +63,11 @@ const Header = () => {
     }
   };
 
-  const iconRotateVariants:any = {
+  const iconRotateVariants: any = {
     hover: { rotate: 360, transition: { duration: 0.6 } }
   };
 
-  const focusVariants:any = {
+  const focusVariants: any = {
     focused: { 
       scale: 1.1,
       boxShadow: isDarkMode 
@@ -93,20 +92,21 @@ const Header = () => {
           ? 'bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 border-gray-700/50' 
           : 'bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 border-gray-200/50'
         } 
-        backdrop-blur-md border-b shadow-lg px-6 py-4 transition-all duration-500 ease-in-out
-        ${isFocused ? 'py-6' : 'py-4'}
+        backdrop-blur-md border-b shadow-lg px-4 sm:px-6 py-3 sm:py-4 transition-all duration-500 ease-in-out
+        ${isFocused ? 'py-4 sm:py-6' : 'py-3 sm:py-4'}
+        overflow-hidden
       `}
     >
-      <div className="flex items-center justify-between max-w-6xl mx-auto">
+      <div className="flex items-center justify-between max-w-6xl mx-auto min-w-0">
         
-        
+        {/* Menu Button */}
         <motion.button
           variants={buttonVariants}
           whileHover="hover"
           whileTap="tap"
           onClick={() => dispatch(setSidebar())}
           className={`
-            p-3 rounded-xl backdrop-blur-sm
+            p-2 sm:p-3 rounded-xl backdrop-blur-sm flex-shrink-0
             ${isDarkMode 
               ? 'bg-gray-700/50 hover:bg-gray-600/70 text-gray-300 hover:text-white shadow-lg shadow-gray-900/20' 
               : 'bg-white/70 hover:bg-white/90 text-gray-600 hover:text-gray-800 shadow-lg shadow-gray-200/50'
@@ -116,13 +116,14 @@ const Header = () => {
           `}
         >
           <motion.div variants={iconRotateVariants} whileHover="hover">
-            <Menu className="w-5 h-5" />
+            <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
           </motion.div>
         </motion.button>
 
+        {/* Title Section */}
         <motion.div 
           variants={titleVariants}
-          className="flex-1 text-center px-8"
+          className="flex-1 text-center px-2 sm:px-8 min-w-0 mx-2 sm:mx-4"
         >
           <AnimatePresence mode="wait">
             {book?.title && (
@@ -132,18 +133,21 @@ const Header = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
+                className="min-w-0"
               >
                 <motion.h1 
                   className={`
-                    text-xl font-bold bg-gradient-to-r 
+                    text-base sm:text-xl font-bold bg-gradient-to-r 
                     ${isDarkMode 
                       ? 'from-white via-gray-100 to-gray-200 text-transparent' 
                       : 'from-gray-800 via-gray-900 to-gray-800 text-transparent'
                     } 
-                    bg-clip-text mb-2 leading-tight
+                    bg-clip-text mb-1 sm:mb-2 leading-tight
+                    truncate max-w-full
                   `}
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
+                  title={book.title} // Show full title on hover
                 >
                   {book.title}
                 </motion.h1>
@@ -151,12 +155,14 @@ const Header = () => {
                 {book.authors && (
                   <motion.p 
                     className={`
-                      text-sm font-medium
+                      text-xs sm:text-sm font-medium
                       ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}
+                      truncate max-w-full
                     `}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3, duration: 0.4 }}
+                    title={book.authors.map((author) => author.name).join(', ')} // Show full authors on hover
                   >
                     {book.authors.map((author) => author.name).join(', ')}
                   </motion.p>
@@ -166,8 +172,9 @@ const Header = () => {
           </AnimatePresence>
         </motion.div>
 
+        {/* Action Buttons */}
         <motion.div 
-          className="flex items-center gap-2"
+          className="flex items-center gap-1 sm:gap-2 flex-shrink-0"
           variants={{
             animate: {
               transition: {
@@ -177,12 +184,13 @@ const Header = () => {
             }
           }}
         >
+          {/* Bookmark Button - Hidden on mobile */}
           <motion.button
             variants={buttonVariants}
             whileHover="hover"
             whileTap="tap"
             className={`
-              p-3 rounded-xl backdrop-blur-sm relative overflow-hidden group
+              hidden sm:flex p-3 rounded-xl backdrop-blur-sm relative overflow-hidden group
               ${isDarkMode 
                 ? 'bg-gray-700/50 hover:bg-yellow-600/20 text-gray-300 hover:text-yellow-400 shadow-lg shadow-gray-900/20' 
                 : 'bg-white/70 hover:bg-yellow-100/80 text-gray-600 hover:text-yellow-600 shadow-lg shadow-gray-200/50'
@@ -199,12 +207,13 @@ const Header = () => {
             </motion.div>
           </motion.button>
 
+          {/* Search Button - Hidden on mobile */}
           <motion.button
             variants={buttonVariants}
             whileHover="hover"
             whileTap="tap"
             className={`
-              p-3 rounded-xl backdrop-blur-sm
+              hidden sm:flex p-3 rounded-xl backdrop-blur-sm
               ${isDarkMode 
                 ? 'bg-gray-700/50 hover:bg-blue-600/20 text-gray-300 hover:text-blue-400 shadow-lg shadow-gray-900/20' 
                 : 'bg-white/70 hover:bg-blue-100/80 text-gray-600 hover:text-blue-600 shadow-lg shadow-gray-200/50'
@@ -221,6 +230,7 @@ const Header = () => {
             </motion.div>
           </motion.button>
 
+          {/* Focus Button */}
           <motion.button
             variants={buttonVariants}
             whileHover="hover"
@@ -229,7 +239,7 @@ const Header = () => {
             variants={focusVariants}
             onClick={handleFocus}
             className={`
-              p-3 rounded-xl backdrop-blur-sm relative
+              p-2 sm:p-3 rounded-xl backdrop-blur-sm relative
               ${isDarkMode 
                 ? `${isFocused 
                     ? 'bg-blue-600/30 text-blue-400 border-blue-500/50' 
@@ -252,7 +262,7 @@ const Header = () => {
                 ease: "easeInOut"
               }}
             >
-              <FocusIcon className="w-5 h-5" />
+              <FocusIcon className="w-4 h-4 sm:w-5 sm:h-5" />
             </motion.div>
             
             <AnimatePresence>
@@ -262,7 +272,7 @@ const Header = () => {
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0, opacity: 0 }}
                   className={`
-                    absolute -top-1 -right-1 w-3 h-3 rounded-full
+                    absolute -top-0.5 sm:-top-1 -right-0.5 sm:-right-1 w-2 h-2 sm:w-3 sm:h-3 rounded-full
                     ${isDarkMode ? 'bg-blue-400' : 'bg-blue-500'}
                   `}
                 >
@@ -276,13 +286,14 @@ const Header = () => {
             </AnimatePresence>
           </motion.button>
 
+          {/* Theme Toggle Button */}
           <motion.button
             variants={buttonVariants}
             whileHover="hover"
             whileTap="tap"
             onClick={toggleTheme}
             className={`
-              p-3 rounded-xl backdrop-blur-sm relative overflow-hidden
+              p-2 sm:p-3 rounded-xl backdrop-blur-sm relative overflow-hidden
               ${isDarkMode 
                 ? 'bg-gray-700/50 hover:bg-orange-600/20 text-gray-300 hover:text-orange-400 shadow-lg shadow-gray-900/20' 
                 : 'bg-white/70 hover:bg-indigo-100/80 text-gray-600 hover:text-indigo-600 shadow-lg shadow-gray-200/50'
@@ -301,9 +312,9 @@ const Header = () => {
                 whileHover={{ scale: 1.1 }}
               >
                 {isDarkMode ? (
-                  <Sun className="w-5 h-5" />
+                  <Sun className="w-4 h-4 sm:w-5 sm:h-5" />
                 ) : (
-                  <Moon className="w-5 h-5" />
+                  <Moon className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
               </motion.div>
             </AnimatePresence>
@@ -324,6 +335,7 @@ const Header = () => {
         </motion.div>
       </div>
 
+      {/* Focus Progress Bar */}
       <AnimatePresence>
         {isFocused && (
           <motion.div
@@ -337,6 +349,7 @@ const Header = () => {
                 ? 'from-blue-600 via-purple-600 to-blue-600' 
                 : 'from-blue-500 via-purple-500 to-blue-500'
               }
+              overflow-hidden
             `}
           >
             <motion.div

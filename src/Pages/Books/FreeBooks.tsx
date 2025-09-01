@@ -34,6 +34,7 @@ const BookCard = ({ book }: { book: book }) => {
   );
 
   useEffect(() => {
+    console.log("book ids are ",book.id)
     const checkFav = wishlistedBook.some((wBook) => Number(wBook.bookId) === Number(book.id))
     console.log("is fav " + checkFav)
     setFav(
@@ -53,7 +54,15 @@ const BookCard = ({ book }: { book: book }) => {
       return;
     }
     if (!fav) {
-      dispatch(updateWishlisted([book]));
+      const filteredBook={
+        title:book.title,
+        bookId:book.id,
+        description:book.summaries?.[0],
+        authors:authorNames,
+        cover:book.formats?.["image/jpeg"],
+        publishedAt:book?.authors?.[0]?.death_year,
+      }
+      dispatch(updateWishlisted([filteredBook]));
       setFav(true);
     } else {
       dispatch(removeFromWishlist(book.id));
