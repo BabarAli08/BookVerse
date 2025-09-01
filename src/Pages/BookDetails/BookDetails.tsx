@@ -22,7 +22,7 @@ import supabase from "../../supabase-client";
 import BookDetailsLoadingButton from "../../Component/BookDetailsLoadingButton";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
-import { updateCompletedBooks, updateUserStreaks } from "../../Store/UserSettingsSlice";
+import { updateCompletedBooks, updateUserStreaks, updateWishlisted } from "../../Store/UserSettingsSlice";
 
 const containerVariants :any= {
   hidden: { opacity: 0 },
@@ -470,6 +470,17 @@ const BookDetails = () => {
       toast.error("Please log in to add to wishlist.");
       return;
     }
+
+    const wishlistBook={
+      title:book?.title,
+      bookId:book?.id,
+      description:book?.summaries?.[0],
+      cover:imageUrl,
+      authors:authors,
+      publishedAt:book?.authors?.[0].death_year,
+      tier:premiumBookClicked?"premium":"free"
+    }
+    dispatch(updateWishlisted([wishlistBook]))
 
     try {
       if (wishlisted) {

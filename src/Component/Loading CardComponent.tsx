@@ -1,5 +1,5 @@
-
-// Loader 1: Shimmer Text Loading
+import {motion} from 'framer-motion'
+import { BookOpen, Star } from 'lucide-react';
 export const LoaderCard1 = () => {
   return (
     <div className="flex items-start hover:shadow-md justify-baseline p-4 w-[27rem] rounded-xl h-[45rem] flex-col border bg-white border-gray-300 cursor-pointer transition duration-200">
@@ -70,7 +70,6 @@ export const LoaderCard2 = () => {
   );
 };
 
-// Loader 3: Pulse Wave Effect
 export const LoaderCard3 = () => {
   return (
     <div className="flex items-start hover:shadow-md justify-baseline p-4 w-[27rem] rounded-xl h-[23rem] flex-col border bg-white border-gray-300 cursor-pointer transition duration-200">
@@ -96,7 +95,6 @@ export const LoaderCard3 = () => {
   );
 };
 
-// Loader 4: Dots Loading
 export const LoaderCard4 = () => {
   return (
     <div className="flex items-start hover:shadow-md justify-baseline p-4 w-[27rem] rounded-xl h-[45rem] flex-col border bg-white border-gray-300 cursor-pointer transition duration-200">
@@ -130,7 +128,6 @@ export const LoaderCard4 = () => {
   );
 };
 
-// Loader 5: Spinning Loader
 export const LoaderCard5 = () => {
   return (
     <div className="flex items-start hover:shadow-md justify-baseline p-4 w-[27rem] rounded-xl h-[45rem] flex-col border bg-white border-gray-300 cursor-pointer transition duration-200">
@@ -160,7 +157,6 @@ export const LoaderCard5 = () => {
   );
 };
 
-// Loader 6: Blinking Effect
 export const LoaderCard6 = () => {
   return (
     <div className="flex items-start hover:shadow-md justify-baseline p-4 w-[27rem] rounded-xl h-[45rem] flex-col border bg-white border-gray-300 cursor-pointer transition duration-200">
@@ -188,7 +184,6 @@ export const LoaderCard6 = () => {
   );
 };
 
-// Loader 7: Gradient Wave
 export const LoaderCard7 = () => {
   return (
     <div className="flex items-start hover:shadow-md justify-baseline p-4 w-[27rem] rounded-xl h-[45rem] flex-col border bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300 cursor-pointer transition duration-200">
@@ -288,3 +283,209 @@ export const LoaderCard9 = () => {
   );
 };
 
+export const LoaderCard3Enhanced = () => {
+  return (
+    <motion.div
+      className="w-[15rem] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0 relative"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    >
+      {/* Loading Overlay */}
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/50 to-transparent z-10"
+        animate={{ x: ["-100%", "200%"] }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+
+      {/* Image Section */}
+      <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200">
+        {/* Animated Tier Badge */}
+        <motion.div
+          className="absolute top-3 left-3 z-20"
+          animate={{
+            scale: [1, 1.05, 1],
+            opacity: [0.7, 1, 0.7]
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+        >
+          <div className="bg-gray-300 w-12 h-6 rounded-md animate-pulse" />
+        </motion.div>
+
+        {/* Animated Heart Button */}
+        <motion.div
+          className="absolute top-3 right-3 z-20 bg-gray-200 p-2 rounded-full w-8 h-8"
+          animate={{
+            scale: [1, 1.1, 1],
+            rotate: [0, 5, -5, 0]
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.3
+          }}
+        />
+
+        {/* Floating Book Icon */}
+        <div className="w-full h-full flex items-center justify-center">
+          <motion.div
+            className="w-12 h-12 border-2 border-gray-300 rounded-lg border-dashed flex items-center justify-center"
+            animate={{
+              scale: [1, 1.1, 1],
+              rotate: [0, 3, -3, 0]
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          >
+            <motion.div
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
+              <BookOpen size={20} className="text-gray-400" />
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
+
+    
+      <div className="p-4 space-y-3">
+        {/* Title Lines */}
+        <div className="space-y-2">
+          <motion.div
+            className="h-4 bg-gray-300 rounded"
+            animate={{
+              opacity: [0.6, 1, 0.6],
+              scale: [1, 1.02, 1]
+            }}
+            transition={{
+              duration: 1.8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          <motion.div
+            className="h-4 bg-gray-300 rounded w-3/4"
+            animate={{
+              opacity: [0.6, 1, 0.6],
+              scale: [1, 1.02, 1]
+            }}
+            transition={{
+              duration: 1.8,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 0.2
+            }}
+          />
+        </div>
+
+        {/* Author Line */}
+        <motion.div
+          className="h-3 bg-gray-200 rounded w-2/3"
+          animate={{
+            opacity: [0.6, 1, 0.6],
+            scale: [1, 1.02, 1]
+          }}
+          transition={{
+            duration: 1.8,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 0.4
+          }}
+        />
+
+        {/* Rating and Pages */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <motion.div
+              animate={{
+                scale: [1, 1.2, 1],
+                rotate: [0, 180, 360]
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
+              <Star size={14} className="text-gray-300" />
+            </motion.div>
+            <motion.div
+              className="h-3 bg-gray-200 rounded w-8"
+              animate={{ opacity: [0.6, 1, 0.6] }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 0.6
+              }}
+            />
+          </div>
+          <motion.div
+            className="h-3 bg-gray-200 rounded w-10"
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 0.8
+            }}
+          />
+        </div>
+
+        <motion.div
+          className="w-full bg-gray-300 h-10 rounded-lg relative overflow-hidden"
+          animate={{
+            opacity: [0.7, 1, 0.7],
+            scale: [1, 1.01, 1]
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1
+          }}
+        >
+         
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+            animate={{ x: ["-100%", "200%"] }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 1.2
+            }}
+          />
+        </motion.div>
+      </div>
+
+     
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+        animate={{ x: ["-100%", "200%"] }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2
+        }}
+      />
+    </motion.div>
+  );
+};

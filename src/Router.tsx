@@ -654,24 +654,32 @@ const AppRouter = () => {
       }
     };
 
-    const getUserStreaks=async()=>{
-      if(!user) return 
-      const {data:streaks,error:streaksError}=await supabase.from("user_streaks").select("*").eq("user_id",user.id).maybeSingle()
-      if(streaksError) {
-        console.log("error getting streaks ",streaksError.message)
+    const getUserStreaks = async () => {
+      if (!user) return;
+
+      const { data: streak, error: streaksError } = await supabase
+        .from("user_streaks")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (streaksError) {
+        console.log("error getting streaks ", streaksError.message);
+        return;
       }
 
-      const filteredStreaks=streaks.map((s:any)=>({
-        currenStreak:s.current_streak,
-        longestStreak:s.longest_streak
-      }))
+      if (!streak) return; 
 
-      dispatch(updateUserStreaks(filteredStreaks))
+      const filteredStreak = {
+        currentStreak: streak.current_streak,
+        longestStreak: streak.longest_streak,
+      };
 
+      dispatch(updateUserStreaks(filteredStreak));
+    };
 
-    }
     const getCurrentlyReading = async () => {
-      if(!user) return 
+      if (!user) return;
       try {
         const { data: currentlyReadingBooks, error } = await supabase
           .from("currently_reading")
@@ -679,7 +687,6 @@ const AppRouter = () => {
           .eq("user_id", user?.id);
 
         if (error) {
-          
           console.error("Error fetching currently reading books:", error);
           return;
         }
@@ -693,23 +700,23 @@ const AppRouter = () => {
             cover: book.cover,
             publishedAt: book.published_at,
           })
-        );  
-          console.log("currenly reading", filteredCurrentlyReadingBooks)
-        dispatch(updateCurrentlyReading(filteredCurrentlyReadingBooks))
+        );
+        console.log("currenly reading", filteredCurrentlyReadingBooks);
+        dispatch(updateCurrentlyReading(filteredCurrentlyReadingBooks));
       } catch (err) {
         console.error("Unexpected error:", err);
       }
     };
 
     const getCompletedBooks = async () => {
-      if(!user) return 
+      if (!user) return;
       try {
         const { data: completedBooks, error } = await supabase
           .from("completed_books")
           .select("*")
           .eq("user_id", user?.id);
 
-          console.log(completedBooks)
+        console.log(completedBooks);
         if (error) {
           console.error("Error fetching completed books:", error);
           return;
@@ -722,50 +729,56 @@ const AppRouter = () => {
             authors: book.authors,
             tier: book.tier,
             cover: book.cover,
-      
           })
         );
 
-        console.log("filteredCompletedReadingBooks", filteredCompletedReadingBooks)
-        dispatch(updateCompletedBooks(filteredCompletedReadingBooks))
+        console.log(
+          "filteredCompletedReadingBooks",
+          filteredCompletedReadingBooks
+        );
+        dispatch(updateCompletedBooks(filteredCompletedReadingBooks));
       } catch (err) {
         console.error("Unexpected error:", err);
       }
     };
-    const getWishlistedBooks=async()=>{
-      if(!user) return 
+    const getWishlistedBooks = async () => {
+      if (!user) return;
       try {
         const { data: wishlistedBooks, error } = await supabase
-          .from("books").select("*").eq("user_id", user?.id);
+          .from("books")
+          .select("*")
+          .eq("user_id", user?.id);
 
         if (error) {
           console.error("Error fetching wishlisted books:", error);
           return;
         }
-        const filteredWishlistedBooks = wishlistedBooks.map((book)=>{
+        const filteredWishlistedBooks = wishlistedBooks.map((book) => {
           return {
-            title:book.title,
-            bookId:book.id,
-            description:book.description,
-            authors:book.authors,
-            tier:book.tier,
-            cover:book.cover,
-            publishedAt:book.published_at
-          }
-        })
+            title: book.title,
+            bookId: book.id,
+            description: book.description,
+            authors: book.authors,
+            tier: book.tier,
+            cover: book.cover,
+            publishedAt: book.published_at,
+          };
+        });
 
-        console.log("filteredWishlistedBooks", filteredWishlistedBooks)
+        console.log("filteredWishlistedBooks", filteredWishlistedBooks);
 
-        dispatch(updateWishlisted(filteredWishlistedBooks))
-    }
-    catch(err:any){
-      console.error("Unexpected error while fetching the wishlisted Books:", err.message);
-    }
-  }
-    getWishlistedBooks()
-    getCompletedBooks()
-    getCurrentlyReading()
-    getUserStreaks()
+        dispatch(updateWishlisted(filteredWishlistedBooks));
+      } catch (err: any) {
+        console.error(
+          "Unexpected error while fetching the wishlisted Books:",
+          err.message
+        );
+      }
+    };
+    getWishlistedBooks();
+    getCompletedBooks();
+    getCurrentlyReading();
+    getUserStreaks();
     getCurrentSubscription();
     getSubscriptionManagement();
     getUserBillingHistory();

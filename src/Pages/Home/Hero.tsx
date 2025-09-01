@@ -20,31 +20,31 @@ const Hero = () => {
     },
   };
 
-  const buttonsVariant={
-    hidden:{
-      opacity:0,
-      y:20
+  const buttonsVariant = {
+    hidden: {
+      opacity: 0,
+      y: 20,
     },
-    visible:{
-      opacity:1,
-      y:0,
-      transition:{
-        delay:0.3,
-        staggerChildren:0.03,
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: 0.3,
+        staggerChildren: 0.03,
       },
-    }
-  }
-
-  const buttonVar={
-    hidden:{
-      opacity:0,
-      y:20
     },
-    visible:{
-      opacity:1,
-      y:0,
-    }
-  }
+  };
+
+  const buttonVar = {
+    hidden: {
+      opacity: 0,
+      y: 20,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+    },
+  };
 
   const letter = {
     hidden: { opacity: 0, y: 20 },
@@ -149,20 +149,52 @@ const Hero = () => {
           >
             BookVerse
           </motion.h1>
-          <motion.p
-            variants={sentence}
+    
+          <motion.div className="w-full px-3 xs:px-4 sm:px-6 md:px-8 lg:px-5">
+            <motion.p
+              variants={sentence}
+              initial="hidden"
+              animate="visible"
+              className="
+      text-gray-300 
+      text-sm xs:text-base sm:text-xl md:text-xl lg:text-2xl
+      mb-3 xs:mb-4 sm:mb-6 
+      drop-shadow-md 
+      py-2 xs:py-3 sm:py-4 md:py-5
+      min-h-[4rem] xs:min-h-[4.5rem] sm:min-h-[4rem] md:min-h-[3.5rem] lg:min-h-[3rem]
+      leading-loose xs:leading-relaxed sm:leading-normal md:leading-relaxed
+      text-center sm:text-left
+      break-words hyphens-auto
+      max-w-full
+      transition-all duration-300
+    "
+              style={{
+                wordBreak: "break-word",
+                overflowWrap: "break-word",
+                hyphens: "auto",
+              }}
+            >
+              {text.split("").map((char, index) => (
+                <motion.span
+                  key={index}
+                  variants={letter}
+                  className="
+          inline-block
+          transition-all duration-200
+          hover:scale-105
+        "
+                >
+                  {char === " " ? "\u00A0" : char}
+                </motion.span>
+              ))}
+            </motion.p>
+          </motion.div>
+          <motion.div
+            variants={buttonsVariant}
             initial="hidden"
             animate="visible"
-            className="text-gray-300 text-lg md:text-xl mb-6 drop-shadow-md min-h-[4rem] sm:min-h-[3rem]"
+            className="flex items-center flex-col sm:flex-row gap-4 justify-center"
           >
-            {text.split("").map((char, index) => (
-              <motion.span key={index} variants={letter}>
-                {char === " " ? "\u00A0" : char}
-              </motion.span>
-            ))}
-          </motion.p>
-
-          <motion.div variants={buttonsVariant} initial="hidden" animate="visible" className="flex items-center flex-col sm:flex-row gap-4 justify-center">
             <WhiteButton
               title="Explore Books"
               onClick={() => navigate("/books")}

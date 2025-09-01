@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import WishlistBook from "../../Component/WishlistedBook";
 import { BookHeart, Library, Plus, Sparkles, TrendingUp, } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useDispatch, useSelector } from "react-redux";
+import {  useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
 
 const WishList = () => {
@@ -17,7 +17,7 @@ const WishList = () => {
 
 
 
-  const containerVariants = {
+  const containerVariants:any = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -28,7 +28,7 @@ const WishList = () => {
     }
   };
 
-  const itemVariants = {
+  const itemVariants:any = {
     hidden: { y: 20, opacity: 0 },
     visible: {
       y: 0,
@@ -37,7 +37,7 @@ const WishList = () => {
     }
   };
 
-  const statsVariants = {
+  const statsVariants:any = {
     hidden: { scale: 0.8, opacity: 0 },
     visible: {
       scale: 1,
@@ -50,7 +50,7 @@ const WishList = () => {
     }
   };
 
-  const emptyStateVariants = {
+  const emptyStateVariants:any = {
     hidden: { opacity: 0, y: 50 },
     visible: {
       opacity: 1,

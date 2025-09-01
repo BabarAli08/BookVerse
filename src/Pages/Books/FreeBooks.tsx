@@ -5,14 +5,19 @@ import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import supabase from "../../supabase-client";
 import { setPremiumBookClicked } from "../../Store/ReadSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../../Store/store";
+import {
+  removeFromWishlist,
+  updateWishlisted,
+} from "../../Store/UserSettingsSlice";
 
 const BookCard = ({ book }: { book: book }) => {
   const [fav, setFav] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [imageLoaded, setImageLoaded] = useState<boolean>(false);
   const navigate = useNavigate();
-  
+
   const imageUrl =
     book.formats?.["image/jpeg"] ||
     book.formats?.["image/png"] ||
@@ -24,45 +29,35 @@ const BookCard = ({ book }: { book: book }) => {
     "Unknown Author";
   const pages = Math.floor(Math.random() * 800 + 100);
   const rating = (Math.random() * 2 + 3).toFixed(1);
+  const { wishlistedBook } = useSelector(
+    (state: RootState) => state.userSettings
+  );
 
   useEffect(() => {
-    async function fetchFav() {
-      setLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return setLoading(false);
-
-      const { data: favBooks, error } = await supabase
-        .from("books")
-        .select("book_id")
-        .eq("user_id", user.id)
-        .eq("book_id", book.id)
-        .single();
-
-      if (!error && favBooks) {
-        setLoading(false);
-        setFav(true);
-      } else {
-        setLoading(false);
-        setFav(false);
-      }
-    }
-
-    fetchFav();
+    const checkFav = wishlistedBook.some((wBook) => Number(wBook.bookId) === Number(book.id))
+    console.log("is fav " + checkFav)
+    setFav(
+      checkFav
+    );
+    setLoading(false);
   }, [book.id]);
 
   const handleFav = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (!fav) setFav(true);
-    else setFav(false);
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
       alert("Please log in to add to wishlist.");
       return;
+    }
+    if (!fav) {
+      dispatch(updateWishlisted([book]));
+      setFav(true);
+    } else {
+      dispatch(removeFromWishlist(book.id));
+      setFav(false);
     }
     if (!fav) {
       const mappedBook = {
@@ -77,13 +72,13 @@ const BookCard = ({ book }: { book: book }) => {
       };
       console.log("mapped Book", mappedBook);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("books")
         .upsert([mappedBook], { onConflict: ["user_id", "book_id"] });
 
       if (error) console.log(error);
     } else {
-      const { data, error } = await supabase
+      const {  error } = await supabase
         .from("books")
         .delete()
         .eq("book_id", book.id)
@@ -102,14 +97,14 @@ const BookCard = ({ book }: { book: book }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      whileHover={{ 
+      whileHover={{
         y: -4,
-        transition: { duration: 0.25, ease: "easeOut" }
+        transition: { duration: 0.25, ease: "easeOut" },
       }}
       layout
     >
       <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
-        {/* Free Badge */}
+        
         <motion.div
           className="absolute top-3 left-3 z-20"
           initial={{ opacity: 0, scale: 0.8 }}
@@ -121,7 +116,6 @@ const BookCard = ({ book }: { book: book }) => {
           </div>
         </motion.div>
 
-        {/* Heart Button */}
         <motion.button
           className="absolute top-3 right-3 z-20 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200"
           onClick={handleFav}
@@ -153,8 +147,8 @@ const BookCard = ({ book }: { book: book }) => {
                 <Heart
                   size={16}
                   className={`transition-colors duration-200 ${
-                    fav 
-                      ? "fill-red-500 text-red-500" 
+                    fav
+                      ? "fill-red-500 text-red-500"
                       : "text-gray-400 hover:text-red-400"
                   }`}
                 />
@@ -171,7 +165,6 @@ const BookCard = ({ book }: { book: book }) => {
           </AnimatePresence>
         </motion.button>
 
-        {/* Image */}
         <div className="w-full h-full flex items-center justify-center relative">
           {imageUrl ? (
             <>
@@ -180,7 +173,10 @@ const BookCard = ({ book }: { book: book }) => {
                 alt={book.title}
                 className="w-full h-full object-cover"
                 initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: imageLoaded ? 1 : 0, scale: imageLoaded ? 1 : 1.05 }}
+                animate={{
+                  opacity: imageLoaded ? 1 : 0,
+                  scale: imageLoaded ? 1 : 1.05,
+                }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 onLoad={() => setImageLoaded(true)}
               />
@@ -188,7 +184,11 @@ const BookCard = ({ book }: { book: book }) => {
                 <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
                   >
                     <Loader2 size={20} className="text-gray-400" />
                   </motion.div>
@@ -208,23 +208,22 @@ const BookCard = ({ book }: { book: book }) => {
         </div>
       </div>
 
-      {/* Content Section */}
-      <motion.div 
+      <motion.div
         className="p-4 space-y-3"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.4 }}
       >
-        {/* Title */}
-        <motion.h3 
+        
+        <motion.h3
           className="text-base font-semibold text-gray-900 leading-tight line-clamp-2 group-hover:text-gray-700 transition-colors duration-200"
           layoutId={`title-${book.id}`}
         >
           {book.title}
         </motion.h3>
 
-        {/* Author */}
-        <motion.p 
+    
+        <motion.p
           className="text-sm text-gray-600"
           initial={{ opacity: 0.8 }}
           animate={{ opacity: 1 }}
@@ -233,8 +232,7 @@ const BookCard = ({ book }: { book: book }) => {
           by {authorNames}
         </motion.p>
 
-        {/* Rating and Pages */}
-        <motion.div 
+        <motion.div
           className="flex items-center justify-between"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -247,11 +245,10 @@ const BookCard = ({ book }: { book: book }) => {
           <span className="text-sm text-gray-500">{pages}p</span>
         </motion.div>
 
-        
         <motion.button
-          onClick={() =>{
-              dispatch(setPremiumBookClicked(false))
-             navigate(`/books/${book.id}`)
+          onClick={() => {
+            dispatch(setPremiumBookClicked(false));
+            navigate(`/books/${book.id}`);
           }}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 mt-3"
           initial={{ opacity: 0, y: 15 }}
@@ -260,10 +257,7 @@ const BookCard = ({ book }: { book: book }) => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <motion.div
-            whileHover={{ x: 2 }}
-            transition={{ duration: 0.2 }}
-          >
+          <motion.div whileHover={{ x: 2 }} transition={{ duration: 0.2 }}>
             <BookOpen size={16} />
           </motion.div>
           <span>Read Free</span>
