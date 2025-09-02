@@ -22,20 +22,24 @@ import supabase from "../../supabase-client";
 import BookDetailsLoadingButton from "../../Component/BookDetailsLoadingButton";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
-import { updateCompletedBooks, updateUserStreaks, updateWishlisted } from "../../Store/UserSettingsSlice";
+import {
+  updateCompletedBooks,
+  updateUserStreaks,
+  updateWishlisted,
+} from "../../Store/UserSettingsSlice";
 
-const containerVariants :any= {
+const containerVariants: any = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
       staggerChildren: 0.1,
-      delayChildren: 0.2
-    }
-  }
+      delayChildren: 0.2,
+    },
+  },
 };
 
-const itemVariants:any = {
+const itemVariants: any = {
   hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
@@ -43,161 +47,190 @@ const itemVariants:any = {
     transition: {
       type: "spring",
       stiffness: 300,
-      damping: 24
-    }
-  }
-};
-
-const buttonVariants:any = {
-  idle: { scale: 1 },
-  hover: { 
-    scale: 1.02,
-    transition: { type: "spring", stiffness: 400, damping: 17 }
+      damping: 24,
+    },
   },
-  tap: { scale: 0.98 }
 };
 
-const progressVariants:any = {
+const buttonVariants: any = {
+  idle: { scale: 1 },
+  hover: {
+    scale: 1.02,
+    transition: { type: "spring", stiffness: 400, damping: 17 },
+  },
+  tap: { scale: 0.98 },
+};
+
+const progressVariants: any = {
   initial: { width: 0 },
   animate: (progress: number) => ({
     width: `${progress}%`,
     transition: {
       duration: 1.5,
       ease: "easeInOut",
-      delay: 0.5
-    }
-  })
+      delay: 0.5,
+    },
+  }),
 };
 
-const OptimizedImage = memo(({ src, alt, className }: { src: string; alt: string; className: string }) => {
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
-  
-  return (
-    <div className="relative">
-      {!loaded && !error && <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-lg" />}
-      {error && (
-        <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
-          <BookOpen size={48} className="text-gray-400" />
-        </div>
-      )}
-      <img 
-        src={src} 
-        alt={alt} 
-        className={className}
-        onLoad={() => setLoaded(true)}
-        onError={() => setError(true)}
-        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s' }}
-      />
-    </div>
-  );
-});
+const OptimizedImage = memo(
+  ({
+    src,
+    alt,
+    className,
+  }: {
+    src: string;
+    alt: string;
+    className: string;
+  }) => {
+    const [loaded, setLoaded] = useState(false);
+    const [error, setError] = useState(false);
 
-
-const MemoizedBookInfo = memo(({ book, pages }: { book: any; pages: number }) => (
-  <motion.div
-    variants={itemVariants}
-    className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6"
-  >
-    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
-      Book Information
-    </h2>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 text-sm sm:text-base">
-      <div className="space-y-3">
-        <motion.div 
-          className="flex items-center gap-2 sm:gap-3"
-          whileHover={{ x: 4 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          <FileText size={16} className="text-gray-400" />
-          <span className="text-gray-500">Pages:</span>
-          <span className="ml-1 sm:ml-2 font-medium text-gray-900">{pages}</span>
-        </motion.div>
-        <motion.div 
-          className="flex items-center gap-2 sm:gap-3"
-          whileHover={{ x: 4 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          <Clock size={16} className="text-gray-400" />
-          <span className="text-gray-500">Reading Time:</span>
-          <span className="ml-1 sm:ml-2 font-medium text-gray-900">5h 45m</span>
-        </motion.div>
+    return (
+      <div className="relative">
+        {!loaded && !error && (
+          <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-lg" />
+        )}
+        {error && (
+          <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+            <BookOpen size={48} className="text-gray-400" />
+          </div>
+        )}
+        <img
+          src={src}
+          alt={alt}
+          className={className}
+          onLoad={() => setLoaded(true)}
+          onError={() => setError(true)}
+          style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.3s" }}
+        />
       </div>
-      <div className="space-y-3">
-        <motion.div 
-          className="flex items-center gap-2 sm:gap-3"
-          whileHover={{ x: 4 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          <Calendar size={16} className="text-gray-400" />
-          <span className="text-gray-500">Published:</span>
-          <span className="ml-1 sm:ml-2 font-medium text-gray-900">
-            {book?.authors?.[0]?.death_year || "Unknown"}
-          </span>
-        </motion.div>
-        <motion.div 
-          className="flex items-center gap-2 sm:gap-3"
-          whileHover={{ x: 4 }}
-          transition={{ type: "spring", stiffness: 300 }}
-        >
-          <User size={16} className="text-gray-400" />
-          <span className="text-gray-500">Publisher:</span>
-          <span className="ml-1 sm:ml-2 font-medium text-gray-900">
-            {book?.authors?.[0]?.name || "Unknown"}
-          </span>
-        </motion.div>
-      </div>
-    </div>
-  </motion.div>
-));
+    );
+  }
+);
 
-const MemoizedActionButton = memo(({ 
-  onClick, 
-  disabled, 
-  icon: Icon, 
-  children, 
-  variant = "secondary",
-  href,
-  className = ""
-}: {
-  onClick?: () => void;
-  disabled?: boolean;
-  icon: any;
-  children: React.ReactNode;
-  variant?: "primary" | "secondary";
-  href?: string;
-  className?: string;
-}) => {
-  const baseClasses = `w-full flex items-center justify-center gap-2 sm:gap-3 h-12 rounded-xl transition-all duration-200 border text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed ${className}`;
-  const variantClasses = variant === "primary"
-    ? "bg-black hover:bg-gray-800 text-white border-black"
-    : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200";
-
-  const content = (
-    <>
-      {disabled ? (
-        <Loader2 className="animate-spin" size={18} />
-      ) : (
-        <Icon size={18} className={variant === "primary" ? "text-white" : ""} />
-      )}
-      {children}
-    </>
-  );
-
-  return (
-    <motion.button
-      variants={buttonVariants}
-      initial="idle"
-      whileHover={!disabled ? "hover" : "idle"}
-      whileTap={!disabled ? "tap" : "idle"}
-      onClick={onClick}
-      disabled={disabled}
-      className={`${baseClasses} ${variantClasses}`}
+const MemoizedBookInfo = memo(
+  ({ book, pages }: { book: any; pages: number }) => (
+    <motion.div
+      variants={itemVariants}
+      className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6"
     >
-      {href ? <a href={href} className="flex items-center gap-2">{content}</a> : content}
-    </motion.button>
-  );
-});
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
+        Book Information
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 text-sm sm:text-base">
+        <div className="space-y-3">
+          <motion.div
+            className="flex items-center gap-2 sm:gap-3"
+            whileHover={{ x: 4 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <FileText size={16} className="text-gray-400" />
+            <span className="text-gray-500">Pages:</span>
+            <span className="ml-1 sm:ml-2 font-medium text-gray-900">
+              {pages}
+            </span>
+          </motion.div>
+          <motion.div
+            className="flex items-center gap-2 sm:gap-3"
+            whileHover={{ x: 4 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <Clock size={16} className="text-gray-400" />
+            <span className="text-gray-500">Reading Time:</span>
+            <span className="ml-1 sm:ml-2 font-medium text-gray-900">
+              5h 45m
+            </span>
+          </motion.div>
+        </div>
+        <div className="space-y-3">
+          <motion.div
+            className="flex items-center gap-2 sm:gap-3"
+            whileHover={{ x: 4 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <Calendar size={16} className="text-gray-400" />
+            <span className="text-gray-500">Published:</span>
+            <span className="ml-1 sm:ml-2 font-medium text-gray-900">
+              {book?.authors?.[0]?.death_year || "Unknown"}
+            </span>
+          </motion.div>
+          <motion.div
+            className="flex items-center gap-2 sm:gap-3"
+            whileHover={{ x: 4 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <User size={16} className="text-gray-400" />
+            <span className="text-gray-500">Publisher:</span>
+            <span className="ml-1 sm:ml-2 font-medium text-gray-900">
+              {book?.authors?.[0]?.name || "Unknown"}
+            </span>
+          </motion.div>
+        </div>
+      </div>
+    </motion.div>
+  )
+);
+
+const MemoizedActionButton = memo(
+  ({
+    onClick,
+    disabled,
+    icon: Icon,
+    children,
+    variant = "secondary",
+    href,
+    className = "",
+  }: {
+    onClick?: () => void;
+    disabled?: boolean;
+    icon: any;
+    children: React.ReactNode;
+    variant?: "primary" | "secondary";
+    href?: string;
+    className?: string;
+  }) => {
+    const baseClasses = `w-full flex items-center justify-center gap-2 sm:gap-3 h-12 rounded-xl transition-all duration-200 border text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed ${className}`;
+    const variantClasses =
+      variant === "primary"
+        ? "bg-black hover:bg-gray-800 text-white border-black"
+        : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200";
+
+    const content = (
+      <>
+        {disabled ? (
+          <Loader2 className="animate-spin" size={18} />
+        ) : (
+          <Icon
+            size={18}
+            className={variant === "primary" ? "text-white" : ""}
+          />
+        )}
+        {children}
+      </>
+    );
+
+    return (
+      <motion.button
+        variants={buttonVariants}
+        initial="idle"
+        whileHover={!disabled ? "hover" : "idle"}
+        whileTap={!disabled ? "tap" : "idle"}
+        onClick={onClick}
+        disabled={disabled}
+        className={`${baseClasses} ${variantClasses}`}
+      >
+        {href ? (
+          <a href={href} className="flex items-center gap-2">
+            {content}
+          </a>
+        ) : (
+          content
+        )}
+      </motion.button>
+    );
+  }
+);
 
 const BookDetails = () => {
   const [credentialsLoading, setCredentialsLoading] = useState<boolean>(true);
@@ -209,38 +242,46 @@ const BookDetails = () => {
 
   const { id } = useParams();
   const navigate = useNavigate();
-  const {wishlistedBook}=useSelector((state:RootState)=>state.userSettings)
+  const { wishlistedBook } = useSelector(
+    (state: RootState) => state.userSettings
+  );
   useEffect(() => {
     const isWishlisted = wishlistedBook.some((b) => b.bookId === Number(id));
-    setWishlisted(isWishlisted)
-  },[])
+    setWishlisted(isWishlisted);
+  }, []);
   const { premiumBookClicked } = useSelector((state: RootState) => state.read);
 
-  const { book, loading, error } = useFetchSingleBook({ id: Number(id) }); 
+  const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
 
-  const {currentPlan}=useSelector((state:RootState)=>state.userSettings.reading.billing)
-  const imageUrl = useMemo(() => 
-    book?.formats?.["image/jpeg"] ||
-    book?.formats?.["image/png"] ||
-    book?.formats?.["image/jpg"] ||
-    "", [book?.formats]
+  const { currentPlan } = useSelector(
+    (state: RootState) => state.userSettings.reading.billing
+  );
+ 
+  const imageUrl = useMemo(
+    () =>
+      book?.formats?.["image/jpeg"] ||
+      book?.formats?.["image/png"] ||
+      book?.formats?.["image/jpg"] ||
+      "",
+    [book?.formats]
   );
 
-  const downloadUrl = useMemo(() => 
-    book?.formats?.["application/pdf"] || 
-    book?.formats?.["application/epub+zip"] || 
-    "", [book?.formats]
+  const downloadUrl = useMemo(
+    () =>
+      book?.formats?.["application/pdf"] ||
+      book?.formats?.["application/epub+zip"] ||
+      "",
+    [book?.formats]
   );
 
   const rating = useMemo(() => (Math.random() * 2 + 3).toFixed(1), []);
   const pages = useMemo(() => Math.floor(Math.random() * 500 + 100), []);
-  const authors = useMemo(() => 
-    book?.authors?.map((author: any) => author.name).join(", ") || "", 
+  const authors = useMemo(
+    () => book?.authors?.map((author: any) => author.name).join(", ") || "",
     [book?.authors]
   );
 
- 
-
+  
 
   useEffect(() => {
     if (book?.id) {
@@ -308,7 +349,7 @@ const BookDetails = () => {
     }
   };
 
-  const dispatch=useDispatch()
+  const dispatch = useDispatch();
   const updateUserStreak = async (userId: string, today: string) => {
     try {
       const { data: currentStreak } = await supabase
@@ -326,13 +367,28 @@ const BookDetails = () => {
         if (currentStreak.last_activity_date === yesterday) {
           newStreak = currentStreak.current_streak + 1;
 
-          dispatch(updateUserStreaks({currenStreak:newStreak, longestStreak:Number(currentStreak.longest_streak)}))
+          dispatch(
+            updateUserStreaks({
+              currenStreak: newStreak,
+              longestStreak: Number(currentStreak.longest_streak),
+            })
+          );
         } else {
           newStreak = 1;
-           dispatch(updateUserStreaks({currenStreak:newStreak, longestStreak:Number(currentStreak.longest_streak)}))
+          dispatch(
+            updateUserStreaks({
+              currenStreak: newStreak,
+              longestStreak: Number(currentStreak.longest_streak),
+            })
+          );
         }
       } else {
-         dispatch(updateUserStreaks({currenStreak:0, longestStreak:Number(currentStreak.longest_streak)}))
+        dispatch(
+          updateUserStreaks({
+            currenStreak: 0,
+            longestStreak: Number(currentStreak.longest_streak),
+          })
+        );
       }
 
       const longestStreak = Math.max(
@@ -364,13 +420,13 @@ const BookDetails = () => {
   };
 
   const handleReadFree = useCallback(async () => {
-    if ( premiumBookClicked && currentPlan.name==="free") {
+    if (premiumBookClicked && currentPlan.name === "free") {
       toast.warning("Buy premium to read this book");
       navigate("/premium");
       return;
     }
     try {
-        setBookLoading(true);
+      setBookLoading(true);
 
       const {
         data: { user },
@@ -407,10 +463,14 @@ const BookDetails = () => {
           .eq("user_id", user.id)
           .eq("book_id", id);
 
-        const completedBooks=useSelector((state:RootState)=>state.userSettings.completedBooks)
-        const filteredBooks=completedBooks.filter((book:any)=>book.bookId!==Number(id))
-        
-        dispatch(updateCompletedBooks(filteredBooks))
+        const completedBooks = useSelector(
+          (state: RootState) => state.userSettings.completedBooks
+        );
+        const filteredBooks = completedBooks.filter(
+          (book: any) => book.bookId !== Number(id)
+        );
+
+        dispatch(updateCompletedBooks(filteredBooks));
         navigate(`/books/${id}/read`);
         return;
       }
@@ -461,7 +521,6 @@ const BookDetails = () => {
   }, []);
 
   const handleAddWishlist = useCallback(async () => {
-
     const {
       data: { user },
       error: userError,
@@ -471,16 +530,16 @@ const BookDetails = () => {
       return;
     }
 
-    const wishlistBook={
-      title:book?.title,
-      bookId:book?.id,
-      description:book?.summaries?.[0],
-      cover:imageUrl,
-      authors:authors,
-      publishedAt:book?.authors?.[0].death_year,
-      tier:premiumBookClicked?"premium":"free"
-    }
-    dispatch(updateWishlisted([wishlistBook]))
+    const wishlistBook = {
+      title: book?.title,
+      bookId: book?.id,
+      description: book?.summaries?.[0],
+      cover: imageUrl,
+      authors: authors,
+      publishedAt: book?.authors?.[0].death_year,
+      tier: premiumBookClicked ? "premium" : "free",
+    };
+    dispatch(updateWishlisted([wishlistBook]));
 
     try {
       if (wishlisted) {
@@ -532,15 +591,17 @@ const BookDetails = () => {
     >
       <div className="max-w-6xl mx-auto w-full">
         <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-     
-          <motion.div variants={itemVariants} className="w-full md:w-[400px] space-y-6">
-            <motion.div 
+          <motion.div
+            variants={itemVariants}
+            className="w-full md:w-[400px] space-y-6"
+          >
+            <motion.div
               className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
               whileHover={{ y: -2 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
               <div className="relative p-4 sm:p-6 bg-gradient-to-br from-gray-50 to-gray-100">
-                <motion.div 
+                <motion.div
                   className="relative aspect-[3/4] w-full max-w-[280px] mx-auto bg-gray-200 rounded-lg overflow-hidden"
                   whileHover={{ scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 300 }}
@@ -550,7 +611,7 @@ const BookDetails = () => {
                     alt={book?.title || "Book cover"}
                     className="w-full h-full object-cover rounded-lg"
                   />
-                  
+
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -564,23 +625,33 @@ const BookDetails = () => {
                 </motion.div>
               </div>
 
-              <motion.div 
+              <motion.div
                 variants={itemVariants}
                 className="px-4 sm:px-6 py-3 border-b border-gray-100"
               >
                 <div className="flex items-center gap-2 text-sm">
                   <motion.div
                     animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatDelay: 3,
+                    }}
                   >
-                    <Star size={16} className="text-yellow-400 fill-yellow-400" />
+                    <Star
+                      size={16}
+                      className="text-yellow-400 fill-yellow-400"
+                    />
                   </motion.div>
                   <span className="font-semibold text-gray-900">{rating}</span>
                   <span className="text-gray-500">(1 reviews)</span>
                 </div>
               </motion.div>
 
-              <motion.div variants={itemVariants} className="p-4 sm:p-6 space-y-3">
+              <motion.div
+                variants={itemVariants}
+                className="p-4 sm:p-6 space-y-3"
+              >
                 <AnimatePresence mode="sync">
                   {bookLoading ? (
                     <motion.div
@@ -612,10 +683,7 @@ const BookDetails = () => {
                   )}
                 </AnimatePresence>
 
-                <MemoizedActionButton
-                  icon={Download}
-                  href={downloadUrl}
-                >
+                <MemoizedActionButton icon={Download} href={downloadUrl}>
                   Download
                 </MemoizedActionButton>
 
@@ -625,23 +693,28 @@ const BookDetails = () => {
                   icon={Heart}
                   className={wishlisted ? "text-red-500" : ""}
                 >
-                  {wishlistLoading ? "Checking..." : wishlisted ? "Wishlisted" : "Add to wishlist"}
+                  {wishlistLoading
+                    ? "Checking..."
+                    : wishlisted
+                    ? "Wishlisted"
+                    : "Add to wishlist"}
                 </MemoizedActionButton>
 
-                <MemoizedActionButton
-                  onClick={handleBookCopy}
-                  icon={Share2}
-                >
+                <MemoizedActionButton onClick={handleBookCopy} icon={Share2}>
                   Share Book
                 </MemoizedActionButton>
               </motion.div>
 
-          
-              <motion.div variants={itemVariants} className="px-4 sm:px-6 pb-4 sm:pb-6">
+              <motion.div
+                variants={itemVariants}
+                className="px-4 sm:px-6 pb-4 sm:pb-6"
+              >
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs sm:text-sm">
                     <span className="text-gray-600">Reading Progress</span>
-                    <span className="text-gray-900 font-medium">{readingProgress}%</span>
+                    <span className="text-gray-900 font-medium">
+                      {readingProgress}%
+                    </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                     <motion.div
@@ -658,9 +731,8 @@ const BookDetails = () => {
           </motion.div>
 
           <motion.div variants={itemVariants} className="flex-1 space-y-6">
-           
             <motion.div variants={itemVariants} className="space-y-3">
-              <motion.h1 
+              <motion.h1
                 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900"
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -668,7 +740,7 @@ const BookDetails = () => {
               >
                 {book?.title}
               </motion.h1>
-              <motion.p 
+              <motion.p
                 className="text-base sm:text-lg text-gray-600"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -676,7 +748,7 @@ const BookDetails = () => {
               >
                 by <span className="text-gray-900 font-medium">{authors}</span>
               </motion.p>
-              <motion.p 
+              <motion.p
                 className="text-gray-600 leading-relaxed text-sm sm:text-base"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -686,10 +758,9 @@ const BookDetails = () => {
               </motion.p>
             </motion.div>
 
-            
             <MemoizedBookInfo book={book} pages={pages} />
 
-            <motion.div 
+            <motion.div
               variants={itemVariants}
               className="bg-white rounded-2xl shadow-sm border border-gray-200"
             >
@@ -711,7 +782,11 @@ const BookDetails = () => {
                       <motion.div
                         className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"
                         layoutId="activeTab"
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 30,
+                        }}
                       />
                     )}
                   </motion.button>
@@ -728,13 +803,20 @@ const BookDetails = () => {
                   className="p-4 sm:p-6"
                 >
                   <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">
-                    {activeTab === "summary" ? "Book Summary" : 
-                     activeTab === "chapters" ? "Chapter List" :
-                     activeTab === "reviews" ? "User Reviews" : "Similar Books"}
+                    {activeTab === "summary"
+                      ? "Book Summary"
+                      : activeTab === "chapters"
+                      ? "Chapter List"
+                      : activeTab === "reviews"
+                      ? "User Reviews"
+                      : "Similar Books"}
                   </h3>
                   <p className="text-gray-600 leading-relaxed text-sm sm:text-base">
-                    {activeTab === "summary" ? book?.summaries?.[0] : 
-                     `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} content will be displayed here.`}
+                    {activeTab === "summary"
+                      ? book?.summaries?.[0]
+                      : `${
+                          activeTab.charAt(0).toUpperCase() + activeTab.slice(1)
+                        } content will be displayed here.`}
                   </p>
                 </motion.div>
               </AnimatePresence>

@@ -4,10 +4,16 @@ import BookFetchError from "../../Component/BookFetchError";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  resetHighlights,
+  resetNotes,
+  setAnnotationsFetched,
+  setAnnotationsLoading,
   setBackground,
   setFontFamily,
   setFontSize,
+  setHighlighted,
   setLineHeight,
+  setNotes,
   setReadingBook,
   setTheme,
 } from "../../Store/BookReadingSlice";
@@ -18,6 +24,7 @@ import Highlighting from "./Highlighting";
 import Navbar from "../../Component/Navbar/Navbar";
 import FocusModeSettings from "./FocusModeSettings";
 import { motion, AnimatePresence } from "framer-motion";
+import supabase from "../../supabase-client";
 
 function debounce<T extends (...args: any[]) => void>(
   func: T,
@@ -94,8 +101,6 @@ const BookReader = () => {
     dispatch(setLineHeight(mapLineHeight(supabaseLineHeight)));
     dispatch(setTheme(readingTheme));
     dispatch(setBackground(backgroundPattern));
-
-    
   }, [
     supabaseFontSize,
     dispatch,
@@ -104,6 +109,88 @@ const BookReader = () => {
     readingTheme,
     backgroundPattern,
   ]);
+
+  const { annotationsFetched } = useSelector(
+    (state: RootState) => state.bookReading
+  );
+
+  const getAnnotations = useCallback(async () => {
+    if (annotationsFetched) return;
+
+    const {
+      data: { user },
+      error: UserError,
+    } = await supabase.auth.getUser();
+
+    if (!user?.id) {
+      dispatch(setAnnotationsLoading(false));
+      dispatch(setHighlighted([]));
+      dispatch(setNotes([]));
+      dispatch(setAnnotationsFetched(true));
+      return;
+    }
+
+    if (!book?.id) return;
+
+    if (UserError) {
+      dispatch(setAnnotationsLoading(false));
+      dispatch(resetHighlights());
+      dispatch(resetNotes());
+      dispatch(setAnnotationsFetched(true));
+      return;
+    }
+
+    try {
+      dispatch(setAnnotationsLoading(true));
+
+      const { data, error } = await supabase
+        .from("annotations")
+        .select("*")
+        .eq("user_id", user?.id)
+        .eq("book_id", book?.id);
+
+      if (error) {
+        console.error("Error fetching annotations:", error);
+        dispatch(setAnnotationsLoading(false));
+        dispatch(setAnnotationsFetched(true));
+        return;
+      }
+
+      const highlights =
+        data
+          ?.filter((item) => item.type === "highlight")
+          ?.map((item) => ({
+            id: item.id,
+            color: item.highlight_color,
+            text: item.highlight_text,
+          })) || [];
+
+      const notes =
+        data
+          ?.filter((item) => item.type === "note")
+          ?.map((item) => ({
+            id: item.id,
+            selectedText: item.text,
+            note: item.note_text,
+          })) || [];
+
+      dispatch(setHighlighted(highlights));
+      dispatch(setNotes(notes));
+    } catch (error: any) {
+      console.error("Error fetching annotations:", error);
+      dispatch(setHighlighted([]));
+      dispatch(setNotes([]));
+    } finally {
+      dispatch(setAnnotationsLoading(false));
+      dispatch(setAnnotationsFetched(true));
+    }
+  }, [book?.id, dispatch, annotationsFetched]);
+
+  useEffect(() => {
+    if (book?.id && !annotationsFetched) {
+      getAnnotations();
+    }
+  }, [book?.id, annotationsFetched, getAnnotations]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -438,18 +525,16 @@ const BookReader = () => {
   }, [book?.id, isContentReady, handleSeek]);
 
   const getTextColor = () => {
-  
-  if (theme?.hex?.text) {
-    return theme.hex.text;  
-  }
+    if (theme?.hex?.text) {
+      return theme.hex.text;
+    }
 
-  if (theme?.text) {
-    return theme.text;
-  }
+    if (theme?.text) {
+      return theme.text;
+    }
 
-  return togglDark ? "#F3F4F6" : "#374151";
-};
-  
+    return togglDark ? "#F3F4F6" : "#374151";
+  };
 
   const containerVariants: any = {
     hidden: { opacity: 0, scale: 0.95 },
@@ -661,7 +746,6 @@ const BookReader = () => {
       </motion.div>
     );
 
-  
   return (
     <motion.div
       className={`${togglDark ? "bg-gray-900" : "bg-gray-50"} min-h-screen`}
@@ -775,21 +859,21 @@ const BookReader = () => {
             variants={contentVariants}
           >
             <motion.div
-              className={`
-                w-full h-full transition-all duration-300 book-reader-container
-                ${
-                  togglDark
-                    ? "bg-gradient-to-br from-gray-800 to-gray-850 text-gray-100 shadow-2xl shadow-black/40"
-                    : "bg-gradient-to-br from-white to-gray-50 text-gray-900 shadow-2xl shadow-gray-300/50"
-                }
-                ${isFocused ? "max-w-4xl mx-auto" : "max-w-6xl"}
-                ${
-                  isMobile
-                    ? "rounded-none border-0"
-                    : "rounded-xl border border-opacity-30"
-                }
-                ${togglDark ? "border-gray-600" : "border-gray-300"}
-              `}
+              className={`                 
+      w-full transition-all duration-300 book-reader-container                
+      ${
+        togglDark
+          ? "bg-gradient-to-br from-gray-800 to-gray-850 text-gray-100 shadow-2xl shadow-black/40"
+          : "bg-gradient-to-br from-white to-gray-50 text-gray-900 shadow-2xl shadow-gray-300/50"
+      }                 
+      ${isFocused ? "max-w-4xl mx-auto" : "max-w-6xl"}                 
+      ${
+        isMobile
+          ? "rounded-none border-0 h-full"
+          : "rounded-xl border border-opacity-30 h-full"
+      }                 
+      ${togglDark ? "border-gray-600" : "border-gray-300"}               
+    `}
               whileHover={{
                 boxShadow: togglDark
                   ? "0 25px 50px rgba(0, 0, 0, 0.6)"
@@ -799,20 +883,18 @@ const BookReader = () => {
             >
               <motion.div
                 ref={bookContentRef}
-                className={`
-                  ${isMobile ? "h-screen" : "h-[95vh]"} 
-                  overflow-auto custom-scrollbar
-                  ${
-                    isMobile
-                      ? "px-4 py-6 rounded-none"
-                      : isFocused
-                      ? "px-8 lg:px-16 py-8 lg:py-12 rounded-xl"
-                      : "px-6 lg:px-12 py-6 lg:py-10 rounded-xl"
-                  }
-                  leading-relaxed
-                  ${theme?.bg}
-               
-                `}
+                className={`                   
+        h-full overflow-auto custom-scrollbar                   
+        ${
+          isMobile
+            ? "px-4 py-6 rounded-none"
+            : isFocused
+            ? "px-8 lg:px-16 py-8 lg:py-12 rounded-xl"
+            : "px-6 lg:px-12 py-6 lg:py-10 rounded-xl"
+        }                   
+        leading-relaxed break-words                   
+        ${theme?.bg}                                 
+      `}
                 dangerouslySetInnerHTML={{ __html: bookContent }}
                 style={{
                   fontFamily: fontFamily,

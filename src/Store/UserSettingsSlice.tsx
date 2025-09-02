@@ -228,14 +228,21 @@ const userSettingsSlice = createSlice({
         new Map(combined.map((book) => [book.bookId, book])).values()
       );
     },
+    removeFromCurrentlyReading: (state, action) => {
+      state.currentlyReading = state.currentlyReading.filter(
+        (book) => book.bookId !== action.payload
+      );
+    },
     updateWishlisted: (state, action) => {
       if (action.payload.replace) {
         state.wishlistedBook = action.payload.books;
       } else {
-        const combined = [...state.wishlistedBook, ...action.payload];
-        state.wishlistedBook = Array.from(
-          new Map(combined.map((book) => [book.bookId, book])).values()
+        const newBooks = action.payload.filter(
+          (book: wishlistedBook) =>
+            !state.wishlistedBook.some((b) => b.bookId === book.bookId)
         );
+
+        state.wishlistedBook = [...state.wishlistedBook, ...newBooks];
       }
     },
     removeFromWishlist: (state, action) => {
@@ -244,10 +251,11 @@ const userSettingsSlice = createSlice({
       );
     },
     updateCompletedBooks: (state, action) => {
-      const combined = [...state.completedBooks, ...action.payload];
-      state.completedBooks = Array.from(
-        new Map(combined.map((book) => [book.bookId, book])).values()
+      const newBooks = action.payload.filter(
+        (book:currentlyReading) => !state.completedBooks.some((b) => b.bookId === book.bookId)
       );
+
+      state.completedBooks = [...state.completedBooks, ...newBooks];
     },
     updateBillingHistory: (state, action) => {
       if (Array.isArray(action.payload)) {
@@ -288,6 +296,7 @@ export const {
   updatePrivacy,
   resetUserSettings,
   updateReadingTheme,
+  removeFromCurrentlyReading,
   updateBackgroundPattern,
   updateTypographySettings,
   updateAutoBookmark,

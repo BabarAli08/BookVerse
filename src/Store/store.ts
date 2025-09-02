@@ -11,6 +11,7 @@ import PaymentSlice from "./PaymentSlice";
 import ReadSlice from "./ReadSlice";
 import FeaturedBooksSlice from "./FeaturedBooksSlice";
 import UserSettingsSlice from "./UserSettingsSlice";
+import HighlightsAndNotesSlice from "./HighlightsAndNotesSlice";
 const store=configureStore({
     reducer:{
         freeBooks:freeBooks,
@@ -24,6 +25,7 @@ const store=configureStore({
         auth:AuthSlice,
         read:ReadSlice,
         featuredBooks:FeaturedBooksSlice,
+        highlightAndNotes:HighlightsAndNotesSlice,
         userSettings:UserSettingsSlice
     }
 })

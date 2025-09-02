@@ -40,7 +40,9 @@ interface BookState {
   highlights: string[];
   theme?: themeState;
   isFocused: boolean;
+  annotationsFetched: boolean;
   annotationsLoading: boolean;
+
 }
 const initialState: BookState = {
   book: {},
@@ -64,6 +66,7 @@ const initialState: BookState = {
   toggleSidebar: false,
   highlights: [],
   isFocused: false,
+  annotationsFetched: false,
   annotationsLoading: true,
 };
 const BookReadingSlice = createSlice({
@@ -85,11 +88,20 @@ const BookReadingSlice = createSlice({
     setFontSize: (state, action: { payload: string }) => {
       state.fontSize = action.payload;
     },
-    setHighlighted: (state, action: { payload: highlightState[] }) => {
-      state.highlited = action.payload;
+    setHighlighted: (state, action) => {
+      state.highlited = [...state.highlights, ...action.payload]
     },
-    setNotes: (state, action: { payload: notesState[] }) => {
-      state.notes = action.payload;
+    setNotes: (state, action) => {
+      state.notes = [...state.notes,...action.payload]
+    },
+    resetHighlights: (state) => {
+      state.highlited = [];
+    },
+    setAnnotationsFetched: (state, action: { payload: boolean }) => {
+      state.annotationsFetched = action.payload;
+    },
+    resetNotes: (state) => {
+      state.notes = [];
     },
     setLineHeight: (state, action: { payload: string }) => {
       state.lineHeight = action.payload;
@@ -148,9 +160,12 @@ export const {
   setHighlighted,
   setNotes,
   deleteNote,
+  setAnnotationsFetched,
   setPreferances,
   deleteHighlight,
   setLineHeight,
+  resetNotes,
+  resetHighlights,
   setFontFamily,
   setBackground,
   setLetterSpacing,

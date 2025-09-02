@@ -46,7 +46,7 @@ const AppRouter = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0"); 
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
@@ -524,13 +524,24 @@ const AppRouter = () => {
           lineSpacing: readingPreferances.line_spacing || "Normal",
         };
 
+        console.log("reading theme from router ", theme)
+        console.log("backgorund theme from router ", background)
+        console.log("typo theme from router ", typoPreferances)
+
+        dispatch(updateTypographySettings(typoPreferances));
+        dispatch(updateReadingTheme(theme));
         dispatch(
-          updateTypographySettings(typoPreferances),
-          updateReadingTheme(theme),
-          updateBackgroundPattern(background),
-          updateAutoBookmark(readingPreferances.auto_bookmark || true),
-          updateOfflineDownloads(readingPreferances.offline_downloads || true)
+          updateBackgroundPattern(
+            background || {
+              id: "none",
+              name: "None",
+              pattern: "",
+              preview: "bg-transparent",
+            }
+          )
         );
+        dispatch(updateAutoBookmark(readingPreferances.auto_bookmark));
+        dispatch(updateOfflineDownloads(readingPreferances.offline_downloads));
       }
     };
 
