@@ -239,24 +239,28 @@ const BookDetails = () => {
   const [wishlistLoading, setWishlistLoading] = useState<boolean>(false);
   const [bookLoading, setBookLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("summary");
-
-  const { id } = useParams();
-  const navigate = useNavigate();
   const { wishlistedBook } = useSelector(
     (state: RootState) => state.userSettings
   );
+  const { premiumBookClicked } = useSelector((state: RootState) => state.read);
+  const { currentPlan } = useSelector(
+    (state: RootState) => state.userSettings.reading.billing
+  );
+
+  const completedBooks = useSelector(
+    (state: RootState) => state.userSettings.completedBooks
+  );
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const { id } = useParams();
   useEffect(() => {
     const isWishlisted = wishlistedBook.some((b) => b.bookId === Number(id));
     setWishlisted(isWishlisted);
   }, []);
-  const { premiumBookClicked } = useSelector((state: RootState) => state.read);
 
   const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
 
-  const { currentPlan } = useSelector(
-    (state: RootState) => state.userSettings.reading.billing
-  );
- 
   const imageUrl = useMemo(
     () =>
       book?.formats?.["image/jpeg"] ||
@@ -280,8 +284,6 @@ const BookDetails = () => {
     () => book?.authors?.map((author: any) => author.name).join(", ") || "",
     [book?.authors]
   );
-
-  
 
   useEffect(() => {
     if (book?.id) {
@@ -349,7 +351,6 @@ const BookDetails = () => {
     }
   };
 
-  const dispatch = useDispatch();
   const updateUserStreak = async (userId: string, today: string) => {
     try {
       const { data: currentStreak } = await supabase
@@ -463,9 +464,6 @@ const BookDetails = () => {
           .eq("user_id", user.id)
           .eq("book_id", id);
 
-        const completedBooks = useSelector(
-          (state: RootState) => state.userSettings.completedBooks
-        );
         const filteredBooks = completedBooks.filter(
           (book: any) => book.bookId !== Number(id)
         );
