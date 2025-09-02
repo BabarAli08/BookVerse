@@ -14,28 +14,7 @@ import {
   updateAutoRenewal,
   updateBillingNotifications,
 } from "../../Store/UserSettingsSlice";
-interface planState {
-  id: string;
-  user_id: string;
-  plan_type: string;
-  billing_cycle: string;
-  status: string;
-  card_number: string;
-  card_holder_name: string;
-  expiry_date: string;
-  cvc: string;
-  email: string;
-  country: string;
-  address_line_1: string;
-  address_line_2: string;
-  city: string;
-  next_billing_date: string;
-  state: string;
-  postal_code: string;
-  amount: number;
-  created_at: string;
-  updated_at: string;
-}
+
 
 export default function Billing() {
   const [isUpdatingPlan, setIsUpdatingPlan] = useState(false);
@@ -757,7 +736,7 @@ export default function Billing() {
                 }}
                 className="p-6 space-y-3"
               >
-                {allPlans.map((plan, i:number) => (
+                {allPlans.map((plan) => (
                   <motion.div
                     key={plan.id}
                     variants={{

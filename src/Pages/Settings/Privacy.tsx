@@ -59,8 +59,8 @@ export default function Privacy() {
 
     try {
       if (user) {
-        // Delete auth user
-        const { data: deletedUser, error: userDeleteError } =
+        
+        const {  error: userDeleteError } =
           await await supabase.auth.admin.deleteUser(user.id);
         if (userDeleteError) {
           toast.warning(
@@ -69,8 +69,8 @@ export default function Privacy() {
           );
         }
 
-        // Delete subscription
-        const { data: deletedSubscription, error: subscriptionDeleteError } =
+        
+        const {  error: subscriptionDeleteError } =
           await supabase.from("subscriptions").delete().eq("user_id", user.id);
         if (subscriptionDeleteError) {
           toast.warning(
@@ -79,8 +79,8 @@ export default function Privacy() {
           );
         }
 
-        // Delete profile
-        const { data: deletedProfile, error: profileDeleteError } =
+       
+        const {  error: profileDeleteError } =
           await supabase.from("profiles").delete().eq("id", user.id);
         if (profileDeleteError) {
           toast.warning(
@@ -89,7 +89,7 @@ export default function Privacy() {
           );
         }
 
-        const { data: deletedNotes, error: notesDeleteError } = await supabase
+        const { error: notesDeleteError } = await supabase
           .from("annotations")
           .delete()
           .eq("user_id", user.id);
@@ -101,7 +101,7 @@ export default function Privacy() {
         }
 
         const {
-          data: deletedCompletedBooks,
+          
           error: completedBooksDeleteError,
         } = await supabase
           .from("completed_books")
@@ -115,7 +115,7 @@ export default function Privacy() {
         }
 
         const {
-          data: deletedCurrentlyReading,
+         
           error: currentlyReadingDeleteError,
         } = await supabase
           .from("currently_reading")
@@ -129,7 +129,7 @@ export default function Privacy() {
         }
 
         const {
-          data: deletedDailyActivities,
+         
           error: dailyActivitiesDeleteError,
         } = await supabase
           .from("user_daily_activities")
@@ -143,7 +143,7 @@ export default function Privacy() {
         }
 
         const {
-          data: deletedReadingPreferences,
+         
           error: readingPreferencesDeleteError,
         } = await supabase
           .from("reading_preferances")
@@ -157,7 +157,7 @@ export default function Privacy() {
         }
 
         const {
-          data: deletedSubscriptionHistory,
+        
           error: subscriptionHistoryDeleteError,
         } = await supabase
           .from("subscription_history")
@@ -171,7 +171,7 @@ export default function Privacy() {
         }
 
         const {
-          data: deletedUserPreferences,
+        
           error: userPreferencesDeleteError,
         } = await supabase
           .from("user_preferences")
@@ -184,7 +184,7 @@ export default function Privacy() {
           );
         }
 
-        const { data: deletedUserStreaks, error: streaksDeleteError } =
+        const { error: streaksDeleteError } =
           await supabase.from("user_streaks").delete().eq("user_id", user.id);
         if (streaksDeleteError) {
           toast.warning(
