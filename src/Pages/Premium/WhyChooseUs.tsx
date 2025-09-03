@@ -58,13 +58,16 @@ const WhyChooseUs = () => {
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start end", "end start"]
+    offset: ["start end", "end start"],
   });
 
   const backgroundY = useTransform(scrollYProgress, [0, 1], [100, -100]);
-  const backgroundOpacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 0.6, 0.6, 0]);
+  const backgroundOpacity = useTransform(
+    scrollYProgress,
+    [0, 0.2, 0.8, 1],
+    [0, 0.6, 0.6, 0]
+  );
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -78,10 +81,10 @@ const WhyChooseUs = () => {
   };
 
   const titleVariants = {
-    hidden: { 
-      opacity: 0, 
+    hidden: {
+      opacity: 0,
       y: 40,
-      scale: 0.9
+      scale: 0.9,
     },
     visible: {
       opacity: 1,
@@ -97,9 +100,9 @@ const WhyChooseUs = () => {
   };
 
   const descriptionVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 20
+    hidden: {
+      opacity: 0,
+      y: 20,
     },
     visible: {
       opacity: 1,
@@ -126,11 +129,11 @@ const WhyChooseUs = () => {
   };
 
   const cardVariants = {
-    hidden: { 
-      opacity: 0, 
+    hidden: {
+      opacity: 0,
       y: 50,
       scale: 0.8,
-      rotateY: -10
+      rotateY: -10,
     },
     visible: {
       opacity: 1,
@@ -159,10 +162,10 @@ const WhyChooseUs = () => {
   };
 
   const iconVariants = {
-    hidden: { 
+    hidden: {
       scale: 0,
       rotate: -180,
-      opacity: 0
+      opacity: 0,
     },
     visible: {
       scale: 1,
@@ -184,18 +187,15 @@ const WhyChooseUs = () => {
       animate={isInView ? "visible" : "hidden"}
       variants={containerVariants}
     >
-      {/* Background decorative elements */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Animated background gradient */}
         <motion.div
           className="absolute inset-0 bg-gradient-to-br from-blue-50/40 via-purple-50/30 to-indigo-50/40"
-          style={{ 
+          style={{
             y: backgroundY,
-            opacity: backgroundOpacity 
+            opacity: backgroundOpacity,
           }}
         />
 
-        {/* Floating icons as decorations */}
         <motion.div
           className="absolute top-20 left-10 text-blue-200 opacity-30"
           variants={iconVariants}
@@ -266,7 +266,6 @@ const WhyChooseUs = () => {
           <Phone size={32} />
         </motion.div>
 
-        {/* Geometric shapes */}
         <motion.div
           className="absolute top-60 right-10 w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full opacity-20"
           variants={floatingVariants}
@@ -281,7 +280,6 @@ const WhyChooseUs = () => {
           transition={{ delay: 1 }}
         />
 
-        {/* Particle effects */}
         {[...Array(10)].map((_, i) => (
           <motion.div
             key={`particle-${i}`}
@@ -305,16 +303,14 @@ const WhyChooseUs = () => {
         ))}
       </div>
 
-      <div className="flex flex-col items-center mt-8 w-full h-auto px-4 sm:px-6 py-10 relative z-10">
-        {/* Animated Header Section */}
-        <motion.div 
+      <div className="flex flex-col justify-center items-center mt-8 w-full h-auto px-4 sm:px-6 py-10 relative z-10">
+        <motion.div
           ref={titleRef}
           className="flex flex-col items-center text-center gap-3 sm:gap-4 max-w-2xl relative"
           variants={titleVariants}
           initial="hidden"
           animate={isTitleInView ? "visible" : "hidden"}
         >
-          {/* Title glow effect */}
           <motion.div
             className="absolute inset-0 bg-gradient-to-r from-blue-100 via-purple-100 to-indigo-100 rounded-xl opacity-0 blur-sm"
             animate={{
@@ -328,11 +324,11 @@ const WhyChooseUs = () => {
             }}
           />
 
-          <motion.h1 
+          <motion.h1
             className="text-2xl sm:text-3xl md:text-4xl font-bold leading-snug relative z-10"
             whileHover={{
               scale: 1.02,
-              transition: { duration: 0.3 }
+              transition: { duration: 0.3 },
             }}
           >
             {"Why Choose BookVerse Premium?".split(" ").map((word, index) => (
@@ -348,9 +344,14 @@ const WhyChooseUs = () => {
                   damping: 12,
                 }}
                 whileHover={{
-                  color: word === "BookVerse" ? "#8b5cf6" : word === "Premium?" ? "#3b82f6" : "#1f2937",
+                  color:
+                    word === "BookVerse"
+                      ? "#8b5cf6"
+                      : word === "Premium?"
+                      ? "#3b82f6"
+                      : "#1f2937",
                   y: -2,
-                  transition: { duration: 0.2 }
+                  transition: { duration: 0.2 },
                 }}
               >
                 {word}
@@ -358,52 +359,52 @@ const WhyChooseUs = () => {
             ))}
           </motion.h1>
 
-          <motion.p 
+          <motion.p
             className="text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed px-2 relative z-10"
             variants={descriptionVariants}
             whileHover={{
               color: "#4b5563",
               scale: 1.01,
-              transition: { duration: 0.3 }
+              transition: { duration: 0.3 },
             }}
           >
-            {"Unlock the full potential of your reading experience with our premium features".split(" ").map((word, index) => (
-              <motion.span
-                key={index}
-                className="inline-block mr-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{
-                  duration: 0.3,
-                  delay: index * 0.03 + 1.2,
-                }}
-              >
-                {word}
-              </motion.span>
-            ))}
+            {"Unlock the full potential of your reading experience with our premium features"
+              .split(" ")
+              .map((word, index) => (
+                <motion.span
+                  key={index}
+                  className="inline-block mr-1"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{
+                    duration: 0.3,
+                    delay: index * 0.03 + 1.2,
+                  }}
+                >
+                  {word}
+                </motion.span>
+              ))}
           </motion.p>
 
-          {/* Decorative underline */}
           <motion.div
             className="mt-2 h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 rounded-full"
             initial={{ width: 0, opacity: 0 }}
-            animate={{ 
-              width: isTitleInView ? "80px" : 0, 
-              opacity: isTitleInView ? 1 : 0 
+            animate={{
+              width: isTitleInView ? "80px" : 0,
+              opacity: isTitleInView ? 1 : 0,
             }}
-            transition={{ 
-              duration: 0.8, 
+            transition={{
+              duration: 0.8,
               delay: 1.8,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           />
         </motion.div>
 
-        {/* Animated Cards Grid */}
         <motion.div
-          className="grid w-full max-w-6xl mt-10 gap-6 
+          className="grid w-full place-items-center items-center max-w-6xl mt-10 gap-6 
                grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 
-               justify-items-center"
+               "
           variants={gridVariants}
         >
           {Offers.map((offer: offer, i: number) => (
@@ -414,19 +415,18 @@ const WhyChooseUs = () => {
                 scale: 1.05,
                 y: -8,
                 rotateY: 5,
-                transition: { 
+                transition: {
                   duration: 0.3,
                   type: "spring",
-                  damping: 20 
-                }
+                  damping: 20,
+                },
               }}
-              whileTap={{ 
+              whileTap={{
                 scale: 0.98,
-                transition: { duration: 0.1 } 
+                transition: { duration: 0.1 },
               }}
-              className="w-full relative"
+              className="w-full flex items-center justify-center relative"
             >
-              {/* Card floating animation */}
               <motion.div
                 animate={{
                   y: [0, -3, 0],
@@ -445,13 +445,12 @@ const WhyChooseUs = () => {
                   whileHover={{
                     opacity: 0.4,
                     scale: 1.02,
-                    transition: { duration: 0.3 }
+                    transition: { duration: 0.3 },
                   }}
                 />
-                
+
                 <FeatureCard {...offer} />
 
-                {/* Icon enhancement overlay */}
                 <motion.div
                   className="absolute top-4 left-4 pointer-events-none"
                   animate={{
@@ -482,16 +481,15 @@ const WhyChooseUs = () => {
           ))}
         </motion.div>
 
-        {/* Bottom decorative element */}
         <motion.div
           className="mt-16 flex justify-center space-x-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ 
+          transition={{
             delay: 3,
             duration: 0.6,
             type: "spring",
-            damping: 15 
+            damping: 15,
           }}
         >
           {[BookAIcon, Headphones, Cloud, Phone].map((Icon, i) => (
@@ -511,7 +509,7 @@ const WhyChooseUs = () => {
               whileHover={{
                 scale: 1.2,
                 backgroundColor: "#ddd6fe",
-                transition: { duration: 0.2 }
+                transition: { duration: 0.2 },
               }}
             >
               <Icon size={16} />

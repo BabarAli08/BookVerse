@@ -342,7 +342,6 @@ const BookCarousel = ({
           </div>
         </div>
 
-        {/* Navigation Buttons */}
         <div className="flex items-center gap-3">
           <AnimatePresence>
             {showLeftButton && (
@@ -445,6 +444,8 @@ const BookCarousel = ({
         >
          
           {loading && allBooks.length === 0 ? (
+            
+            
             Array(booksPerView)
               .fill(0)
               .map((_, i) => (
@@ -457,7 +458,7 @@ const BookCarousel = ({
                   transition={{ delay: i * 0.1 }}
                 >
                   <div className={`
-                    p-4 rounded-2xl shadow-lg border-2 transition-all duration-300
+                    p-4 rounded-2xl px-10 shadow-lg border-2 transition-all duration-300
                     ${isPremium 
                       ? 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200' 
                       : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
