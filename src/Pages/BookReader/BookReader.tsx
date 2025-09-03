@@ -28,193 +28,31 @@ import supabase from "../../supabase-client";
 
 function debounce<T extends (...args: any[]) => void>(
   func: T,
-  wait: number,
-  immediate = false
+  wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: NodeJS.Timeout;
   return (...args: Parameters<T>) => {
-    const callNow = immediate && !timeout;
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      timeout = null;
-      if (!immediate) func(...args);
-    }, wait);
-    if (callNow) func(...args);
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
   };
 }
 
 function throttle<T extends (...args: any[]) => void>(
   func: T,
-  limit: number,
-  options: { leading?: boolean; trailing?: boolean } = {
-    leading: true,
-    trailing: true,
-  }
+  limit: number
 ): (...args: Parameters<T>) => void {
-  let inThrottle = false;
-  let lastFunc: NodeJS.Timeout;
-  let lastRan: number;
-
+  let inThrottle: boolean;
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
-      if (options.leading !== false) {
-        func(...args);
-      }
-      lastRan = Date.now();
+      func(...args);
       inThrottle = true;
-    } else {
-      if (lastFunc) clearTimeout(lastFunc);
-      lastFunc = setTimeout(() => {
-        if (Date.now() - lastRan >= limit) {
-          if (options.trailing !== false) {
-            func(...args);
-          }
-          lastRan = Date.now();
-        }
-      }, limit - (Date.now() - lastRan));
+      setTimeout(() => (inThrottle = false), limit);
     }
-
-    setTimeout(() => {
-      inThrottle = false;
-    }, limit);
   };
 }
 
-const PROXY_SERVICES = [
-  {
-    name: "AllOrigins",
-    url: (targetUrl: string) =>
-      `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
-    extractContent: (data: any) => data.contents,
-    timeout: 10000,
-  },
-  {
-    name: "CORS-Anywhere",
-    url: (targetUrl: string) =>
-      `https://cors-anywhere.herokuapp.com/${targetUrl}`,
-    extractContent: (data: any) => data,
-    timeout: 8000,
-  },
-  {
-    name: "ThingProxy",
-    url: (targetUrl: string) =>
-      `https://thingproxy.freeboard.io/fetch/${targetUrl}`,
-    extractContent: (data: any) => data,
-    timeout: 12000,
-  },
-  {
-    name: "JSONProxy",
-    url: (targetUrl: string) =>
-      `https://jsonp.afeld.me/?url=${encodeURIComponent(targetUrl)}`,
-    extractContent: (data: any) => data,
-    timeout: 15000,
-  },
-  {
-    name: "CORSProxy",
-    url: (targetUrl: string) =>
-      `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-    extractContent: (data: any) => data,
-    timeout: 10000,
-  },
-];
-
-const fetchWithProxyFallback = async (
-  targetUrl: string,
-  maxRetries: number = PROXY_SERVICES.length
-): Promise<string> => {
-  let lastError: Error | null = null;
-
-  for (let i = 0; i < Math.min(maxRetries, PROXY_SERVICES.length); i++) {
-    const proxy = PROXY_SERVICES[i];
-    const controller = new AbortController();
-
-    
-    const timeoutId = setTimeout(() => controller.abort(), proxy.timeout);
-
-    try {
-      console.log(`Attempting to fetch with ${proxy.name}...`);
-
-      const response = await fetch(proxy.url(targetUrl), {
-        signal: controller.signal,
-        headers: {
-          Accept: "application/json, text/plain, */*",
-          "User-Agent": "Mozilla/5.0 (compatible; BookReader/1.0)",
-        },
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(
-          `${proxy.name} failed: ${response.status} ${response.statusText}`
-        );
-      }
-
-      const contentType = response.headers.get("content-type");
-      let data;
-
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      } else {
-        data = await response.text();
-      }
-
-      const content = proxy.extractContent(data);
-
-      if (!content || typeof content !== "string") {
-        throw new Error(`${proxy.name} returned invalid content`);
-      }
-
-      console.log(`Successfully fetched with ${proxy.name}`);
-      return content;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      lastError =
-        error instanceof Error ? error : new Error(`${proxy.name} failed`);
-      console.warn(`${proxy.name} failed:`, lastError.message);
-
-      
-      if (error.name === "AbortError" || error.name === "TimeoutError") {
-        console.log(`${proxy.name} timed out, trying next proxy...`);
-        continue;
-      }
-
-      
-      if (i < PROXY_SERVICES.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-    }
-  }
-
-  throw new Error(
-    `All proxy services failed. Last error: ${lastError?.message}`
-  );
-};
-
-
-const processBookHtmlOptimized = (html: string): string => {
- 
-  const patterns = [
-    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-    /<link\b[^>]*>/gi,
-    /<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi,
-    /<\/?html[^>]*>/gi,
-    /<\/?body[^>]*>/gi,
-    /<meta\b[^>]*>/gi,
-    /<!--[\s\S]*?-->/g,
-  ];
-
-  let processed = html;
-  patterns.forEach((pattern) => {
-    processed = processed.replace(pattern, "");
-  });
-
-  processed = processed.replace(/\s+/g, " ").replace(/>\s+</g, "><").trim();
-
-  return processed;
-};
-
 const BookReader = () => {
+  // State declarations
   const [selectedText, setSelectedText] = useState<string>("");
   const [scrollProgress, setScrollProgress] = useState<number>(0);
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
@@ -225,14 +63,24 @@ const BookReader = () => {
   const [contentError, setContentError] = useState<string | null>(null);
   const [isContentReady, setIsContentReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [currentProxy, setCurrentProxy] = useState<string>("");
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+  // Refs
   const bookContentRef = useRef<HTMLDivElement>(null);
+  const progressRestoreTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastSettingsChangeRef = useRef<number>(0);
+  const isRestoringProgressRef = useRef(false);
+
+  // Router and Redux
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { book, loading, error } = useFetchSingleBook({ id: Number(id) });
+
+  // Redux selectors - memoized for performance
+  const bookReadingState = useSelector((state: RootState) => state.bookReading);
+  const userSettingsState = useSelector((state: RootState) => state.userSettings);
 
   const {
     togglDark,
@@ -244,24 +92,73 @@ const BookReader = () => {
     lineHeight,
     theme,
     background,
-  } = useSelector((state: RootState) => state.bookReading);
+    annotationsFetched,
+  } = bookReadingState;
 
-  const { readingTheme, backgroundPattern } = useSelector(
-    (state: RootState) => state.userSettings.reading.appearanceSettings
-  );
-
+  const { readingTheme, backgroundPattern } = userSettingsState.reading.appearanceSettings;
   const {
     fontSize: supabaseFontSize,
     fontFamily: supabaseFontFamily,
     lineSpacing: supabaseLineHeight,
-  } = useSelector(
-    (state: RootState) => state.userSettings.reading.typographySettings
-  );
+  } = userSettingsState.reading.typographySettings;
 
-  
+  // Memoized mobile detection
+  const checkMobile = useCallback(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
+
+  // Memoized font mapping functions
+  const mapFontFamily = useCallback((fontFamily: string): string => {
+    switch (fontFamily.toLowerCase()) {
+      case "sans serif":
+      case "sans-serif":
+      case "system-ui, -apple-system, blinkmacsystemfont, 'segoe ui', roboto, 'helvetica neue', arial, sans-serif":
+        return "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+      case "monospace":
+      case "'sf mono', monaco, 'cascadia code', 'roboto mono', consolas, 'courier new', monospace":
+        return "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace";
+      case "dyslexic":
+        return "OpenDyslexic, sans-serif";
+      case "serif":
+      case "georgia, serif":
+      case "ui-serif, georgia, cambria, 'times new roman', times, serif":
+        return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
+      default:
+        return fontFamily.includes(",") ? fontFamily : "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
+    }
+  }, []);
+
+  const mapLineHeight = useCallback((lineHeight: string): string => {
+    switch (lineHeight) {
+      case "Tight": return "1.4";
+      case "Normal": return "1.6";
+      case "Relaxed": return "1.8";
+      case "Double": return "2.0";
+      default: return lineHeight;
+    }
+  }, []);
+
+  const mapFontSize = useCallback((fontSize: string | number) => {
+    const baseSize = isMobile ? 16 : 18;
+
+    if (typeof fontSize === "number" || !isNaN(Number(fontSize))) {
+      return `${fontSize}px`;
+    }
+
+    switch (fontSize) {
+      case "Small": return `${baseSize - 2}px`;
+      case "Medium": return `${baseSize}px`;
+      case "Large": return `${baseSize + 4}px`;
+      case "Extra Large": return `${baseSize + 8}px`;
+      default: return `${baseSize}px`;
+    }
+  }, [isMobile]);
+
   useEffect(() => {
     console.log("Initializing reading preferences from user settings...");
-
+    
+    lastSettingsChangeRef.current = Date.now();
+    
     dispatch(setFontSize(mapFontSize(supabaseFontSize)));
     dispatch(setFontFamily(mapFontFamily(supabaseFontFamily) as any));
     dispatch(setLineHeight(mapLineHeight(supabaseLineHeight)));
@@ -269,16 +166,15 @@ const BookReader = () => {
     dispatch(setBackground(backgroundPattern));
   }, [
     supabaseFontSize,
-    dispatch,
     supabaseFontFamily,
     supabaseLineHeight,
     readingTheme,
     backgroundPattern,
+    dispatch,
+    mapFontSize,
+    mapFontFamily,
+    mapLineHeight,
   ]);
-
-  const { annotationsFetched } = useSelector(
-    (state: RootState) => state.bookReading
-  );
 
   const getAnnotations = useCallback(async () => {
     if (annotationsFetched) return;
@@ -358,43 +254,39 @@ const BookReader = () => {
     }
   }, [book?.id, annotationsFetched, getAnnotations]);
 
-  const checkMobile = useCallback(
-    debounce(() => {
-      setIsMobile(window.innerWidth < 768);
-    }, 150),
-    []
-  );
-
   useEffect(() => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, [checkMobile]);
 
+
   const handleScroll = useCallback(
     throttle(() => {
       const el = bookContentRef.current;
-      if (!el || !isContentReady) return;
+      if (!el || !isContentReady || isRestoringProgressRef.current) return;
 
-      requestAnimationFrame(() => {
-        const scrollTop = el.scrollTop;
-        const scrollHeight = el.scrollHeight;
-        const clientHeight = el.clientHeight;
-        const maxScrollTop = scrollHeight - clientHeight;
+      const scrollTop = el.scrollTop;
+      const scrollHeight = el.scrollHeight;
+      const clientHeight = el.clientHeight;
+      const maxScrollTop = scrollHeight - clientHeight;
 
-        if (maxScrollTop <= 0) {
-          setScrollProgress(0);
-          return;
-        }
+      if (maxScrollTop <= 0) {
+        setScrollProgress(0);
+        return;
+      }
 
-        const progress = Math.max(
-          0,
-          Math.min(100, (scrollTop / maxScrollTop) * 100)
-        );
-        setScrollProgress(progress);
-      });
+      const progress = Math.max(
+        0,
+        Math.min(100, (scrollTop / maxScrollTop) * 100)
+      );
+      setScrollProgress(progress);
+
+      if (!hasUserInteracted && !isInitialLoad) {
+        setHasUserInteracted(true);
+      }
     }, 16),
-    [isContentReady]
+    [isContentReady, hasUserInteracted, isInitialLoad]
   );
 
   useEffect(() => {
@@ -412,7 +304,7 @@ const BookReader = () => {
   }, [handleScroll, isContentReady]);
 
   const handleSeek = useCallback(
-    (percentage: number) => {
+    (percentage: number, isProgressRestore: boolean = false) => {
       const container = bookContentRef.current;
       if (!container || !isContentReady) return;
 
@@ -425,13 +317,23 @@ const BookReader = () => {
 
       const targetScrollTop = (clampedPercentage / 100) * maxScrollTop;
 
+      if (isProgressRestore) {
+        isRestoringProgressRef.current = true;
+      }
+
       try {
         container.scrollTo({
           top: targetScrollTop,
-          behavior: "smooth",
+          behavior: isProgressRestore ? "auto" : "smooth",
         });
       } catch (error) {
         container.scrollTop = targetScrollTop;
+      }
+
+      if (isProgressRestore) {
+        setTimeout(() => {
+          isRestoringProgressRef.current = false;
+        }, 100);
       }
     },
     [isContentReady]
@@ -495,15 +397,24 @@ const BookReader = () => {
           bookContentRef.current.contains(range.commonAncestorContainer)
         ) {
           const rect = range.getBoundingClientRect();
+          const containerRect = bookContentRef.current.getBoundingClientRect();
+          
+          const x = isMobile ? 
+            Math.min(Math.max(10, rect.left), window.innerWidth - 320) : 
+            rect.x;
+          const y = isMobile ? 
+            Math.max(containerRect.top + 10, rect.top - 60) : 
+            rect.y - 60;
+
           setSelectedText(selection.toString().trim());
-          setSelectedPosition({ x: rect.x, y: rect.y - 60 });
+          setSelectedPosition({ x, y });
           setShowOptions(true);
         } else {
           clearSelection();
         }
       }
     }, 50);
-  }, []);
+  }, [isMobile]);
 
   const clearSelection = useCallback(() => {
     const selection = window.getSelection();
@@ -519,11 +430,26 @@ const BookReader = () => {
   }, [clearSelection]);
 
   useEffect(() => {
-    document.addEventListener("mouseup", handleTextSelection);
-    return () => {
-      document.removeEventListener("mouseup", handleTextSelection);
+    const handleTouchEnd = () => {
+      if (isMobile) {
+        handleTextSelection();
+      }
     };
-  }, [handleTextSelection]);
+
+    const handleMouseUp = () => {
+      if (!isMobile) {
+        handleTextSelection();
+      }
+    };
+
+    document.addEventListener("touchend", handleTouchEnd);
+    document.addEventListener("mouseup", handleMouseUp);
+    
+    return () => {
+      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isMobile, handleTextSelection]);
 
   const getBookUrl = useCallback(() => {
     if (!book?.formats) return "";
@@ -537,174 +463,111 @@ const BookReader = () => {
     );
   }, [book?.formats]);
 
-  const mapFontFamily = useCallback((fontFamily: string): string => {
-    switch (fontFamily.toLowerCase()) {
-      case "sans serif":
-      case "sans-serif":
-      case "system-ui, -apple-system, blinkmacsystemfont, 'segoe ui', roboto, 'helvetica neue', arial, sans-serif":
-        return "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
-      case "monospace":
-      case "'sf mono', monaco, 'cascadia code', 'roboto mono', consolas, 'courier new', monospace":
-        return "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace";
-      case "dyslexic":
-        return "OpenDyslexic, sans-serif";
-      case "serif":
-      case "georgia, serif":
-      case "ui-serif, georgia, cambria, 'times new roman', times, serif":
-        return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
-      default:
-        if (fontFamily.includes(",")) {
-          return fontFamily;
-        }
-        return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
-    }
-  }, []);
-
-  const mapLineHeight = useCallback((lineHeight: string): string => {
-    switch (lineHeight) {
-      case "Tight":
-        return "1.4";
-      case "Normal":
-        return "1.6";
-      case "Relaxed":
-        return "1.8";
-      case "Double":
-        return "2.0";
-      default:
-        return lineHeight;
-    }
-  }, []);
-
-  const mapFontSize = useCallback(
-    (fontSize: string | number) => {
-      const baseSize = isMobile ? 16 : 18;
-
-      if (typeof fontSize === "number" || !isNaN(Number(fontSize))) {
-        return `${fontSize}px`;
-      }
-
-      switch (fontSize) {
-        case "Small":
-          return `${baseSize - 2}px`;
-        case "Medium":
-          return `${baseSize}px`;
-        case "Large":
-          return `${baseSize + 4}px`;
-        case "Extra Large":
-          return `${baseSize + 8}px`;
-        default:
-          return `${baseSize}px`;
-      }
-    },
-    [isMobile]
-  );
-
   const htmlUrl = useMemo(() => getBookUrl(), [getBookUrl]);
 
   useEffect(() => {
     if (book) dispatch(setReadingBook(book));
   }, [book, dispatch]);
 
+  const fetchWithProxy = useCallback(async (url: string): Promise<string> => {
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.contents;
+  }, []);
+
+  const processBookHtml = useCallback((html: string): string => {
+    return html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/<link\b[^>]*>/gi, "")
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+      .replace(/<\/?html[^>]*>/gi, "")
+      .replace(/<\/?body[^>]*>/gi, "");
+  }, []);
+
   useEffect(() => {
     if (!htmlUrl) return;
-
-    let isCancelled = false;
 
     const fetchContent = async () => {
       setContentLoading(true);
       setContentError(null);
       setIsContentReady(false);
-      setLoadingProgress(0);
+      setIsInitialLoad(true);
 
       try {
-        setLoadingProgress(10);
-        setCurrentProxy("Initializing...");
-
-        const html = await fetchWithProxyFallback(htmlUrl);
-
-        if (isCancelled) return;
-
-        setLoadingProgress(60);
-        setCurrentProxy("Processing content...");
-
-        const processedHtml = processBookHtmlOptimized(html);
-
-        if (isCancelled) return;
-
-        setLoadingProgress(90);
+        const html = await fetchWithProxy(htmlUrl);
+        const processedHtml = processBookHtml(html);
         setBookContent(processedHtml);
 
-        // Use RAF for smooth transition
-        requestAnimationFrame(() => {
-          setLoadingProgress(100);
-          setTimeout(() => {
-            if (!isCancelled) {
-              setIsContentReady(true);
-            }
-          }, 300);
-        });
+        setTimeout(() => {
+          setIsContentReady(true);
+          setIsInitialLoad(false);
+        }, 500);
       } catch (error) {
-        if (!isCancelled) {
-          setContentError(
-            error instanceof Error
-              ? error.message
-              : "Failed to load book content"
-          );
-          console.error("Error fetching book:", error);
-        }
+        setContentError("Failed to load book content");
+        console.error("Error fetching book:", error);
+        setIsInitialLoad(false);
       } finally {
-        if (!isCancelled) {
-          setContentLoading(false);
-          setCurrentProxy("");
-        }
+        setContentLoading(false);
       }
     };
 
     fetchContent();
+  }, [htmlUrl, fetchWithProxy, processBookHtml]);
 
-    return () => {
-      isCancelled = true;
-    };
-  }, [htmlUrl]);
-
-  const debouncedSaveProgress = useMemo(
-    () =>
-      debounce((bookId: number, progress: number) => {
-        if (progress > 0) {
-          localStorage.setItem(
-            `reading-progress-${bookId}`,
-            progress.toFixed(2)
-          );
-        }
-      }, 1000),
-    []
+  const debouncedSaveProgress = useCallback(
+    debounce((bookId: number, progress: number) => {
+      if (progress > 0 && hasUserInteracted) {
+        localStorage.setItem(`reading-progress-${bookId}`, progress.toFixed(2));
+      }
+    }, 1000),
+    [hasUserInteracted]
   );
 
   useEffect(() => {
-    if (book?.id && scrollProgress > 0) {
+    if (book?.id && scrollProgress > 0 && hasUserInteracted) {
       debouncedSaveProgress(Number(book?.id), scrollProgress);
     }
-  }, [book?.id, scrollProgress, debouncedSaveProgress]);
+  }, [book?.id, scrollProgress, debouncedSaveProgress, hasUserInteracted]);
 
   useEffect(() => {
-    if (book?.id && bookContentRef.current && isContentReady) {
-      const savedProgress = localStorage.getItem(`reading-progress-${book.id}`);
-      if (savedProgress) {
-        const progress = parseFloat(savedProgress);
+    if (book?.id && bookContentRef.current && isContentReady && !isInitialLoad) {
+      if (progressRestoreTimeoutRef.current) {
+        clearTimeout(progressRestoreTimeoutRef.current);
+      }
 
-        const restoreProgress = () => {
-          const container = bookContentRef.current;
-          if (container && container.scrollHeight > container.clientHeight) {
-            handleSeek(progress);
-          } else {
-            setTimeout(restoreProgress, 200);
-          }
-        };
+      const timeSinceLastSettingsChange = Date.now() - lastSettingsChangeRef.current;
+      const isSettingsChange = timeSinceLastSettingsChange < 1000; // 1 second threshold
 
-        setTimeout(restoreProgress, 1000);
+      if (!isSettingsChange && !hasUserInteracted) {
+        const savedProgress = localStorage.getItem(`reading-progress-${book.id}`);
+        if (savedProgress) {
+          const progress = parseFloat(savedProgress);
+
+          const restoreProgress = () => {
+            const container = bookContentRef.current;
+            if (container && container.scrollHeight > container.clientHeight) {
+              handleSeek(progress, true);
+              setHasUserInteracted(false); 
+            } else {
+              progressRestoreTimeoutRef.current = setTimeout(restoreProgress, 200);
+            }
+          };
+
+          progressRestoreTimeoutRef.current = setTimeout(restoreProgress, 1000);
+        }
       }
     }
-  }, [book?.id, isContentReady, handleSeek]);
+
+    return () => {
+      if (progressRestoreTimeoutRef.current) {
+        clearTimeout(progressRestoreTimeoutRef.current);
+      }
+    };
+  }, [book?.id, isContentReady, hasUserInteracted, handleSeek, isInitialLoad]);
 
   const getTextColor = useCallback(() => {
     if (theme?.hex?.text) {
@@ -718,81 +581,69 @@ const BookReader = () => {
     return togglDark ? "#F3F4F6" : "#374151";
   }, [theme, togglDark]);
 
-  const containerVariants = useMemo(
-    () => ({
-      hidden: { opacity: 0, scale: 0.98 },
-      visible: {
-        opacity: 1,
-        scale: 1,
-        transition: {
-          duration: 0.3,
-          ease: "easeOut",
-          staggerChildren: 0.05,
-        },
+  const containerVariants:any = useMemo(() => ({
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut",
+        staggerChildren: 0.1,
       },
-      exit: {
-        opacity: 0,
-        scale: 0.99,
-        transition: { duration: 0.2 },
-      },
-    }),
-    []
-  );
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.98,
+      transition: { duration: 0.3 },
+    },
+  }), []);
 
-  const contentVariants = useMemo(
-    () => ({
-      hidden: { opacity: 0, y: 10 },
-      visible: {
-        opacity: 1,
-        y: 0,
-        transition: {
-          duration: 0.3,
-          ease: "easeOut",
-          delay: 0.1,
-        },
+  const contentVariants:any = useMemo(() => ({
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut",
+        delay: 0.2,
       },
-    }),
-    []
-  );
+    },
+  }), []);
 
-  const sidebarVariants = useMemo(
-    () => ({
-      hidden: { x: -320, opacity: 0 },
-      visible: {
-        x: 0,
-        opacity: 1,
-        transition: {
-          type: "spring",
-          stiffness: 400,
-          damping: 40,
-        },
+  const sidebarVariants:any = useMemo(() => ({
+    hidden: { x: -320, opacity: 0 },
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
       },
-      exit: {
-        x: -320,
-        opacity: 0,
-        transition: {
-          duration: 0.2,
-          ease: "easeIn",
-        },
+    },
+    exit: {
+      x: -320,
+      opacity: 0,
+      transition: {
+        duration: 0.3,
+        ease: "easeIn",
       },
-    }),
-    []
-  );
+    },
+  }), []);
 
-  const overlayVariants = useMemo(
-    () => ({
-      hidden: { opacity: 0 },
-      visible: {
-        opacity: 1,
-        transition: { duration: 0.2 },
-      },
-      exit: {
-        opacity: 0,
-        transition: { duration: 0.15 },
-      },
-    }),
-    []
-  );
+  const overlayVariants:any = useMemo(() => ({
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { duration: 0.3 },
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.2 },
+    },
+  }), []);
 
   if (loading)
     return (
@@ -802,7 +653,7 @@ const BookReader = () => {
         }`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.5 }}
       >
         <div className="text-center">
           <motion.div
@@ -812,9 +663,9 @@ const BookReader = () => {
           />
           <motion.h1
             className="text-xl md:text-2xl"
-            initial={{ opacity: 0, y: 5 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: 0.2 }}
           >
             Loading book...
           </motion.h1>
@@ -841,52 +692,29 @@ const BookReader = () => {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        <div className="text-center max-w-md mx-auto px-4">
-          {/* Enhanced loading progress indicator */}
-          <motion.div className="mb-6">
-            <div
-              className={`w-64 h-2 rounded-full mb-4 ${
-                togglDark ? "bg-gray-700" : "bg-gray-200"
-              }`}
-            >
-              <motion.div
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${loadingProgress}%` }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              />
-            </div>
-            <motion.p className="text-sm opacity-75 mb-2">
-              {currentProxy || "Preparing..."}
-            </motion.p>
-            <motion.p className="text-xs opacity-50">
-              {loadingProgress}% Complete
-            </motion.p>
-          </motion.div>
-
+        <div className="text-center">
           <motion.div className="animate-pulse">
             <motion.div
               className="h-4 bg-gray-300 rounded w-3/4 mx-auto mb-4"
               animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
+              transition={{ duration: 1.5, repeat: Infinity }}
             />
             <motion.div
               className="h-4 bg-gray-300 rounded w-1/2 mx-auto mb-4"
               animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1.2, repeat: Infinity, delay: 0.1 }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
             />
             <motion.div
               className="h-4 bg-gray-300 rounded w-5/6 mx-auto"
               animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
             />
           </motion.div>
-
           <motion.h1
             className="text-xl md:text-2xl mt-6"
-            initial={{ opacity: 0, y: 5 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.3 }}
           >
             Loading book content...
           </motion.h1>
@@ -1118,8 +946,8 @@ const BookReader = () => {
                   fontSize: mapFontSize(fontSize),
                   letterSpacing: letterSpacing + "px",
                   lineHeight: mapLineHeight(lineHeight),
-                  color: theme?.hex.text,
-                  backgroundColor: theme?.hex.bg,
+                  color: theme?.hex?.text || getTextColor(),
+                  backgroundColor: theme?.hex?.bg,
                   backgroundImage: background?.pattern || "none",
                   backgroundSize:
                     background?.id === "graph-paper"
@@ -1191,7 +1019,6 @@ const BookReader = () => {
           animation: slide-in-from-top-2 0.2s ease-out;
         }
 
-        /* Enhanced Scrollbar */
         .custom-scrollbar {
           scrollbar-width: thin;
           scrollbar-color: ${togglDark ? "#4B5563 #1F2937" : "#CBD5E1 #F8FAFC"};
@@ -1245,6 +1072,40 @@ const BookReader = () => {
           background: ${togglDark ? "#1F2937" : "#F8FAFC"};
         }
 
+        .book-reader-container {
+          -webkit-user-select: text;
+          -moz-user-select: text;
+          -ms-user-select: text;
+          user-select: text;
+          -webkit-touch-callout: none;
+        }
+
+        .book-reader-container * {
+          -webkit-user-select: text;
+          -moz-user-select: text;
+          -ms-user-select: text;
+          user-select: text;
+        }
+
+        /* Better mobile text selection */
+        @media (max-width: 768px) {
+          .book-reader-container {
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
+            -webkit-touch-callout: default;
+          }
+
+          .book-reader-container * {
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
+            -webkit-touch-callout: default;
+          }
+        }
+
         .book-reader-container h1,
         .book-reader-container h2,
         .book-reader-container h3,
@@ -1252,7 +1113,7 @@ const BookReader = () => {
         .book-reader-container h5,
         .book-reader-container h6 {
           color: ${
-            theme?.text || (togglDark ? "#F9FAFB" : "#111827")
+            theme?.hex?.text || theme?.text || (togglDark ? "#F9FAFB" : "#111827")
           } !important;
           margin-top: ${isMobile ? "1.5em" : "2em"};
           margin-bottom: ${isMobile ? "0.75em" : "1em"};
@@ -1270,21 +1131,21 @@ const BookReader = () => {
         .book-reader-container h2 {
           font-size: ${isMobile ? "1.5em" : "1.875em"};
           color: ${
-            theme?.text || (togglDark ? "#A78BFA" : "#3730A3")
+            theme?.hex?.text || theme?.text || (togglDark ? "#A78BFA" : "#3730A3")
           } !important;
         }
 
         .book-reader-container h3 {
           font-size: ${isMobile ? "1.25em" : "1.5em"};
           color: ${
-            theme?.text || (togglDark ? "#C4B5FD" : "#4338CA")
+            theme?.hex?.text || theme?.text || (togglDark ? "#C4B5FD" : "#4338CA")
           } !important;
         }
 
         .book-reader-container h4 {
           font-size: ${isMobile ? "1.125em" : "1.25em"};
           color: ${
-            theme?.text || (togglDark ? "#DDD6FE" : "#4F46E5")
+            theme?.hex?.text || theme?.text || (togglDark ? "#DDD6FE" : "#4F46E5")
           } !important;
         }
 
@@ -1294,7 +1155,7 @@ const BookReader = () => {
           hyphens: auto;
           word-spacing: 0.05em;
           line-height: inherit;
-          color: ${getTextColor()}; 
+          color: ${getTextColor()} !important; 
         }
 
         .book-reader-container p:first-of-type {
@@ -1439,11 +1300,6 @@ const BookReader = () => {
           color: ${togglDark ? "#F1F5F9" : "#334155"} !important;
         }
 
-        /* Override any inherited text colors */
-        .book-reader-container * {
-          color: inherit !important;
-        }
-
         .book-reader-container div,
         .book-reader-container span,
         .book-reader-container em,
@@ -1453,14 +1309,12 @@ const BookReader = () => {
           color: ${getTextColor()} !important;
         }
 
-        /* Enhanced focus styles for better accessibility */
         .book-reader-container *:focus {
           outline: 2px solid ${togglDark ? "#7C3AED" : "#3B82F6"};
           outline-offset: 2px;
           border-radius: 0.25em;
         }
 
-        /* Better text selection */
         .book-reader-container ::selection {
           background: ${
             togglDark ? "rgba(124, 58, 237, 0.3)" : "rgba(59, 130, 246, 0.2)"
@@ -1468,10 +1322,10 @@ const BookReader = () => {
           color: ${togglDark ? "#F9FAFB" : "#1F2937"};
         }
 
-        /* Mobile-specific optimizations */
         @media (max-width: 768px) {
           .book-reader-container {
             font-size: 16px !important;
+            touch-action: manipulation;
           }
           
           .book-reader-container p {
@@ -1485,14 +1339,12 @@ const BookReader = () => {
           }
         }
 
-        /* Dark mode enhancements */
         @media (prefers-color-scheme: dark) {
           .custom-scrollbar::-webkit-scrollbar-thumb {
             box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
           }
         }
 
-        /* Reduced motion accessibility */
         @media (prefers-reduced-motion: reduce) {
           .animate-shimmer,
           .animate-pulse,
@@ -1524,6 +1376,23 @@ const BookReader = () => {
             border-bottom-width: 3px;
             border-bottom-style: solid;
             border-bottom-color: currentColor;
+          }
+        }
+
+        .book-reader-container {
+          contain: layout style paint;
+          will-change: scroll-position;
+        }
+
+        .book-reader-container img {
+          contain: layout style paint;
+          content-visibility: auto;
+        }
+
+        @media (pointer: coarse) {
+          .book-reader-container {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
           }
         }
       `}</style>

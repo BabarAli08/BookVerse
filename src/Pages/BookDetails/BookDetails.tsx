@@ -233,10 +233,9 @@ const MemoizedActionButton = memo(
 );
 
 const BookDetails = () => {
-  const [credentialsLoading, setCredentialsLoading] = useState<boolean>(true);
   const [wishlisted, setWishlisted] = useState<boolean>(false);
   const [readingProgress, setReadingProgress] = useState<number>(0);
-  const [wishlistLoading, setWishlistLoading] = useState<boolean>(false);
+
   const [bookLoading, setBookLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("summary");
   const { wishlistedBook } = useSelector(
@@ -247,7 +246,6 @@ const BookDetails = () => {
     (state: RootState) => state.userSettings.reading.billing
   );
 
-  
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -385,7 +383,7 @@ const BookDetails = () => {
         dispatch(
           updateUserStreaks({
             currentStreak: 0,
-            longestStreak: Number(currentStreak.longest_streak),
+            longestStreak: Number(currentStreak.longest_streak || 0),
           })
         );
       }
@@ -685,15 +683,10 @@ const BookDetails = () => {
 
                 <MemoizedActionButton
                   onClick={handleAddWishlist}
-                  disabled={wishlistLoading}
                   icon={Heart}
                   className={wishlisted ? "text-red-500" : ""}
                 >
-                  {wishlistLoading
-                    ? "Checking..."
-                    : wishlisted
-                    ? "Wishlisted"
-                    : "Add to wishlist"}
+                  {wishlisted ? "Wishlisted" : "Add to wishlist"}
                 </MemoizedActionButton>
 
                 <MemoizedActionButton onClick={handleBookCopy} icon={Share2}>
