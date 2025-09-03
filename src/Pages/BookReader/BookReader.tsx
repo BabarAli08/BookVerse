@@ -80,7 +80,9 @@ const BookReader = () => {
 
   // Redux selectors - memoized for performance
   const bookReadingState = useSelector((state: RootState) => state.bookReading);
-  const userSettingsState = useSelector((state: RootState) => state.userSettings);
+  const userSettingsState = useSelector(
+    (state: RootState) => state.userSettings
+  );
 
   const {
     togglDark,
@@ -95,7 +97,8 @@ const BookReader = () => {
     annotationsFetched,
   } = bookReadingState;
 
-  const { readingTheme, backgroundPattern } = userSettingsState.reading.appearanceSettings;
+  const { readingTheme, backgroundPattern } =
+    userSettingsState.reading.appearanceSettings;
   const {
     fontSize: supabaseFontSize,
     fontFamily: supabaseFontFamily,
@@ -124,41 +127,56 @@ const BookReader = () => {
       case "ui-serif, georgia, cambria, 'times new roman', times, serif":
         return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
       default:
-        return fontFamily.includes(",") ? fontFamily : "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
+        return fontFamily.includes(",")
+          ? fontFamily
+          : "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
     }
   }, []);
 
   const mapLineHeight = useCallback((lineHeight: string): string => {
     switch (lineHeight) {
-      case "Tight": return "1.4";
-      case "Normal": return "1.6";
-      case "Relaxed": return "1.8";
-      case "Double": return "2.0";
-      default: return lineHeight;
+      case "Tight":
+        return "1.4";
+      case "Normal":
+        return "1.6";
+      case "Relaxed":
+        return "1.8";
+      case "Double":
+        return "2.0";
+      default:
+        return lineHeight;
     }
   }, []);
 
-  const mapFontSize = useCallback((fontSize: string | number) => {
-    const baseSize = isMobile ? 16 : 18;
+  const mapFontSize = useCallback(
+    (fontSize: string | number) => {
+      const baseSize = isMobile ? 16 : 18;
 
-    if (typeof fontSize === "number" || !isNaN(Number(fontSize))) {
-      return `${fontSize}px`;
-    }
+      if (typeof fontSize === "number" || !isNaN(Number(fontSize))) {
+        return `${fontSize}px`;
+      }
 
-    switch (fontSize) {
-      case "Small": return `${baseSize - 2}px`;
-      case "Medium": return `${baseSize}px`;
-      case "Large": return `${baseSize + 4}px`;
-      case "Extra Large": return `${baseSize + 8}px`;
-      default: return `${baseSize}px`;
-    }
-  }, [isMobile]);
+      switch (fontSize) {
+        case "Small":
+          return `${baseSize - 2}px`;
+        case "Medium":
+          return `${baseSize}px`;
+        case "Large":
+          return `${baseSize + 4}px`;
+        case "Extra Large":
+          return `${baseSize + 8}px`;
+        default:
+          return `${baseSize}px`;
+      }
+    },
+    [isMobile]
+  );
 
   useEffect(() => {
     console.log("Initializing reading preferences from user settings...");
-    
+
     lastSettingsChangeRef.current = Date.now();
-    
+
     dispatch(setFontSize(mapFontSize(supabaseFontSize)));
     dispatch(setFontFamily(mapFontFamily(supabaseFontFamily) as any));
     dispatch(setLineHeight(mapLineHeight(supabaseLineHeight)));
@@ -259,7 +277,6 @@ const BookReader = () => {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, [checkMobile]);
-
 
   const handleScroll = useCallback(
     throttle(() => {
@@ -398,13 +415,13 @@ const BookReader = () => {
         ) {
           const rect = range.getBoundingClientRect();
           const containerRect = bookContentRef.current.getBoundingClientRect();
-          
-          const x = isMobile ? 
-            Math.min(Math.max(10, rect.left), window.innerWidth - 320) : 
-            rect.x;
-          const y = isMobile ? 
-            Math.max(containerRect.top + 10, rect.top - 60) : 
-            rect.y - 60;
+
+          const x = isMobile
+            ? Math.min(Math.max(10, rect.left), window.innerWidth - 320)
+            : rect.x;
+          const y = isMobile
+            ? Math.max(containerRect.top + 10, rect.top - 60)
+            : rect.y - 60;
 
           setSelectedText(selection.toString().trim());
           setSelectedPosition({ x, y });
@@ -444,7 +461,7 @@ const BookReader = () => {
 
     document.addEventListener("touchend", handleTouchEnd);
     document.addEventListener("mouseup", handleMouseUp);
-    
+
     return () => {
       document.removeEventListener("touchend", handleTouchEnd);
       document.removeEventListener("mouseup", handleMouseUp);
@@ -470,7 +487,9 @@ const BookReader = () => {
   }, [book, dispatch]);
 
   const fetchWithProxy = useCallback(async (url: string): Promise<string> => {
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(
+      url
+    )}`;
     const response = await fetch(proxyUrl);
     if (!response.ok) {
       throw new Error(`Failed to fetch: ${response.status}`);
@@ -534,16 +553,24 @@ const BookReader = () => {
   }, [book?.id, scrollProgress, debouncedSaveProgress, hasUserInteracted]);
 
   useEffect(() => {
-    if (book?.id && bookContentRef.current && isContentReady && !isInitialLoad) {
+    if (
+      book?.id &&
+      bookContentRef.current &&
+      isContentReady &&
+      !isInitialLoad
+    ) {
       if (progressRestoreTimeoutRef.current) {
         clearTimeout(progressRestoreTimeoutRef.current);
       }
 
-      const timeSinceLastSettingsChange = Date.now() - lastSettingsChangeRef.current;
+      const timeSinceLastSettingsChange =
+        Date.now() - lastSettingsChangeRef.current;
       const isSettingsChange = timeSinceLastSettingsChange < 1000; // 1 second threshold
 
       if (!isSettingsChange && !hasUserInteracted) {
-        const savedProgress = localStorage.getItem(`reading-progress-${book.id}`);
+        const savedProgress = localStorage.getItem(
+          `reading-progress-${book.id}`
+        );
         if (savedProgress) {
           const progress = parseFloat(savedProgress);
 
@@ -551,9 +578,12 @@ const BookReader = () => {
             const container = bookContentRef.current;
             if (container && container.scrollHeight > container.clientHeight) {
               handleSeek(progress, true);
-              setHasUserInteracted(false); 
+              setHasUserInteracted(false);
             } else {
-              progressRestoreTimeoutRef.current = setTimeout(restoreProgress, 200);
+              progressRestoreTimeoutRef.current = setTimeout(
+                restoreProgress,
+                200
+              );
             }
           };
 
@@ -581,69 +611,81 @@ const BookReader = () => {
     return togglDark ? "#F3F4F6" : "#374151";
   }, [theme, togglDark]);
 
-  const containerVariants:any = useMemo(() => ({
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        duration: 0.4,
-        ease: "easeOut",
-        staggerChildren: 0.1,
+  const containerVariants: any = useMemo(
+    () => ({
+      hidden: { opacity: 0, scale: 0.95 },
+      visible: {
+        opacity: 1,
+        scale: 1,
+        transition: {
+          duration: 0.4,
+          ease: "easeOut",
+          staggerChildren: 0.1,
+        },
       },
-    },
-    exit: {
-      opacity: 0,
-      scale: 0.98,
-      transition: { duration: 0.3 },
-    },
-  }), []);
+      exit: {
+        opacity: 0,
+        scale: 0.98,
+        transition: { duration: 0.3 },
+      },
+    }),
+    []
+  );
 
-  const contentVariants:any = useMemo(() => ({
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut",
-        delay: 0.2,
+  const contentVariants: any = useMemo(
+    () => ({
+      hidden: { opacity: 0, y: 20 },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+          duration: 0.5,
+          ease: "easeOut",
+          delay: 0.2,
+        },
       },
-    },
-  }), []);
+    }),
+    []
+  );
 
-  const sidebarVariants:any = useMemo(() => ({
-    hidden: { x: -320, opacity: 0 },
-    visible: {
-      x: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
+  const sidebarVariants: any = useMemo(
+    () => ({
+      hidden: { x: -320, opacity: 0 },
+      visible: {
+        x: 0,
+        opacity: 1,
+        transition: {
+          type: "spring",
+          stiffness: 300,
+          damping: 30,
+        },
       },
-    },
-    exit: {
-      x: -320,
-      opacity: 0,
-      transition: {
-        duration: 0.3,
-        ease: "easeIn",
+      exit: {
+        x: -320,
+        opacity: 0,
+        transition: {
+          duration: 0.3,
+          ease: "easeIn",
+        },
       },
-    },
-  }), []);
+    }),
+    []
+  );
 
-  const overlayVariants:any = useMemo(() => ({
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { duration: 0.3 },
-    },
-    exit: {
-      opacity: 0,
-      transition: { duration: 0.2 },
-    },
-  }), []);
+  const overlayVariants: any = useMemo(
+    () => ({
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: { duration: 0.3 },
+      },
+      exit: {
+        opacity: 0,
+        transition: { duration: 0.2 },
+      },
+    }),
+    []
+  );
 
   if (loading)
     return (
@@ -1113,7 +1155,9 @@ const BookReader = () => {
         .book-reader-container h5,
         .book-reader-container h6 {
           color: ${
-            theme?.hex?.text || theme?.text || (togglDark ? "#F9FAFB" : "#111827")
+            theme?.hex?.text ||
+            theme?.text ||
+            (togglDark ? "#F9FAFB" : "#111827")
           } !important;
           margin-top: ${isMobile ? "1.5em" : "2em"};
           margin-bottom: ${isMobile ? "0.75em" : "1em"};
@@ -1131,21 +1175,27 @@ const BookReader = () => {
         .book-reader-container h2 {
           font-size: ${isMobile ? "1.5em" : "1.875em"};
           color: ${
-            theme?.hex?.text || theme?.text || (togglDark ? "#A78BFA" : "#3730A3")
+            theme?.hex?.text ||
+            theme?.text ||
+            (togglDark ? "#A78BFA" : "#3730A3")
           } !important;
         }
 
         .book-reader-container h3 {
           font-size: ${isMobile ? "1.25em" : "1.5em"};
           color: ${
-            theme?.hex?.text || theme?.text || (togglDark ? "#C4B5FD" : "#4338CA")
+            theme?.hex?.text ||
+            theme?.text ||
+            (togglDark ? "#C4B5FD" : "#4338CA")
           } !important;
         }
 
         .book-reader-container h4 {
           font-size: ${isMobile ? "1.125em" : "1.25em"};
           color: ${
-            theme?.hex?.text || theme?.text || (togglDark ? "#DDD6FE" : "#4F46E5")
+            theme?.hex?.text ||
+            theme?.text ||
+            (togglDark ? "#DDD6FE" : "#4F46E5")
           } !important;
         }
 
