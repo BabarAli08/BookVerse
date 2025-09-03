@@ -247,9 +247,7 @@ const BookDetails = () => {
     (state: RootState) => state.userSettings.reading.billing
   );
 
-  const completedBooks = useSelector(
-    (state: RootState) => state.userSettings.completedBooks
-  );
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -386,7 +384,7 @@ const BookDetails = () => {
       } else {
         dispatch(
           updateUserStreaks({
-            currenStreak: 0,
+            currentStreak: 0,
             longestStreak: Number(currentStreak.longest_streak),
           })
         );

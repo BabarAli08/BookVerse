@@ -118,7 +118,7 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.04 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className={`w-full max-w-xs bg-white rounded-xl border shadow-md overflow-hidden relative flex flex-col group
+      className={`w-full max-w-xs bg-white rounded-xl min-w-[80px] border shadow-md overflow-hidden relative flex flex-col group
         ${
           currentPlan.name !== "free" && currentPlan.status == "active"
             ? "border-purple-100 ring-2 ring-purple-300"

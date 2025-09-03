@@ -7,7 +7,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import PremiumBook from "./PremiumBook";
 import BookCard from "./FreeBooks";
 import useFetchData from "../../Data/useFetchData";
@@ -42,6 +42,13 @@ const BookCarousel = ({
   const [isScrolling, setIsScrolling] = useState<boolean>(false);
   const [loadingId, setLoadingId] = useState<string>("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const componentRef = useRef<HTMLDivElement>(null);
+
+  const isInView = useInView(componentRef, {
+    once: true,
+    amount: 0.2,
+    margin: "0px 0px -100px 0px",
+  });
 
   useEffect(() => {
     const handleResize = () => {
@@ -129,10 +136,9 @@ const BookCarousel = ({
     }
   }, [data, isPremium, dispatch]);
 
- 
   useEffect(() => {
     if (loading) {
-      setLoadingId(`loading-${isPremium ? 'premium' : 'free'}-${Date.now()}`);
+      setLoadingId(`loading-${isPremium ? "premium" : "free"}-${Date.now()}`);
     }
   }, [loading, isPremium]);
 
@@ -190,75 +196,76 @@ const BookCarousel = ({
 
   const { allBooks } = booksState;
 
-  const containerVariants:any = {
-    hidden: { opacity: 0, y: 20 },
+  const containerVariants = {
+    hidden: { opacity: 0, y: 15 },
     visible: {
       opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut",
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const headerVariants:any = {
-    hidden: { opacity: 0, x: -30 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: { duration: 0.5, ease: "easeOut" },
-    },
-  };
-
-  const buttonVariants:any = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: { duration: 0.3, ease: "easeOut" },
-    },
-    exit: {
-      opacity: 0,
-      scale: 0.8,
-      transition: { duration: 0.2 },
-    },
-  };
-
-  const bookItemVariants:any = {
-    hidden: { opacity: 0, scale: 0.9, y: 20 },
-    visible: {
-      opacity: 1,
-      scale: 1,
       y: 0,
       transition: {
         duration: 0.4,
         ease: "easeOut",
+        staggerChildren: 0.05,
       },
     },
   };
 
-  const loadingVariants:any = {
-    hidden: { opacity: 0, x: 50 },
+  const headerVariants = {
+    hidden: { opacity: 0, x: -20 },
     visible: {
       opacity: 1,
       x: 0,
       transition: { duration: 0.3, ease: "easeOut" },
     },
+  };
+
+  const buttonVariants = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { duration: 0.2, ease: "easeOut" },
+    },
     exit: {
       opacity: 0,
-      x: -50,
-      transition: { duration: 0.3 },
+      scale: 0.9,
+      transition: { duration: 0.15 },
+    },
+  };
+
+  const bookItemVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 10 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: {
+        duration: 0.25,
+        ease: "easeOut",
+      },
+    },
+  };
+
+  const loadingVariants = {
+    hidden: { opacity: 0, x: 20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.2, ease: "easeOut" },
+    },
+    exit: {
+      opacity: 0,
+      x: -20,
+      transition: { duration: 0.2 },
     },
   };
 
   return (
     <motion.div
+      ref={componentRef}
       className="w-full max-w-7xl mx-auto px-4 md:px-6 py-8"
       variants={containerVariants}
       initial="hidden"
-      animate="visible"
+      animate={isInView ? "visible" : "hidden"}
     >
       <motion.div
         className="flex items-center justify-between mb-8"
@@ -274,7 +281,7 @@ const BookCarousel = ({
             whileHover={{
               scale: 1.05,
               rotate: [0, -5, 5, 0],
-              transition: { duration: 0.3 },
+              transition: { duration: 0.2 },
             }}
           >
             {isPremium ? (
@@ -283,11 +290,11 @@ const BookCarousel = ({
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 rounded-2xl opacity-20"
                   animate={{
-                    scale: [1, 1.1, 1],
-                    opacity: [0.2, 0.3, 0.2],
+                    scale: [1, 1.05, 1],
+                    opacity: [0.2, 0.25, 0.2],
                   }}
                   transition={{
-                    duration: 2,
+                    duration: 1.5,
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
@@ -298,7 +305,11 @@ const BookCarousel = ({
                 <BookOpen className="text-blue-600 relative z-10" size={28} />
                 <motion.div
                   animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
                 >
                   <Sparkles
                     className="absolute -top-1 -right-1 text-blue-400"
@@ -312,17 +323,17 @@ const BookCarousel = ({
           <div className="space-y-1">
             <motion.h2
               className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
             >
               {title}
             </motion.h2>
             <motion.div
               className="flex items-center gap-2"
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
+              transition={{ delay: 0.15, duration: 0.3 }}
             >
               <div
                 className={`h-1 w-12 rounded-full bg-gradient-to-r ${
@@ -349,10 +360,11 @@ const BookCarousel = ({
                 onClick={() => scroll("left")}
                 disabled={!showLeftButton || isScrolling}
                 className={`
-                  relative p-3 rounded-full backdrop-blur-sm transition-all duration-300
-                  ${isPremium
-                    ? "bg-purple-50/80 hover:bg-purple-100 border border-purple-200 hover:border-purple-300 text-purple-600"
-                    : "bg-blue-50/80 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 text-blue-600"
+                  relative p-3 rounded-full backdrop-blur-sm transition-all duration-200
+                  ${
+                    isPremium
+                      ? "bg-purple-50/80 hover:bg-purple-100 border border-purple-200 hover:border-purple-300 text-purple-600"
+                      : "bg-blue-50/80 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 text-blue-600"
                   }
                   disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl
                 `}
@@ -372,10 +384,11 @@ const BookCarousel = ({
             onClick={() => scroll("right")}
             disabled={loading || isScrolling}
             className={`
-              relative p-3 rounded-full backdrop-blur-sm transition-all duration-300
-              ${isPremium
-                ? "bg-purple-50/80 hover:bg-purple-100 border border-purple-200 hover:border-purple-300 text-purple-600"
-                : "bg-blue-50/80 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 text-blue-600"
+              relative p-3 rounded-full backdrop-blur-sm transition-all duration-200
+              ${
+                isPremium
+                  ? "bg-purple-50/80 hover:bg-purple-100 border border-purple-200 hover:border-purple-300 text-purple-600"
+                  : "bg-blue-50/80 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 text-blue-600"
               }
               disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl
             `}
@@ -390,7 +403,11 @@ const BookCarousel = ({
                 rotate: loading ? 360 : 0,
               }}
               transition={{
-                rotate: { duration: 1, repeat: loading ? Infinity : 0, ease: "linear" },
+                rotate: {
+                  duration: 0.8,
+                  repeat: loading ? Infinity : 0,
+                  ease: "linear",
+                },
               }}
             >
               <ChevronRight size={20} />
@@ -403,15 +420,15 @@ const BookCarousel = ({
         className="relative"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
+        transition={{ delay: 0.2, duration: 0.3 }}
       >
-      
         <AnimatePresence>
           {showLeftButton && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-r from-white via-white/80 to-transparent"
             />
           )}
@@ -420,6 +437,7 @@ const BookCarousel = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-l from-white via-white/80 to-transparent"
             />
           )}
@@ -438,60 +456,60 @@ const BookCarousel = ({
             msOverflowStyle: "none",
             WebkitOverflowScrolling: "touch",
           }}
-          initial={{ x: -20 }}
+          initial={{ x: -10 }}
           animate={{ x: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
         >
-         
           {loading && allBooks.length === 0 ? (
-            
-            
-            Array(booksPerView)
-              .fill(0)
-              .map((_, i) => (
-                <motion.div
-                  key={`initial-loader-${isPremium ? 'premium' : 'free'}-${i}`}
-                  className="flex-shrink-0 w-48 max-w-xs"
-                  variants={loadingVariants}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <div className={`
-                    p-4 rounded-2xl px-10 shadow-lg border-2 transition-all duration-300
-                    ${isPremium 
-                      ? 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200' 
-                      : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
-                    }
-                  `}>
-                    <LoaderCard3Enhanced />
-                  </div>
-                </motion.div>
-              ))
+            <div className="flex items-center w-[100vw] justify-between gap-6 px-4">
+              {Array(booksPerView)
+                .fill(0)
+                .map((_, i) => (
+                  <motion.div
+                    key={`initial-loader-${
+                      isPremium ? "premium" : "free"
+                    }-${i}`}
+                    className="flex-shrink-0 w-48 max-w-xs"
+                    variants={loadingVariants}
+                    initial="hidden"
+                    animate="visible"
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <div
+                      className={`
+              rounded-2xl flex min-w-[150px] items-center justify-center px-10  transition-all duration-200
+              
+            `}
+                    >
+                      <LoaderCard3Enhanced />
+                    </div>
+                  </motion.div>
+                ))}
+            </div>
           ) : error ? (
-          
             <motion.div
               className="flex-shrink-0 w-full"
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
             >
               <motion.div
                 className={`
                   relative overflow-hidden rounded-2xl p-8 text-center shadow-xl border-2
-                  ${isPremium
-                    ? "bg-gradient-to-br from-red-50 to-purple-50 border-red-200"
-                    : "bg-gradient-to-br from-red-50 to-blue-50 border-red-200"
+                  ${
+                    isPremium
+                      ? "bg-gradient-to-br from-red-50 to-purple-50 border-red-200"
+                      : "bg-gradient-to-br from-red-50 to-blue-50 border-red-200"
                   }
                 `}
                 whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.15 }}
               >
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-red-100/50 to-transparent"
                   animate={{ x: ["-100%", "100%"] }}
                   transition={{
-                    duration: 2,
+                    duration: 1.5,
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
@@ -500,39 +518,38 @@ const BookCarousel = ({
                   Unable to Load Books
                 </h3>
                 <p className="relative text-red-500">
-                  No {isPremium ? "Premium" : "Free"} books available for this tier
+                  No {isPremium ? "Premium" : "Free"} books available for this
+                  tier
                 </p>
               </motion.div>
             </motion.div>
           ) : (
-          
             <>
-                {allBooks.map((book: book, index: number) => (
+              {allBooks.map((book: book, index: number) => (
                 <motion.div
-                  key={`book-${book.id}-${isPremium ? 'premium' : 'free'}`}
+                  key={`book-${book.id}-${isPremium ? "premium" : "free"}`}
                   className="flex-shrink-0"
                   variants={bookItemVariants}
                   initial="hidden"
                   animate="visible"
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.03 }}
                   whileHover={{
-                    y: -8,
-                    transition: { duration: 0.3, ease: "easeOut" },
+                    y: -6,
+                    transition: { duration: 0.2, ease: "easeOut" },
                   }}
                 >
                   <motion.div
                     className="relative"
-                    whileHover={{ scale: 1.03 }}
-                    transition={{ duration: 0.2 }}
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.15 }}
                   >
-                    
                     <motion.div
                       className={`
                         absolute -inset-2 rounded-2xl opacity-0 blur-xl
                         ${isPremium ? "bg-purple-200" : "bg-blue-200"}
                       `}
-                      whileHover={{ opacity: 0.3 }}
-                      transition={{ duration: 0.3 }}
+                      whileHover={{ opacity: 0.25 }}
+                      transition={{ duration: 0.2 }}
                     />
                     <div className="relative">
                       {isPremium ? (
@@ -545,57 +562,36 @@ const BookCarousel = ({
                 </motion.div>
               ))}
 
-             
               <AnimatePresence>
-                {loading && allBooks.length > 0 &&
-                  Array(3)
-                    .fill(0)
-                    .map((_, i) => (
-                      <motion.div
-                        key={`${loadingId}-${i}`}
-                        className="flex-shrink-0 w-48"
-                        variants={loadingVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                        transition={{ delay: i * 0.1 }}
-                      >
-                        <motion.div
-                          className={`
-                            relative p-4 rounded-2xl shadow-lg border-2 transition-all duration-300
-                            ${isPremium 
-                              ? 'bg-gradient-to-br from-purple-50/80 to-purple-100/80 border-purple-200/50' 
-                              : 'bg-gradient-to-br from-blue-50/80 to-blue-100/80 border-blue-200/50'
-                            }
-                            backdrop-blur-sm
-                          `}
-                          animate={{
-                            opacity: [0.7, 1, 0.7],
-                            scale: [0.98, 1, 0.98],
-                          }}
-                          transition={{
-                            duration: 1.5,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: i * 0.2,
-                          }}
-                        >
-                          <LoaderCard3Enhanced />
-                          
-                         
+                {loading && allBooks.length > 0 && (
+                  <>
+                    <div className="flex items-center w-[100vw] justify-between gap-6 px-4">
+                      {Array(booksPerView)
+                        .fill(0)
+                        .map((_, i) => (
                           <motion.div
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent rounded-2xl"
-                            animate={{ x: ["-100%", "200%"] }}
-                            transition={{
-                              duration: 1.5,
-                              repeat: Infinity,
-                              ease: "easeInOut",
-                              delay: i * 0.3,
-                            }}
-                          />
-                        </motion.div>
-                      </motion.div>
-                    ))}
+                            key={`initial-loader-${
+                              isPremium ? "premium" : "free"
+                            }-${i}`}
+                            className="flex-shrink-0 w-48 max-w-xs"
+                            variants={loadingVariants}
+                            initial="hidden"
+                            animate="visible"
+                            transition={{ delay: i * 0.05 }}
+                          >
+                            <div
+                              className={`
+              rounded-2xl flex min-w-[150px] items-center justify-center px-10  transition-all duration-200
+              
+            `}
+                            >
+                              <LoaderCard3Enhanced />
+                            </div>
+                          </motion.div>
+                        ))}
+                    </div>
+                  </>
+                )}
               </AnimatePresence>
             </>
           )}
