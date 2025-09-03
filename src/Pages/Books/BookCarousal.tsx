@@ -461,7 +461,9 @@ const BookCarousel = ({
           transition={{ duration: 0.3, ease: "easeOut" }}
         >
           {loading && allBooks.length === 0 ? (
-            <div className="flex items-center w-[100vw] justify-between gap-6 px-4">
+          
+            <>
+            <div className="w-[100%] flex items-center justify-between gap-6">
               {Array(booksPerView)
                 .fill(0)
                 .map((_, i) => (
@@ -469,23 +471,21 @@ const BookCarousel = ({
                     key={`initial-loader-${
                       isPremium ? "premium" : "free"
                     }-${i}`}
-                    className="flex-shrink-0 w-48 max-w-xs"
+                    className={`flex-shrink-0 ${
+                      isMobile ? "w-[calc(50vw-2rem)] min-w-[240px]" : "w-48"
+                    }`}
                     variants={loadingVariants}
                     initial="hidden"
                     animate="visible"
                     transition={{ delay: i * 0.05 }}
                   >
-                    <div
-                      className={`
-              rounded-2xl flex min-w-[150px] items-center justify-center px-10  transition-all duration-200
-              
-            `}
-                    >
+                    <div className="rounded-2xl flex items-center justify-center transition-all duration-200">
                       <LoaderCard3Enhanced />
                     </div>
                   </motion.div>
                 ))}
-            </div>
+                </div>
+            </>
           ) : error ? (
             <motion.div
               className="flex-shrink-0 w-full"
@@ -564,32 +564,29 @@ const BookCarousel = ({
 
               <AnimatePresence>
                 {loading && allBooks.length > 0 && (
+                  // Fixed append loading cards
                   <>
-                    <div className="flex items-center w-[100vw] justify-between gap-6 px-4">
-                      {Array(booksPerView)
-                        .fill(0)
-                        .map((_, i) => (
-                          <motion.div
-                            key={`initial-loader-${
-                              isPremium ? "premium" : "free"
-                            }-${i}`}
-                            className="flex-shrink-0 w-48 max-w-xs"
-                            variants={loadingVariants}
-                            initial="hidden"
-                            animate="visible"
-                            transition={{ delay: i * 0.05 }}
-                          >
-                            <div
-                              className={`
-              rounded-2xl flex min-w-[150px] items-center justify-center px-10  transition-all duration-200
-              
-            `}
-                            >
-                              <LoaderCard3Enhanced />
-                            </div>
-                          </motion.div>
-                        ))}
-                    </div>
+                    {Array(booksPerView)
+                      .fill(0)
+                      .map((_, i) => (
+                        <motion.div
+                          key={`append-loader-${
+                            isPremium ? "premium" : "free"
+                          }-${i}`}
+                          className={`flex-shrink-0 ${
+                            isMobile ? "w-[calc(50vw-2rem)] min-w-[140px]" : "w-48"
+                          }`}
+                          variants={loadingVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          transition={{ delay: i * 0.05 }}
+                        >
+                          <div className="rounded-2xl flex items-center justify-center transition-all duration-200">
+                            <LoaderCard3Enhanced />
+                          </div>
+                        </motion.div>
+                      ))}
                   </>
                 )}
               </AnimatePresence>
