@@ -250,8 +250,17 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
 
   return (
     <>
-      <div className="z-50 p-4 w-[27rem] max-w-[40rem] bg-white rounded-xl shadow-xl border border-gray-300">
-        {/* Header */}
+      <div className=" z-50 
+  p-4 
+  w-full max-w-[27rem]   
+  sm:w-[27rem]          
+  bg-white 
+  rounded-xl 
+  shadow-xl 
+  border border-gray-300
+  max-h-[90vh]           
+  overflow-y-auto ">
+       
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-md font-semibold flex items-center justify-center gap-3">
             <PiHighlighterFill size={25} /> Highlight Text
@@ -261,12 +270,12 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
           </button>
         </div>
 
-        {/* Selected Text */}
+        
         <blockquote className="text-sm italic text-gray-600 bg-gray-100 p-2 rounded mb-3 max-h-24 overflow-y-auto">
           {text}
         </blockquote>
 
-        {/* Navigation Tabs */}
+     
         <div className="flex mb-4 border-b border-gray-200">
           <button
             onClick={() => {
@@ -312,7 +321,7 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
           </button>
         </div>
 
-        {/* Highlights List */}
+       
         {showHighlights && (
           <div className="max-h-64 overflow-y-auto space-y-2">
             {highlited.length === 0 ? (
@@ -335,7 +344,7 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
                     </div>
                   </div>
                   
-                  {/* Beautiful Delete Button */}
+                  
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                     <button
                       onClick={() => handleDeleteClick('highlight', highlight.id, highlight.text)}
@@ -351,7 +360,6 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
           </div>
         )}
 
-        {/* Notes List */}
         {showNotesList && (
           <div className="max-h-64 overflow-y-auto space-y-3">
             {notes.length === 0 ? (
@@ -364,7 +372,7 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
                   key={noteItem.id}
                   className="group relative p-4 rounded-xl border border-blue-200 hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-150 hover:border-blue-300"
                 >
-                  {/* Beautiful Delete Button for Notes */}
+                  
                   <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
                     <button
                       onClick={() => handleDeleteClick('note', noteItem.id, noteItem.selectedText)}
@@ -404,7 +412,7 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
           </div>
         )}
 
-        {/* Color Picker */}
+        
         {!showNotes && !showHighlights && !showNotesList && (
           <>
             <p className="text-sm font-medium text-gray-700 mb-2">
@@ -427,7 +435,7 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
           </>
         )}
 
-        {/* Action Buttons or Note Input */}
+      
         {!showNotes && !showHighlights && !showNotesList ? (
           <div className="flex gap-2">
             <button
@@ -473,7 +481,7 @@ const Highlighting = ({ text, onClose }: HighlightingProps) => {
         ) : null}
       </div>
 
-      {/* Delete Confirmation Modal */}
+     
       {deleteConfirm && <DeleteConfirmModal />}
     </>
   );
