@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import useFetchSingleBook from "../../Data/useFetchSingleBook";
 import BookFetchError from "../../Component/BookFetchError";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   resetHighlights,
@@ -28,28 +28,191 @@ import supabase from "../../supabase-client";
 
 function debounce<T extends (...args: any[]) => void>(
   func: T,
-  wait: number
+  wait: number,
+  immediate = false
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
+  let timeout: NodeJS.Timeout | null = null;
   return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
+    const callNow = immediate && !timeout;
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      timeout = null;
+      if (!immediate) func(...args);
+    }, wait);
+    if (callNow) func(...args);
   };
 }
 
 function throttle<T extends (...args: any[]) => void>(
   func: T,
-  limit: number
+  limit: number,
+  options: { leading?: boolean; trailing?: boolean } = {
+    leading: true,
+    trailing: true,
+  }
 ): (...args: Parameters<T>) => void {
-  let inThrottle: boolean;
+  let inThrottle = false;
+  let lastFunc: NodeJS.Timeout;
+  let lastRan: number;
+
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
-      func(...args);
+      if (options.leading !== false) {
+        func(...args);
+      }
+      lastRan = Date.now();
       inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
+    } else {
+      if (lastFunc) clearTimeout(lastFunc);
+      lastFunc = setTimeout(() => {
+        if (Date.now() - lastRan >= limit) {
+          if (options.trailing !== false) {
+            func(...args);
+          }
+          lastRan = Date.now();
+        }
+      }, limit - (Date.now() - lastRan));
     }
+
+    setTimeout(() => {
+      inThrottle = false;
+    }, limit);
   };
 }
+
+const PROXY_SERVICES = [
+  {
+    name: "AllOrigins",
+    url: (targetUrl: string) =>
+      `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+    extractContent: (data: any) => data.contents,
+    timeout: 10000,
+  },
+  {
+    name: "CORS-Anywhere",
+    url: (targetUrl: string) =>
+      `https://cors-anywhere.herokuapp.com/${targetUrl}`,
+    extractContent: (data: any) => data,
+    timeout: 8000,
+  },
+  {
+    name: "ThingProxy",
+    url: (targetUrl: string) =>
+      `https://thingproxy.freeboard.io/fetch/${targetUrl}`,
+    extractContent: (data: any) => data,
+    timeout: 12000,
+  },
+  {
+    name: "JSONProxy",
+    url: (targetUrl: string) =>
+      `https://jsonp.afeld.me/?url=${encodeURIComponent(targetUrl)}`,
+    extractContent: (data: any) => data,
+    timeout: 15000,
+  },
+  {
+    name: "CORSProxy",
+    url: (targetUrl: string) =>
+      `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+    extractContent: (data: any) => data,
+    timeout: 10000,
+  },
+];
+
+const fetchWithProxyFallback = async (
+  targetUrl: string,
+  maxRetries: number = PROXY_SERVICES.length
+): Promise<string> => {
+  let lastError: Error | null = null;
+
+  for (let i = 0; i < Math.min(maxRetries, PROXY_SERVICES.length); i++) {
+    const proxy = PROXY_SERVICES[i];
+    const controller = new AbortController();
+
+    
+    const timeoutId = setTimeout(() => controller.abort(), proxy.timeout);
+
+    try {
+      console.log(`Attempting to fetch with ${proxy.name}...`);
+
+      const response = await fetch(proxy.url(targetUrl), {
+        signal: controller.signal,
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "User-Agent": "Mozilla/5.0 (compatible; BookReader/1.0)",
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(
+          `${proxy.name} failed: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const contentType = response.headers.get("content-type");
+      let data;
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+
+      const content = proxy.extractContent(data);
+
+      if (!content || typeof content !== "string") {
+        throw new Error(`${proxy.name} returned invalid content`);
+      }
+
+      console.log(`Successfully fetched with ${proxy.name}`);
+      return content;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      lastError =
+        error instanceof Error ? error : new Error(`${proxy.name} failed`);
+      console.warn(`${proxy.name} failed:`, lastError.message);
+
+      
+      if (error.name === "AbortError" || error.name === "TimeoutError") {
+        console.log(`${proxy.name} timed out, trying next proxy...`);
+        continue;
+      }
+
+      
+      if (i < PROXY_SERVICES.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+  }
+
+  throw new Error(
+    `All proxy services failed. Last error: ${lastError?.message}`
+  );
+};
+
+
+const processBookHtmlOptimized = (html: string): string => {
+ 
+  const patterns = [
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    /<link\b[^>]*>/gi,
+    /<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi,
+    /<\/?html[^>]*>/gi,
+    /<\/?body[^>]*>/gi,
+    /<meta\b[^>]*>/gi,
+    /<!--[\s\S]*?-->/g,
+  ];
+
+  let processed = html;
+  patterns.forEach((pattern) => {
+    processed = processed.replace(pattern, "");
+  });
+
+  processed = processed.replace(/\s+/g, " ").replace(/>\s+</g, "><").trim();
+
+  return processed;
+};
 
 const BookReader = () => {
   const [selectedText, setSelectedText] = useState<string>("");
@@ -62,6 +225,8 @@ const BookReader = () => {
   const [contentError, setContentError] = useState<string | null>(null);
   const [isContentReady, setIsContentReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [currentProxy, setCurrentProxy] = useState<string>("");
 
   const bookContentRef = useRef<HTMLDivElement>(null);
   const { id } = useParams();
@@ -93,6 +258,7 @@ const BookReader = () => {
     (state: RootState) => state.userSettings.reading.typographySettings
   );
 
+  
   useEffect(() => {
     console.log("Initializing reading preferences from user settings...");
 
@@ -192,46 +358,41 @@ const BookReader = () => {
     }
   }, [book?.id, annotationsFetched, getAnnotations]);
 
-  useEffect(() => {
-    const checkMobile = () => {
+  const checkMobile = useCallback(
+    debounce(() => {
       setIsMobile(window.innerWidth < 768);
-    };
+    }, 150),
+    []
+  );
 
+  useEffect(() => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, [
-    togglDark,
-    toggleSidebar,
-    letterSpacing,
-    isFocused,
-    fontSize,
-    fontFamily,
-    lineHeight,
-    theme,
-    background,
-  ]);
+  }, [checkMobile]);
 
   const handleScroll = useCallback(
     throttle(() => {
       const el = bookContentRef.current;
       if (!el || !isContentReady) return;
 
-      const scrollTop = el.scrollTop;
-      const scrollHeight = el.scrollHeight;
-      const clientHeight = el.clientHeight;
-      const maxScrollTop = scrollHeight - clientHeight;
+      requestAnimationFrame(() => {
+        const scrollTop = el.scrollTop;
+        const scrollHeight = el.scrollHeight;
+        const clientHeight = el.clientHeight;
+        const maxScrollTop = scrollHeight - clientHeight;
 
-      if (maxScrollTop <= 0) {
-        setScrollProgress(0);
-        return;
-      }
+        if (maxScrollTop <= 0) {
+          setScrollProgress(0);
+          return;
+        }
 
-      const progress = Math.max(
-        0,
-        Math.min(100, (scrollTop / maxScrollTop) * 100)
-      );
-      setScrollProgress(progress);
+        const progress = Math.max(
+          0,
+          Math.min(100, (scrollTop / maxScrollTop) * 100)
+        );
+        setScrollProgress(progress);
+      });
     }, 16),
     [isContentReady]
   );
@@ -239,7 +400,7 @@ const BookReader = () => {
   useEffect(() => {
     const container = bookContentRef.current;
     if (container && isContentReady) {
-      container.addEventListener("scroll", handleScroll);
+      container.addEventListener("scroll", handleScroll, { passive: true });
       handleScroll();
     }
 
@@ -323,7 +484,7 @@ const BookReader = () => {
     return () => document.removeEventListener("keydown", handleKeyPress);
   }, [handleKeyPress]);
 
-  const handleTextSelection = () => {
+  const handleTextSelection = useCallback(() => {
     setTimeout(() => {
       const selection = window.getSelection();
       if (selection && selection.toString().trim().length > 0) {
@@ -342,29 +503,29 @@ const BookReader = () => {
         }
       }
     }, 50);
-  };
+  }, []);
 
-  const clearSelection = () => {
+  const clearSelection = useCallback(() => {
     const selection = window.getSelection();
     if (selection) {
       selection.removeAllRanges();
     }
     setSelectedText("");
     setShowOptions(false);
-  };
+  }, []);
 
-  const handleCloseHighlighting = () => {
+  const handleCloseHighlighting = useCallback(() => {
     clearSelection();
-  };
+  }, [clearSelection]);
 
   useEffect(() => {
     document.addEventListener("mouseup", handleTextSelection);
     return () => {
       document.removeEventListener("mouseup", handleTextSelection);
     };
-  }, []);
+  }, [handleTextSelection]);
 
-  const getBookUrl = () => {
+  const getBookUrl = useCallback(() => {
     if (!book?.formats) return "";
 
     return (
@@ -374,9 +535,9 @@ const BookReader = () => {
       book.formats["text/plain"] ||
       ""
     );
-  };
+  }, [book?.formats]);
 
-  const mapFontFamily = (fontFamily: string): string => {
+  const mapFontFamily = useCallback((fontFamily: string): string => {
     switch (fontFamily.toLowerCase()) {
       case "sans serif":
       case "sans-serif":
@@ -397,9 +558,9 @@ const BookReader = () => {
         }
         return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
     }
-  };
+  }, []);
 
-  const mapLineHeight = (lineHeight: string): string => {
+  const mapLineHeight = useCallback((lineHeight: string): string => {
     switch (lineHeight) {
       case "Tight":
         return "1.4";
@@ -412,68 +573,110 @@ const BookReader = () => {
       default:
         return lineHeight;
     }
-  };
+  }, []);
 
-  const htmlUrl = getBookUrl();
+  const mapFontSize = useCallback(
+    (fontSize: string | number) => {
+      const baseSize = isMobile ? 16 : 18;
+
+      if (typeof fontSize === "number" || !isNaN(Number(fontSize))) {
+        return `${fontSize}px`;
+      }
+
+      switch (fontSize) {
+        case "Small":
+          return `${baseSize - 2}px`;
+        case "Medium":
+          return `${baseSize}px`;
+        case "Large":
+          return `${baseSize + 4}px`;
+        case "Extra Large":
+          return `${baseSize + 8}px`;
+        default:
+          return `${baseSize}px`;
+      }
+    },
+    [isMobile]
+  );
+
+  const htmlUrl = useMemo(() => getBookUrl(), [getBookUrl]);
 
   useEffect(() => {
     if (book) dispatch(setReadingBook(book));
   }, [book, dispatch]);
 
-  const fetchWithProxy = async (url: string): Promise<string> => {
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(
-      url
-    )}`;
-    const response = await fetch(proxyUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.contents;
-  };
-
-  const processBookHtml = (html: string): string => {
-    return html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/<link\b[^>]*>/gi, "")
-      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-      .replace(/<\/?html[^>]*>/gi, "")
-      .replace(/<\/?body[^>]*>/gi, "");
-  };
-
   useEffect(() => {
     if (!htmlUrl) return;
+
+    let isCancelled = false;
 
     const fetchContent = async () => {
       setContentLoading(true);
       setContentError(null);
       setIsContentReady(false);
+      setLoadingProgress(0);
 
       try {
-        const html = await fetchWithProxy(htmlUrl);
-        const processedHtml = processBookHtml(html);
+        setLoadingProgress(10);
+        setCurrentProxy("Initializing...");
+
+        const html = await fetchWithProxyFallback(htmlUrl);
+
+        if (isCancelled) return;
+
+        setLoadingProgress(60);
+        setCurrentProxy("Processing content...");
+
+        const processedHtml = processBookHtmlOptimized(html);
+
+        if (isCancelled) return;
+
+        setLoadingProgress(90);
         setBookContent(processedHtml);
 
-        setTimeout(() => {
-          setIsContentReady(true);
-        }, 500);
+        // Use RAF for smooth transition
+        requestAnimationFrame(() => {
+          setLoadingProgress(100);
+          setTimeout(() => {
+            if (!isCancelled) {
+              setIsContentReady(true);
+            }
+          }, 300);
+        });
       } catch (error) {
-        setContentError("Failed to load book content");
-        console.error("Error fetching book:", error);
+        if (!isCancelled) {
+          setContentError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load book content"
+          );
+          console.error("Error fetching book:", error);
+        }
       } finally {
-        setContentLoading(false);
+        if (!isCancelled) {
+          setContentLoading(false);
+          setCurrentProxy("");
+        }
       }
     };
 
     fetchContent();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [htmlUrl]);
 
-  const debouncedSaveProgress = useCallback(
-    debounce((bookId: number, progress: number) => {
-      if (progress > 0) {
-        localStorage.setItem(`reading-progress-${bookId}`, progress.toFixed(2));
-      }
-    }, 1000),
+  const debouncedSaveProgress = useMemo(
+    () =>
+      debounce((bookId: number, progress: number) => {
+        if (progress > 0) {
+          localStorage.setItem(
+            `reading-progress-${bookId}`,
+            progress.toFixed(2)
+          );
+        }
+      }, 1000),
     []
   );
 
@@ -482,27 +685,6 @@ const BookReader = () => {
       debouncedSaveProgress(Number(book?.id), scrollProgress);
     }
   }, [book?.id, scrollProgress, debouncedSaveProgress]);
-
-  const mapFontSize = (fontSize: string | number) => {
-    const baseSize = isMobile ? 16 : 18;
-
-    if (typeof fontSize === "number" || !isNaN(Number(fontSize))) {
-      return `${fontSize}px`;
-    }
-
-    switch (fontSize) {
-      case "Small":
-        return `${baseSize - 2}px`;
-      case "Medium":
-        return `${baseSize}px`;
-      case "Large":
-        return `${baseSize + 4}px`;
-      case "Extra Large":
-        return `${baseSize + 8}px`;
-      default:
-        return `${baseSize}px`;
-    }
-  };
 
   useEffect(() => {
     if (book?.id && bookContentRef.current && isContentReady) {
@@ -524,7 +706,7 @@ const BookReader = () => {
     }
   }, [book?.id, isContentReady, handleSeek]);
 
-  const getTextColor = () => {
+  const getTextColor = useCallback(() => {
     if (theme?.hex?.text) {
       return theme.hex.text;
     }
@@ -534,71 +716,83 @@ const BookReader = () => {
     }
 
     return togglDark ? "#F3F4F6" : "#374151";
-  };
+  }, [theme, togglDark]);
 
-  const containerVariants: any = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        duration: 0.4,
-        ease: "easeOut",
-        staggerChildren: 0.1,
+  const containerVariants = useMemo(
+    () => ({
+      hidden: { opacity: 0, scale: 0.98 },
+      visible: {
+        opacity: 1,
+        scale: 1,
+        transition: {
+          duration: 0.3,
+          ease: "easeOut",
+          staggerChildren: 0.05,
+        },
       },
-    },
-    exit: {
-      opacity: 0,
-      scale: 0.98,
-      transition: { duration: 0.3 },
-    },
-  };
+      exit: {
+        opacity: 0,
+        scale: 0.99,
+        transition: { duration: 0.2 },
+      },
+    }),
+    []
+  );
 
-  const contentVariants: any = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut",
-        delay: 0.2,
+  const contentVariants = useMemo(
+    () => ({
+      hidden: { opacity: 0, y: 10 },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+          duration: 0.3,
+          ease: "easeOut",
+          delay: 0.1,
+        },
       },
-    },
-  };
+    }),
+    []
+  );
 
-  const sidebarVariants: any = {
-    hidden: { x: -320, opacity: 0 },
-    visible: {
-      x: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
+  const sidebarVariants = useMemo(
+    () => ({
+      hidden: { x: -320, opacity: 0 },
+      visible: {
+        x: 0,
+        opacity: 1,
+        transition: {
+          type: "spring",
+          stiffness: 400,
+          damping: 40,
+        },
       },
-    },
-    exit: {
-      x: -320,
-      opacity: 0,
-      transition: {
-        duration: 0.3,
-        ease: "easeIn",
+      exit: {
+        x: -320,
+        opacity: 0,
+        transition: {
+          duration: 0.2,
+          ease: "easeIn",
+        },
       },
-    },
-  };
+    }),
+    []
+  );
 
-  const overlayVariants: any = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { duration: 0.3 },
-    },
-    exit: {
-      opacity: 0,
-      transition: { duration: 0.2 },
-    },
-  };
+  const overlayVariants = useMemo(
+    () => ({
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: { duration: 0.2 },
+      },
+      exit: {
+        opacity: 0,
+        transition: { duration: 0.15 },
+      },
+    }),
+    []
+  );
 
   if (loading)
     return (
@@ -608,7 +802,7 @@ const BookReader = () => {
         }`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.3 }}
       >
         <div className="text-center">
           <motion.div
@@ -618,9 +812,9 @@ const BookReader = () => {
           />
           <motion.h1
             className="text-xl md:text-2xl"
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.1 }}
           >
             Loading book...
           </motion.h1>
@@ -647,29 +841,52 @@ const BookReader = () => {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        <div className="text-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          {/* Enhanced loading progress indicator */}
+          <motion.div className="mb-6">
+            <div
+              className={`w-64 h-2 rounded-full mb-4 ${
+                togglDark ? "bg-gray-700" : "bg-gray-200"
+              }`}
+            >
+              <motion.div
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${loadingProgress}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            </div>
+            <motion.p className="text-sm opacity-75 mb-2">
+              {currentProxy || "Preparing..."}
+            </motion.p>
+            <motion.p className="text-xs opacity-50">
+              {loadingProgress}% Complete
+            </motion.p>
+          </motion.div>
+
           <motion.div className="animate-pulse">
             <motion.div
               className="h-4 bg-gray-300 rounded w-3/4 mx-auto mb-4"
               animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              transition={{ duration: 1.2, repeat: Infinity }}
             />
             <motion.div
               className="h-4 bg-gray-300 rounded w-1/2 mx-auto mb-4"
               animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: 0.1 }}
             />
             <motion.div
               className="h-4 bg-gray-300 rounded w-5/6 mx-auto"
               animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }}
             />
           </motion.div>
+
           <motion.h1
             className="text-xl md:text-2xl mt-6"
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.2 }}
           >
             Loading book content...
           </motion.h1>
