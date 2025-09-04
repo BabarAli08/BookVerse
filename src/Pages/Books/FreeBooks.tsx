@@ -1,4 +1,4 @@
-import { BookOpen, Star, Heart, Loader2 } from "lucide-react";
+import { BookOpen, Star, Heart, Loader2, CheckCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { author, book } from "../../Data/Interfaces";
 import { useNavigate } from "react-router";
@@ -7,6 +7,7 @@ import supabase from "../../supabase-client";
 import { setPremiumBookClicked } from "../../Store/ReadSlice";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Store/store";
+import { toast } from "sonner";
 import {
   removeFromWishlist,
   updateWishlisted,
@@ -14,9 +15,10 @@ import {
 
 const BookCard = ({ book }: { book: book }) => {
   const [fav, setFav] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [imageLoaded, setImageLoaded] = useState<boolean>(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const imageUrl =
     book.formats?.["image/jpeg"] ||
@@ -34,105 +36,151 @@ const BookCard = ({ book }: { book: book }) => {
   );
 
   useEffect(() => {
-    console.log("book ids are ",book.id)
-    const checkFav = wishlistedBook.some((wBook) => Number(wBook.bookId) === Number(book.id))
-    console.log("is fav " + checkFav)
-    setFav(
-      checkFav
+    const checkFav = wishlistedBook.some(
+      (wBook) => Number(wBook.bookId) === Number(book.id)
     );
-    setLoading(false);
-  }, [book.id]);
+    setFav(checkFav);
+  }, [book.id, wishlistedBook]);
 
   const handleFav = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    e.stopPropagation();
+    setLoading(true);
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    
     if (!user) {
-      alert("Please log in to add to wishlist.");
+      toast.error("Please log in to add to wishlist.");
+      setLoading(false);
       return;
     }
-    if (!fav) {
-      const filteredBook={
-        title:book.title,
-        bookId:book.id,
-        description:book.summaries?.[0],
-        authors:authorNames,
-        cover:book.formats?.["image/jpeg"],
-        publishedAt:book?.authors?.[0]?.death_year,
-      }
-      dispatch(updateWishlisted([filteredBook]));
-      setFav(true);
-    } else {
-      dispatch(removeFromWishlist(book.id));
-      setFav(false);
-    }
-    if (!fav) {
-      const mappedBook = {
-        user_id: user.id,
-        book_id: book.id,
-        tier: "free",
-        title: book.title,
-        authors: authorNames,
-        cover: book.formats?.["image/jpeg"],
-        published_at: book?.authors?.[0]?.death_year,
-        description: book?.summaries?.[0],
-      };
-      console.log("mapped Book", mappedBook);
 
-      const { error } = await supabase
-        .from("books")
-        .upsert([mappedBook], { onConflict: ["user_id", "book_id"] });
+    try {
+      if (!fav) {
+        const filteredBook = {
+          title: book.title,
+          bookId: book.id,
+          description: book.summaries?.[0],
+          authors: authorNames,
+          cover: book.formats?.["image/jpeg"],
+          publishedAt: book?.authors?.[0]?.death_year,
+        };
+        dispatch(updateWishlisted([filteredBook]));
+        setFav(true);
+        toast.success("Added to wishlist!");
 
-      if (error) console.log(error);
-    } else {
-      const {  error } = await supabase
-        .from("books")
-        .delete()
-        .eq("book_id", book.id)
-        .eq("user_id", user.id);
-      if (error) console.log(error);
-      else {
+        const mappedBook = {
+          user_id: user.id,
+          book_id: book.id,
+          tier: "free",
+          title: book.title,
+          authors: authorNames,
+          cover: book.formats?.["image/jpeg"],
+          published_at: book?.authors?.[0]?.death_year,
+          description: book?.summaries?.[0],
+        };
+
+        const { error } = await supabase
+          .from("books")
+          .upsert([mappedBook], { onConflict: ["user_id", "book_id"] });
+
+        if (error) {
+          toast.error("Failed to sync with server");
+          console.error(error);
+        }
+      } else {
+        dispatch(removeFromWishlist(book.id));
         setFav(false);
+        toast.success("Removed from wishlist!");
+
+        const { error } = await supabase
+          .from("books")
+          .delete()
+          .eq("book_id", book.id)
+          .eq("user_id", user.id);
+
+        if (error) {
+          toast.error("Failed to sync with server");
+          console.error(error);
+        }
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReadBook = () => {
+    dispatch(setPremiumBookClicked(false));
+    navigate(`/books/${book.id}`);
+  };
+
+  const cardVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: 20,
+      scale: 0.95
+    },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        duration: 0.6
+      }
+    },
+    hover: {
+      y: -8,
+      scale: 1.02,
+      transition: {
+        type: "spring",
+        stiffness: 400,
+        damping: 25
       }
     }
   };
-  const dispatch = useDispatch();
+
+  const overlayVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { duration: 0.3 }
+    }
+  };
 
   return (
     <motion.div
-      className="w-[15rem] bg-white rounded-xl shadow-sm hover:shadow-lg border border-gray-100 overflow-hidden flex-shrink-0 group cursor-pointer"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      whileHover={{
-        y: -4,
-        transition: { duration: 0.25, ease: "easeOut" },
-      }}
-      layout
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      className="w-full"
     >
-      <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      <div className="relative w-full h-[440px] min-w-[280px] max-w-[320px] mx-auto bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer border-2 border-gray-200 hover:border-gray-300 transition-all duration-300 group">
         
         <motion.div
-          className="absolute top-3 left-3 z-20"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.3 }}
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="absolute top-3 left-3 z-20 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm bg-gradient-to-r from-green-500 to-emerald-500 text-white"
         >
-          <div className="bg-green-500 text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm">
-            Free
-          </div>
+          <CheckCircle size={12} />
+          <span>Free</span>
         </motion.div>
 
         <motion.button
-          className="absolute top-3 right-3 z-20 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200"
-          onClick={handleFav}
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.2 }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
+          className="absolute top-3 right-3 z-20 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200"
+          onClick={handleFav}
+          disabled={loading}
         >
           <AnimatePresence mode="wait">
             {loading ? (
@@ -157,123 +205,136 @@ const BookCard = ({ book }: { book: book }) => {
                   size={16}
                   className={`transition-colors duration-200 ${
                     fav
-                      ? "fill-red-500 text-red-500"
-                      : "text-gray-400 hover:text-red-400"
+                      ? "text-red-500 fill-red-500"
+                      : "text-gray-600 hover:text-red-500"
                   }`}
                 />
-                {fav && (
-                  <motion.div
-                    className="absolute inset-0"
-                    initial={{ scale: 1 }}
-                    animate={{ scale: [1, 1.3, 1] }}
-                    transition={{ duration: 0.4, ease: "easeOut" }}
-                  />
-                )}
               </motion.div>
             )}
           </AnimatePresence>
         </motion.button>
 
-        <div className="w-full h-full flex items-center justify-center relative">
+        <div className="relative h-[200px] bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
           {imageUrl ? (
             <>
               <motion.img
                 src={imageUrl}
                 alt={book.title}
-                className="w-full h-full object-cover"
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{
-                  opacity: imageLoaded ? 1 : 0,
-                  scale: imageLoaded ? 1 : 1.05,
-                }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 onLoad={() => setImageLoaded(true)}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/placeholder-book.png";
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: imageLoaded ? 1 : 0.5 }}
               />
+              
+              <motion.div
+                variants={overlayVariants}
+                initial="hidden"
+                whileHover="visible"
+                className="absolute inset-0 bg-black/30 flex items-center justify-center"
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  whileHover={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                  className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm"
+                >
+                  <BookOpen className="w-6 h-6 text-white" />
+                </motion.div>
+              </motion.div>
+              
               {!imageLoaded && (
-                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  >
-                    <Loader2 size={20} className="text-gray-400" />
-                  </motion.div>
+                <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
                 </div>
               )}
             </>
           ) : (
-            <motion.div
-              className="w-12 h-12 border-2 border-gray-300 rounded-lg border-dashed flex items-center justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <BookOpen size={20} className="text-gray-400" />
-            </motion.div>
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="w-16 h-16 border-2 border-gray-300 rounded-xl border-dashed flex items-center justify-center">
+                <BookOpen size={24} className="text-gray-400" />
+              </div>
+            </div>
           )}
         </div>
-      </div>
 
-      <motion.div
-        className="p-4 space-y-3"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1, duration: 0.4 }}
-      >
-        
-        <motion.h3
-          className="text-base font-semibold text-gray-900 leading-tight line-clamp-2 group-hover:text-gray-700 transition-colors duration-200"
-          layoutId={`title-${book.id}`}
-        >
-          {book.title}
-        </motion.h3>
+        <div className="p-4 h-[240px] flex flex-col">
+          
+          <div className="h-[3.5rem] mb-3">
+            <motion.h3
+              className="text-lg font-bold text-gray-900 leading-tight line-clamp-2 hover:text-green-600 transition-colors duration-200"
+              layoutId={`title-${book.id}`}
+            >
+              {book.title}
+            </motion.h3>
+          </div>
 
-    
-        <motion.p
-          className="text-sm text-gray-600"
-          initial={{ opacity: 0.8 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.3 }}
-        >
-          by {authorNames}
-        </motion.p>
+          <div className="h-[1.5rem] mb-3">
+            <p className="text-sm text-gray-600 line-clamp-1">
+              by {authorNames}
+            </p>
+          </div>
+
+          <div className="h-[1.5rem] mb-4">
+            <p className="text-xs text-gray-500 line-clamp-1">
+              {book.subjects?.slice(0, 2).join(" • ") || "Classic Literature"}
+            </p>
+          </div>
+
+          <div className="flex justify-between items-center mb-4 text-sm">
+            <div className="flex items-center gap-1">
+              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+              <span className="font-semibold text-gray-700">{rating}</span>
+            </div>
+            <div className="flex items-center gap-1 text-gray-500">
+              <BookOpen className="w-4 h-4" />
+              <span>{pages}p</span>
+            </div>
+          </div>
+
+          <div className="mt-auto">
+            <motion.button
+              onClick={handleReadBook}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-sm bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-green-200"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Read Free</span>
+              <motion.div
+                className="w-1 h-1 bg-white rounded-full opacity-60"
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.6, 1, 0.6]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            </motion.button>
+          </div>
+        </div>
 
         <motion.div
-          className="flex items-center justify-between"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25, duration: 0.3 }}
-        >
-          <div className="flex items-center gap-1">
-            <Star size={14} className="fill-yellow-400 text-yellow-400" />
-            <span className="text-sm font-medium text-gray-900">{rating}</span>
-          </div>
-          <span className="text-sm text-gray-500">{pages}p</span>
-        </motion.div>
-
-        <motion.button
-          onClick={() => {
-            dispatch(setPremiumBookClicked(false));
-            navigate(`/books/${book.id}`);
-          }}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 mt-3"
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.3 }}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <motion.div whileHover={{ x: 2 }} transition={{ duration: 0.2 }}>
-            <BookOpen size={16} />
-          </motion.div>
-          <span>Read Free</span>
-        </motion.button>
-      </motion.div>
+          className="absolute -inset-1 bg-gradient-to-r from-green-400 via-emerald-400 to-green-400 rounded-2xl opacity-0 group-hover:opacity-10 blur-sm -z-10"
+          whileHover={{ opacity: 0.15 }}
+          transition={{ duration: 0.3 }}
+        />
+      </div>
 
       <style>{`
+        .line-clamp-1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        
         .line-clamp-2 {
           display: -webkit-box;
           -webkit-line-clamp: 2;
