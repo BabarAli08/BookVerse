@@ -23,7 +23,7 @@ const Featured = () => {
   } = useFetchData(
     books.length === 0
       ? { url: "https://gutendex.com/books", page }
-      : { url: "", page: 0 } 
+      : { url: "", page: 0 }
   );
 
   useEffect(() => {
@@ -47,10 +47,10 @@ const Featured = () => {
   };
 
   const headerVariants = {
-    hidden: { 
-      opacity: 0, 
+    hidden: {
+      opacity: 0,
       y: -30,
-      scale: 0.9 
+      scale: 0.9,
     },
     visible: {
       opacity: 1,
@@ -60,15 +60,15 @@ const Featured = () => {
         type: "spring",
         stiffness: 100,
         damping: 15,
-        duration: 0.8
-      }
-    }
+        duration: 0.8,
+      },
+    },
   };
 
   const subtitleVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 20 
+    hidden: {
+      opacity: 0,
+      y: 20,
     },
     visible: {
       opacity: 1,
@@ -76,17 +76,17 @@ const Featured = () => {
       transition: {
         duration: 0.6,
         delay: 0.2,
-        ease: "easeOut"
-      }
-    }
+        ease: "easeOut",
+      },
+    },
   };
 
   const cardVariants = {
-    hidden: { 
-      opacity: 0, 
+    hidden: {
+      opacity: 0,
       y: 60,
       scale: 0.8,
-      rotateY: -15
+      rotateY: -15,
     },
     visible: (index: number) => ({
       opacity: 1,
@@ -98,15 +98,15 @@ const Featured = () => {
         stiffness: 80,
         damping: 20,
         delay: index * 0.1,
-        duration: 0.8
-      }
-    })
+        duration: 0.8,
+      },
+    }),
   };
 
   const skeletonVariants = {
-    hidden: { 
-      opacity: 0, 
-      scale: 0.9 
+    hidden: {
+      opacity: 0,
+      scale: 0.9,
     },
     visible: (index: number) => ({
       opacity: 1,
@@ -114,9 +114,9 @@ const Featured = () => {
       transition: {
         duration: 0.5,
         delay: index * 0.1,
-        ease: "easeOut"
-      }
-    })
+        ease: "easeOut",
+      },
+    }),
   };
 
   const floatingVariants = {
@@ -126,15 +126,15 @@ const Featured = () => {
       transition: {
         duration: 4,
         repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
+        ease: "easeInOut",
+      },
+    },
   };
 
   return (
     <div className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-gray-50/30 to-white overflow-hidden">
-      
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        
         {[...Array(5)].map((_, i) => (
           <motion.div
             key={i}
@@ -158,7 +158,7 @@ const Featured = () => {
             className="absolute w-32 h-32 rounded-full opacity-10"
             style={{
               background: `radial-gradient(circle, ${
-                i === 0 ? '#3b82f6' : i === 1 ? '#8b5cf6' : '#06b6d4'
+                i === 0 ? "#3b82f6" : i === 1 ? "#8b5cf6" : "#06b6d4"
               } 0%, transparent 70%)`,
               right: `${10 + i * 25}%`,
               top: `${30 + i * 20}%`,
@@ -170,14 +170,13 @@ const Featured = () => {
             transition={{
               duration: 6 + i * 2,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           />
         ))}
       </div>
 
       <div className="relative max-w-7xl mx-auto">
-        
         <motion.div
           initial="hidden"
           animate={isInView ? "visible" : "hidden"}
@@ -187,40 +186,48 @@ const Featured = () => {
             variants={headerVariants}
             className="relative inline-block"
           >
-            <motion.h1 
+            <motion.h1
               className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 relative z-10"
               style={{
-                background: "linear-gradient(135deg, #1f2937 0%, #3b82f6 50%, #8b5cf6 100%)",
+                background:
+                  "linear-gradient(135deg, #1f2937 0%, #3b82f6 50%, #8b5cf6 100%)",
                 backgroundClip: "text",
                 WebkitBackgroundClip: "text",
                 color: "transparent",
               }}
               whileHover={{
                 scale: 1.05,
-                transition: { duration: 0.3 }
+                transition: { duration: 0.3 },
               }}
             >
               Featured Books
             </motion.h1>
-            
+
             <motion.div
               className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent"
               initial={{ width: 0, opacity: 0 }}
-              animate={isInView ? { width: "200px", opacity: 1 } : { width: 0, opacity: 0 }}
+              animate={
+                isInView
+                  ? { width: "200px", opacity: 1 }
+                  : { width: 0, opacity: 0 }
+              }
               transition={{ duration: 0.8, delay: 0.5 }}
             />
           </motion.div>
 
-          <motion.p 
+          <motion.p
             variants={subtitleVariants}
             className="text-gray-600 text-lg sm:text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed"
           >
-            Discover our handpicked selection of the most captivating reads that will transport you to new worlds
+            Discover our handpicked selection of the most captivating reads that
+            will transport you to new worlds
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, scale: 0 }}
-            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }}
+            animate={
+              isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }
+            }
             transition={{ duration: 0.6, delay: 0.8 }}
             className="flex justify-center mt-6"
           >
@@ -231,12 +238,12 @@ const Featured = () => {
                   className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400"
                   animate={{
                     scale: [1, 1.3, 1],
-                    opacity: [0.5, 1, 0.5]
+                    opacity: [0.5, 1, 0.5],
                   }}
                   transition={{
                     duration: 2,
                     repeat: Infinity,
-                    delay: i * 0.2
+                    delay: i * 0.2,
                   }}
                 />
               ))}
@@ -251,12 +258,12 @@ const Featured = () => {
           animate={isInView ? "visible" : "hidden"}
           className="relative"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 justify-items-center">
-            
-            {loading && books.length === 0 &&
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10 items-center justify-items-center">
+            {loading &&
+              books.length === 0 &&
               Array.from({ length: 3 }).map((_, i) => (
-                <motion.div 
-                  key={i} 
+                <motion.div
+                  key={i}
                   variants={skeletonVariants}
                   custom={i}
                   className="w-full max-w-sm"
@@ -268,7 +275,7 @@ const Featured = () => {
                     transition={{
                       duration: 1.5,
                       repeat: Infinity,
-                      delay: i * 0.2
+                      delay: i * 0.2,
                     }}
                   >
                     <SkeletonBookCard />
@@ -277,34 +284,31 @@ const Featured = () => {
               ))}
 
             {books.slice(0, 3).map((book: book, i: number) => (
-              <motion.div 
-                key={book.id} 
+              <motion.div
+                key={book.id}
                 variants={cardVariants}
                 custom={i}
                 className="w-full max-w-sm group"
-                whileHover={{ 
+                whileHover={{
                   y: -10,
-                  transition: { 
-                    type: "spring", 
-                    stiffness: 300, 
-                    damping: 20 
-                  }
+                  transition: {
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 20,
+                  },
                 }}
               >
                 <motion.div
                   className="relative"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.02,
                     rotateY: 5,
-                    transition: { duration: 0.3 }
+                    transition: { duration: 0.3 },
                   }}
                   style={{ perspective: "1000px" }}
                 >
-                  {/* Card glow effect */}
-                  <motion.div
-                    className="absolute -inset-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-2xl opacity-0 blur group-hover:opacity-20 transition-opacity duration-300"
-                  />
-                  
+                  <motion.div className="absolute -inset-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-2xl opacity-0 blur group-hover:opacity-20 transition-opacity duration-300" />
+
                   <div className="relative">
                     <FeaturedBookCard
                       book={book}
@@ -315,43 +319,6 @@ const Featured = () => {
               </motion.div>
             ))}
           </div>
-
-          {books.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-              transition={{ duration: 0.6, delay: 1.2 }}
-              className="text-center mt-16"
-            >
-              <motion.button
-                onClick={() => navigate('/books')}
-                className="group relative px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
-                whileHover={{ 
-                  scale: 1.05,
-                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
-                }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span className="relative z-10">Explore All Books</span>
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                />
-                
-                <motion.div
-                  className="absolute top-1 right-3 w-1 h-1 bg-white rounded-full opacity-0 group-hover:opacity-100"
-                  animate={{
-                    scale: [0, 1, 0],
-                    opacity: [0, 1, 0]
-                  }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                    delay: 0.5
-                  }}
-                />
-              </motion.button>
-            </motion.div>
-          )}
         </motion.div>
 
         {error && (
