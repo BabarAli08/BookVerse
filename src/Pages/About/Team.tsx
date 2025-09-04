@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-
+import babarali from '../../../assets/babarali.jpeg'
 const MeetOurTeam = () => {
   const [headerVisible, setHeaderVisible] = useState(false);
   const [visibleCards, setVisibleCards] = useState(new Set());
@@ -11,7 +11,7 @@ const MeetOurTeam = () => {
       name: "Babar ALi",
       role: "Founder & CEO",
       description: "Former librarian turned tech entrepreneur, passionate about making reading accessible to everyone.",
-      image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop&crop=face"
+      image: babarali
     },
     {
       name: "Mark Luther", 
