@@ -166,11 +166,8 @@ const PremiumBook = ({ book }: PremiumBookProps) => {
       <div 
         className={`
           relative w-full h-[440px] min-w-[280px] max-w-[320px] mx-auto bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer
-          border-2 transition-all duration-300 group
-          ${isPremiumUser 
-            ? "border-gradient-to-br from-purple-400 to-pink-400 shadow-purple-100" 
-            : "border-gray-200 hover:border-gray-300"
-          }
+          border-gray-200 border transition-all duration-300 group
+         
         `}
         style={isPremiumUser ? {
           background: "linear-gradient(white, white) padding-box, linear-gradient(135deg, #a855f7, #ec4899) border-box"
